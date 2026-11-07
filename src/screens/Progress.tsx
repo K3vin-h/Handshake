@@ -48,6 +48,10 @@ export function ProgressScreen() {
           <CardDescription>Mastered means matching the reference 3 times in a row. Reference-only letters have no pass or fail.</CardDescription>
         </CardHeader>
         <CardContent>
+          <details className="disclosure">
+            <summary>
+              Alphabet <span className="muted">· {liveLetters.length} live, {LETTERS.length - liveLetters.length} reference only. Open or close the list.</span>
+            </summary>
           <div className="table-wrap">
             <table>
               <thead>
@@ -76,6 +80,7 @@ export function ProgressScreen() {
               </tbody>
             </table>
           </div>
+          </details>
         </CardContent>
       </Card>
 

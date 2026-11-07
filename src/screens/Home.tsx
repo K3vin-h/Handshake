@@ -27,6 +27,9 @@ export function Home() {
     return isUnlocked(units, progress, id) ? "available" : "locked";
   };
   const open = (id: string) => (location.hash = `#/lesson/${id}`);
+  const themKey = profile.theirName.toUpperCase().replace(/[^A-Z]/g, "");
+  const spellThem = units.flatMap((u) => u.lessons).find((l) => l.title.toUpperCase() === `SPELL ${themKey}`);
+  const spellOpen = spellThem ? isUnlocked(units, progress, spellThem.id) : false;
 
   return (
     <div className="page home">
@@ -46,6 +49,39 @@ export function Home() {
           <p className="lead">You have finished every lesson that is available right now.</p>
         )}
       </header>
+
+      <section className="feature-tiles" aria-label="Where to go">
+        {next && (
+          <a className="feature-tile" href={`#/lesson/${next.id}`}>
+            <span className="feature-eyebrow">Lessons</span>
+            <strong>{next.title}</strong>
+            <span className="muted small">Lesson {next.id} · {next.xp} XP</span>
+          </a>
+        )}
+        <a className="feature-tile" href="#/progress">
+          <span className="feature-eyebrow">Progress</span>
+          <strong>Your alphabet</strong>
+          <span className="muted small">{progress.completed.length} lessons done · {progress.xp} XP</span>
+        </a>
+        {spellThem && (spellOpen ? (
+          <a className="feature-tile" href={`#/lesson/${spellThem.id}`}>
+            <span className="feature-eyebrow">Their name</span>
+            <strong>{spellThem.title}</strong>
+            <span className="muted small">Lesson {spellThem.id}</span>
+          </a>
+        ) : (
+          <div className="feature-tile is-locked" aria-disabled="true">
+            <span className="feature-eyebrow">Their name</span>
+            <strong>{spellThem.title}</strong>
+            <span className="muted small">Locked until you finish the lessons before it</span>
+          </div>
+        ))}
+        <a className="feature-tile" href="#/welcome">
+          <span className="feature-eyebrow">Settings</span>
+          <strong>Names and hand</strong>
+          <span className="muted small">{profile.userName} → {profile.theirName}</span>
+        </a>
+      </section>
 
       <div className="home-layout">
         <div className="units">

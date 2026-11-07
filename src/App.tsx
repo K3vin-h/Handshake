@@ -44,14 +44,18 @@ const TITLES: Record<string, string> = {
   "lesson-preview": "Lesson preview",
 };
 
-// Player-facing links. The dev tools (demo, record, curriculum, components) only show in `npm run dev`,
-// never in the production build, but their routes keep working.
+// Player-facing nav is deliberately small: Home (the main page that leads everywhere) and Progress.
+// Dev tools live in a "Dev tools" menu that only exists in `npm run dev`; their routes keep working in every build.
 const NAV: [string, string][] = [
-  ["#/", "Path"],
+  ["#/", "Home"],
   ["#/progress", "Progress"],
-  ...(import.meta.env.DEV
-    ? ([["#/demo", "Demo"], ["#/record", "Record"], ["#/curriculum", "Curriculum"], ["#/components", "Components"]] as [string, string][])
-    : []),
+];
+const DEV_NAV: [string, string][] = [
+  ["#/demo", "Demo"],
+  ["#/record", "Record"],
+  ["#/curriculum", "Curriculum"],
+  ["#/lesson-preview", "Lesson preview"],
+  ["#/components", "Components"],
 ];
 
 export default function App() {
@@ -87,6 +91,18 @@ export default function App() {
           </span>
         )}
         <ReduceMotionToggle />
+        {import.meta.env.DEV && (
+          <details className="dev-menu">
+            <summary>Dev tools</summary>
+            <div className="dev-menu-list">
+              {DEV_NAV.map(([href, label]) => (
+                <a key={href} href={href} aria-current={hash === href ? "page" : undefined}>
+                  {label}
+                </a>
+              ))}
+            </div>
+          </details>
+        )}
       </nav>
       <main id="main" tabIndex={-1}>
         <PageTransition key={hash}>{screen(hash)}</PageTransition>

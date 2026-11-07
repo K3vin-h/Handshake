@@ -4,6 +4,9 @@
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
 
+/* The app is light only: shadcn's dark: classes apply only under an explicit .dark class, never from the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Handshake design tokens + styles. Plain CSS, no framework. Light theme (white, Radix blue + violet).
    Contrast for every text/background pair is checked by `node src/styles.contrast.mjs`. */
 :root {
@@ -110,7 +113,9 @@
 /* shadcn components carry data-slot. Without preflight we set the few defaults they expect. */
 @layer components {
   [data-slot] { border-color: var(--border); box-sizing: border-box; }
-  [data-slot="button"] { border-width: 0; border-bottom-width: 0; font-weight: 700; }
+  [data-slot="button"] { border-width: 0; border-bottom-width: 0; font-weight: 700; text-decoration: none; }
+  [data-slot="button"][data-variant="outline"] { color: var(--text); border-width: 2px; }
+  [data-slot="button"][data-variant="outline"]:hover { color: var(--text); }
   [data-slot="button"]:hover:not(:disabled), [data-slot="button"]:active:not(:disabled) { transform: none; }
 }
 
@@ -346,6 +351,47 @@ thead th { font-size: 13px; color: var(--muted); }
 .lesson-compare .lesson-grid > section { flex: 1 1 420px; }
 .lesson .status, .lesson .coach { margin-top: var(--space-3); }
 
+/* ---- Simple nav + dev menu ---- */
+.dev-menu { position: relative; }
+.dev-menu summary { list-style: none; cursor: pointer; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); border: 2px dashed var(--border-strong); color: var(--muted); font-weight: 700; }
+.dev-menu summary::-webkit-details-marker { display: none; }
+.dev-menu[open] summary { color: var(--text); background: var(--raised); }
+.dev-menu-list { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; display: flex; flex-direction: column; min-width: 180px; padding: var(--space-2); background: var(--card); border: 2px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-md); }
+.dev-menu-list a { border-radius: var(--radius-sm); }
+
+/* ---- Home: where-to-go tiles ---- */
+.feature-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-5); }
+.feature-tile { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4) var(--space-5); border: 2px solid var(--border); border-bottom-width: 4px; border-radius: var(--radius-lg); background: var(--card); color: var(--text); text-decoration: none; border-radius: var(--radius-lg); }
+a.feature-tile:hover { border-color: var(--brand-text); background: var(--tint); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.feature-tile strong { font-size: 1.1rem; }
+.feature-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--brand-text); }
+.feature-tile.is-locked { border-style: dashed; background: var(--bg); color: var(--muted); }
+.feature-tile { transition: transform var(--motion-fast) ease, box-shadow var(--motion-fast) ease, border-color var(--motion-fast) ease, background var(--motion-fast) ease; }
+
+/* ---- Progress: collapsible alphabet ---- */
+.disclosure > summary { cursor: pointer; font-weight: 800; font-size: 1.05rem; padding: var(--space-3) var(--space-4); border: 2px solid var(--border-strong); border-radius: var(--radius-md); list-style: none; display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; background: var(--card); }
+.disclosure > summary::-webkit-details-marker { display: none; }
+.disclosure > summary::before { content: "▸"; display: inline-block; transition: transform var(--motion-fast) ease; color: var(--brand-text); }
+.disclosure[open] > summary::before { transform: rotate(90deg); }
+.disclosure[open] > summary { background: var(--tint); border-color: var(--brand-text); margin-bottom: var(--space-3); }
+.disclosure > summary .muted { font-weight: 500; font-size: 14px; }
+
+/* ---- Lesson: camera on the left, coach panel on the side ---- */
+.lesson-head { display: block; }
+.lesson-head h1 { margin: 0 0 var(--space-3); }
+.lesson-main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--space-4); align-items: start; }
+.lesson-compare .lesson-main { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.lesson-left { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.coach-panel { position: sticky; top: 84px; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border-radius: var(--radius-lg); background: linear-gradient(180deg, var(--tint), var(--card) 55%); min-width: 0; }
+.panel-ring-row { display: flex; align-items: center; gap: var(--space-3); }
+.panel-target { margin: 0; font-size: 1.05rem; }
+.panel-target strong { font-size: 1.6rem; }
+.coach-panel .status, .coach-panel .coach { margin-top: 0; }
+@media (max-width: 860px) {
+  .lesson-main, .lesson-compare .lesson-main { grid-template-columns: minmax(0, 1fr); }
+  .coach-panel { position: static; }
+}
+
 /* ---- Camera + dev screens (Ryan's classes; colours via tokens) ---- */
 .camera { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #000; border-radius: var(--radius-lg); overflow: hidden; }
 .camera video, .camera canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
@@ -355,7 +401,7 @@ thead th { font-size: 13px; color: var(--muted); }
 .debug { margin-top: var(--space-4); padding: var(--space-3); border: 2px solid var(--border); border-radius: var(--radius-md); background: var(--card); }
 .debug label { display: flex; flex-direction: column; gap: var(--space-1); margin: var(--space-2) 0; font-size: 14px; }
 .debug label.check { flex-direction: row; align-items: center; }
-.hand3d { position: relative; width: 100%; border-radius: var(--radius-lg); background: var(--panel-light); overflow: hidden; touch-action: none; }
+.hand3d { position: relative; width: 100%; box-sizing: border-box; border-radius: var(--radius-lg); background: var(--panel-light); overflow: hidden; touch-action: none; }
 .hand3d.empty { display: grid; place-items: center; padding: var(--space-4); text-align: center; color: var(--on-panel-light); min-height: 200px; }
 .hand3d-bar { position: absolute; left: var(--space-2); right: var(--space-2); bottom: var(--space-2); display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--on-panel-light); }
 .check { display: flex; gap: 6px; align-items: center; font-size: 14px; margin-top: var(--space-2); }

@@ -36,11 +36,8 @@ export function LessonView(p: LessonViewProps) {
   return (
     <div className={`page lesson${p.sideBySide ? " lesson-compare" : ""}`}>
       <header className="lesson-head">
-        <div>
-          <p className="eyebrow">{p.stepLabel}</p>
-          <h1>{p.title}</h1>
-        </div>
-        <HoldRing progress={p.progress} label={`Hold progress for ${p.target}`} />
+        <p className="eyebrow">{p.stepLabel}</p>
+        <h1>{p.title}</h1>
       </header>
 
       {p.word && (
@@ -59,31 +56,41 @@ export function LessonView(p: LessonViewProps) {
         </ol>
       )}
 
-      <div className="lesson-grid">
-        {(p.showReference || p.sideBySide) && (
-          <section className="card" aria-label={p.sideBySide ? "Compare: reference vs your hand" : "Reference"}>
-            <h2 className="small-title">{p.sideBySide ? "Compare: reference vs your hand" : "Reference"}</h2>
-            {p.reference}
+      <div className="lesson-main">
+        <div className="lesson-left">
+          <section className="card lesson-camera" aria-label="Your camera">
+            <h2 className="small-title">Your hand</h2>
+            {p.camera}
           </section>
-        )}
-        <section className="card" aria-label="Your camera">
-          <h2 className="small-title">Your hand</h2>
-          {p.camera}
-        </section>
-      </div>
+          <div className="row">
+            {p.onSelfCheck && (
+              <button type="button" onClick={p.onSelfCheck}>
+                I signed it
+              </button>
+            )}
+            <button type="button" className={p.onSelfCheck ? "secondary" : p.actionLabel === "Continue" ? "" : "secondary"} onClick={p.onAction}>
+              {p.actionLabel}
+            </button>
+          </div>
+        </div>
 
-      <StatusMessage kind={kindOf(p.status)} label={false} message={p.status} />
-      <CoachTip instantTip={p.landmarkTip} coachText={p.coachTip || undefined} coachCached={p.coachCached} />
-
-      <div className="row">
-        {p.onSelfCheck && (
-          <button type="button" onClick={p.onSelfCheck}>
-            I signed it
-          </button>
-        )}
-        <button type="button" className={p.onSelfCheck ? "secondary" : p.actionLabel === "Continue" ? "" : "secondary"} onClick={p.onAction}>
-          {p.actionLabel}
-        </button>
+        {/* Side panel: hold progress, the live result, the coach, and the reference. Sticky on wide screens. */}
+        <aside className="card coach-panel" aria-label="Coach and reference">
+          <div className="panel-ring-row">
+            <HoldRing progress={p.progress} label={`Hold progress for ${p.target}`} size={84} />
+            <p className="panel-target">
+              Target <strong>{p.target}</strong>
+            </p>
+          </div>
+          <StatusMessage kind={kindOf(p.status)} label={false} message={p.status} />
+          <CoachTip instantTip={p.landmarkTip} coachText={p.coachTip || undefined} coachCached={p.coachCached} />
+          {(p.showReference || p.sideBySide) && (
+            <section aria-label={p.sideBySide ? "Compare: reference vs your hand" : "Reference"}>
+              <h2 className="small-title">{p.sideBySide ? "Compare: reference vs your hand" : "Reference"}</h2>
+              {p.reference}
+            </section>
+          )}
+        </aside>
       </div>
     </div>
   );
