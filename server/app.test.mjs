@@ -23,6 +23,12 @@ async function post(app, url, body) {
 const promptOf = (call) => call.contents[0].parts[0].text;
 const THUMB = { finger: "thumb", issue: "is too far from the index finger", code: "thumb:placement" };
 
+test("words: precache works without a key and is labelled cached", async () => {
+  const precache = { "words:LIY:L": { words: ["ILL"], cached: false } };
+  const out = await post(createApp({ precache }), "/api/words", { knownLetters: ["L", "I", "Y"], weakLetters: ["L"] });
+  assert.deepEqual(out, { words: ["ILL"], cached: true });
+});
+
 test("words: only known letters survive, weak letters first, schema enum = known letters", async () => {
   const ai = fakeAi({ words: [["B", "O", "Y"], ["L", "I", "L", "Y"], ["C", "A", "T"]] });
   const out = await post(createApp({ ai }), "/api/words", { knownLetters: ["L", "I", "Y", "B", "O"], weakLetters: ["L"] });

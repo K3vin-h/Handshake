@@ -4,7 +4,7 @@ import { celebrate } from "../components/celebrate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildCurriculum, flatLessons } from "../lib/curriculum";
-import { DEMO_PROFILE, loadProfile } from "../lib/profile";
+import { DEMO_PROFILE, loadProfile, refreshPracticeWords } from "../lib/profile";
 import { isUnlocked, loadProgress, nextLesson } from "../lib/progress";
 
 // Level-complete. The player records completion: visiting this route never awards XP or unlocks a lesson.
@@ -18,6 +18,10 @@ export function Complete({ lessonId }: { lessonId: string }) {
   const [units] = useState(() => buildCurriculum(loadProfile() ?? DEMO_PROFILE).filter((u) => ["u1", "u2"].includes(u.id)));
   const lesson = flatLessons(units).find((l) => l.id === lessonId);
   const done = !!lesson && progress.completed.includes(lessonId);
+
+  useEffect(() => {
+    if (done) void refreshPracticeWords(); // re-pick practice words around the learner's weakest letters
+  }, [lessonId, done]);
 
   useEffect(() => {
     heading.current?.focus();

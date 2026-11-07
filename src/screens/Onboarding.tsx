@@ -5,7 +5,7 @@ import { LiveCoverage } from "../components/LiveCoverage";
 import { LockedUnit } from "../components/LockedUnit";
 import { StatusMessage } from "../components/StatusMessage";
 import { buildCurriculum, type Personalization } from "../lib/curriculum";
-import { DEMO_PROFILE, loadProfile, saveProfile } from "../lib/profile";
+import { DEMO_PROFILE, loadProfile, refreshPracticeWords, saveProfile } from "../lib/profile";
 
 // Onboarding. Everything typed here stays in this browser (localStorage via saveProfile).
 // Nothing on this screen calls /api: names and the relationship never leave the device.
@@ -58,6 +58,7 @@ export function Onboarding() {
     setFieldErr({ you: "", them: "" });
     saveProfile({ userName: you.trim(), theirName: them.trim(), relationship, leftHanded });
     location.hash = "#/";
+    void refreshPracticeWords();
   }
 
   return (
@@ -109,7 +110,7 @@ export function Onboarding() {
 
           <div className="row">
             <button type="submit">Build my path</button>
-            <button type="button" className="secondary" onClick={() => { saveProfile(DEMO_PROFILE); location.hash = "#/"; }}>
+            <button type="button" className="secondary" onClick={() => { saveProfile(DEMO_PROFILE); location.hash = "#/"; void refreshPracticeWords(); }}>
               Use demo profile (Ryan → Lily)
             </button>
           </div>

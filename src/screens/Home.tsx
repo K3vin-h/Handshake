@@ -76,6 +76,11 @@ export function Home() {
             <span className="muted small">Locked until you finish the lessons before it</span>
           </div>
         ))}
+        <a className="feature-tile" href="#/stats">
+          <span className="feature-eyebrow">Stats</span>
+          <strong>Accuracy and your plan</strong>
+          <span className="muted small">Charts and today's practice plan</span>
+        </a>
         <a className="feature-tile" href="#/welcome">
           <span className="feature-eyebrow">Settings</span>
           <strong>Names and hand</strong>
