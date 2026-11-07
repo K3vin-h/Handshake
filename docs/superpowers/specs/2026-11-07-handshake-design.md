@@ -11,19 +11,21 @@ Pitch line: **"MediaPipe measures your hands, Gemini coaches you."** Gemini neve
 Persona: a hearing adult with a Deaf friend, relative or coworker. Demo: Ryan learning for Lily (coworker).
 
 ### Demo path (must work on stage)
-1. **Onboarding** (`#/welcome`): your name, who you're learning for (name, relationship), dominant hand, goal. Shows which letters of both names are practiceable now and which are "reference only, coming later". Names stay on the device.
-2. **Home** (`#/`): Duolingo-style trail from `buildCurriculum`, streak, XP bar, locked/stretch badges.
+1. **Onboarding** (`#/welcome`): your name, the name of who you're learning for, signing hand. No level or placement questions: everyone starts at lesson 1.1. Shows which letters of both names are practiceable now and which are "reference only, coming later". Names stay on the device.
+2. **Home** (`#/`): Duolingo-style trail from `buildCurriculum`, streak, XP bar, Level badge (`floor(xp / 100) + 1`; replays earn XP again; Level never affects unlocking), locked/stretch badges.
 3. **Lesson player** (`#/lesson/<id>`): reference (3D hand / image) beside the webcam, hold-progress ring, tip box. Instant landmark tip on a miss, Gemini tip added when it arrives. Confetti + XP on a match.
-4. **Complete** (`#/complete/<id>`): XP earned, message card (download PNG).
+4. **Complete** (`#/complete/<id>`): XP earned, next lesson, back to the path.
 5. **Progress** (`#/progress`): letters mastered, weak letters, weak fingers ("thumb placement is your most common issue"), streak.
 
-Demo lessons (`scope: "demo"`): 1.1–1.3 (your name), the Unit 2 families covering the practiceable letters, "Spell LILY", 3.1 HELLO/BYE, 3.2 MY/NAME + sentence `MY NAME fs:<you>`, scene 4.1.
+Demo lessons (`scope: "demo"`): 1.1–1.3 (your name), the Unit 2 families covering the practiceable letters, "Spell LILY" (after the last demo family), 3.1 HELLO/BYE, 3.2 MY/NAME + sentence `MY NAME fs:<you>`, scene 4.1.
 
 ### Practiceable set
 `PRACTICEABLE = A B C D F I L O V W Y` + handshapes `5` and `H` (needed by BYE and NAME).
 - J, Z: learn-only (they move). M N S T: added only if they hit the accuracy bar.
 - Any other letter in a name → a `learn` step marked "reference only, coming later"; no `practice`/`spell` grading on it. Spelling a word skips non-practiceable letters with a visible "(reference only)" tile.
-- Unit 2 demo families must cover all 11 letters: flat (B C O), point (D I L Y), fist (A), fingers (F V W). Other letters stay `stretch`.
+- Unit 2 demo families must cover all 11 letters: flat (B C O), point (D I L Y), fingers (F V W), fist (A). Other letters stay `stretch`.
+- Unit 2 is identical for everyone: every family lesson always exists with all its letters (letters Unit 1 already taught are practised again, not removed), and "Spell <them>" sits at one fixed place, right after the last demo family. Names change step content only, never lesson ids, order or scope.
+- A lesson with no graded letters (e.g. a name with only reference-only letters) completes through its Continue buttons.
 
 ### Wording and claims
 - UI says **"matches the reference"**, never "correct". Until a fluent signer has checked templates: "matches our recording".
@@ -31,13 +33,14 @@ Demo lessons (`scope: "demo"`): 1.1–1.3 (your name), the Unit 2 families cover
 
 ## 2. Rules (from the doc, binding on all groups)
 1. `getHandFeedback` (landmarks) is the truth. Gemini only rewords it and must not contradict it. Show the landmark tip first, then Gemini's.
-2. Gemini never sees names. It receives letters, relationship, sign ids and error codes only.
-3. All three endpoints use `responseSchema`; letter fields are constrained by an `enum` of allowed letters.
+2. Gemini never sees names, relationship or goal. Allowed prompt inputs: the target letter, structured landmark feedback (`finger`, `issue`, `code`, validated server-side), the repeat count, known/weak letters for `/api/words`, and a hand snapshot only if the H4 test passes.
+3. Both endpoints use `responseSchema`; letter fields are constrained by an `enum` of allowed letters.
 4. Any cached/pre-generated response returns `cached: true` and the UI labels it "cached".
-5. Personalization (profile, mistake history) stays in localStorage. The check is identical for everyone; personalization never lowers the pass threshold.
-6. Sound is never the only cue; confetti/animation respect `prefers-reduced-motion`; detections announced via `aria-live`.
-7. Gemini key only in `.env`. `npm run build` passes on main at every merge.
-8. Each person edits only their owned files; interface changes go through this spec + `CLAUDE.md`.
+5. Same baseline, Duolingo-style: no placement test, no skipping ahead. Every learner gets the same units in the same order (intro → alphabet → greetings and sentences → conversation) and the same unlock rule. Content differs only where it uses your names (Unit 1 letters, the word in "Spell <them>", the scene). Unit 2 never skips letters Unit 1 taught; they are practised again. Inside a lesson, only the practice words and the review pick adapt to your mistakes. Stretch lessons never gate `isUnlocked` or `nextLesson`. `#/lesson/<id>` for a locked lesson shows "Locked" instead of the player. "Skip" moves past a graded item without counting it as a match; the lesson still completes.
+6. Personalization (profile, mistake history) stays in localStorage. The check is identical for everyone; personalization never lowers the pass threshold.
+7. Sound is never the only cue; confetti/animation respect `prefers-reduced-motion`; detections announced via `aria-live`.
+8. Gemini key only in `.env`. `npm run build` passes on main at every merge.
+9. Each person edits only their owned files; interface changes go through this spec + `CLAUDE.md`.
 
 ## 3. Architecture
 
@@ -48,7 +51,7 @@ webcam → useHandTracking → useLetterCheck ─┬─ detection → LessonPlay
                                            └─ feedback[] (with codes) → landmark tip (instant)
                                                                        → recordMistake → repeat count
                                                                        → /api/coach {target, feedback, repeat} → Gemini tip
-Onboarding → practiceable letters of names → /api/path {letters, relationship, allowedWords} → wordPack + welcome template
+Onboarding → profile (names, hand) in localStorage → Home welcome = fixed template with names filled in locally
 Home/Progress ← buildCurriculum(personalization) + loadProgress + mistakes
 ```
 
@@ -91,14 +94,13 @@ loadMistakes() / saveMistakes(m)   // localStorage "handshake.mistakes.v1"
 
 ### Profile (`src/lib/profile.ts`, owner Group 3)
 ```ts
-type Profile = Personalization & { leftHanded: boolean; goal: string; welcome: string };
+type Profile = Personalization & { leftHanded: boolean };   // Personalization.relationship is optional (default pack)
+const WELCOME: string;   // uses {you}/{them}; fillNames(WELCOME, profile)
 loadProfile(): Profile | null; saveProfile(p)    // localStorage "handshake.profile.v1"
 ```
 
 ### Frontend → backend (owner Group 3)
 ```
-POST /api/path  { letters: string[], relationship, allowedWords: string[] }
-             → { wordPack: string[], welcome: string /* uses {you} and {them}; client fills names */, cached?: boolean }
 POST /api/coach { target, feedback: FingerFeedback[], repeat: number, snapshot?: string }
              → { tip: string, cached?: boolean }
              repeat 1: one short cue · 2: a different cue or comparison · 3+: UI also shows reference beside live hand
@@ -113,9 +115,9 @@ POST /api/words { knownLetters: string[], weakLetters: string[] }
 |---|---|---|---|
 | 1 · CV + integration | Ryan | `src/cv/`, `src/lib/mistakes.ts`, `RecordPage`, `LessonDemo`, `LessonPlayer`, `TokenRunner`, `training/`, `docs/test-log.md` | Reliable letters + signs, `useLetterCheck`, error codes, mistake memory, left-hand mode, H10 integration |
 | 2 · Design + frontend | Teammate A | Figma, `src/components/`, `src/screens/` (Home, Progress, Complete, LessonPreview), `styles.css`, `App.tsx` routes | 5 polished screens, XP/streak/confetti, reference images, scene chat UI, accessibility |
-| 3 · Gemini + backend + pitch | Teammate B | `server/`, `src/lib/api.ts`, `src/lib/profile.ts`, `src/lib/curriculum.ts`, `Onboarding.tsx`, `docs/notes.md` | 3 endpoints, onboarding, practice order, adaptive coach, cache, interviews, Devpost, slides, video |
+| 3 · Gemini + backend + pitch | Teammate B | `server/`, `src/lib/api.ts`, `src/lib/profile.ts`, `src/lib/curriculum.ts`, `Onboarding.tsx`, `docs/notes.md` | 2 endpoints (coach, words), onboarding, practice order, adaptive coach, cache, interviews, Devpost, slides, video |
 
-`progress.ts` is shared: Group 2 reads it; nobody changes its exports without telling the team.
+`progress.ts` is shared: Group 2 reads it; nobody changes its exports without telling the team. `docs/notes.md` is owned by Group 3 but append-only for everyone (Groups 1 and 2 log decisions and sources there).
 Seams: Group 2 builds `LessonView` and `SceneView` (presentational, in `src/components/`); Group 1 wires them inside `LessonPlayer`. The starter plan adds every route and an empty stub for every new file at H0.5, so nobody edits `App.tsx` for routing afterwards.
 
 ## 6. Roadmap: milestones follow the curriculum (hours from kickoff)
@@ -125,8 +127,8 @@ Work is built in curriculum order. Each milestone is a **playable vertical slice
 |---|---|---|
 | **M0 Foundation** | H0.5 | Starter plan: repo, stubs, routes, interfaces; everyone runs `npm run dev` |
 | **M1 Your name** (Unit 1: lessons 1.1–1.3) | H6 | Onboarding → Home (Unit 1) → learn/practise/spell your name with real recognition → landmark tip + Gemini coach → Complete. Letters: the practiceable letters of the user's name (RYAN → A, Y; R, N "reference only") |
-| **M2 Alphabet + their name** (Unit 2) | H10 | All 11 letters ≥ 80% · contrast + review steps · practice words from `/api/words` · "Spell LILY" · Progress screen · mistake memory + adaptive coach |
-| **M3 Greetings** (Unit 3: 3.1, 3.2) | H14 | `5` and `H` handshapes · HELLO, BYE, MY, NAME via SignChecker (≥ 4/5 tries, else cut rule) · sentence "MY NAME fs:<you>" · word pack from `/api/path` |
+| **M2 Alphabet + their name** (Unit 2) | H10 | All 11 letters + `5`, `H` ≥ 80% · contrast + review steps · practice words from `/api/words` · "Spell LILY" · Progress screen · mistake memory + adaptive coach · Gemini shown live once (recorded): a cue that changes on the repeated mistake, and a word drill led by a weak letter |
+| **M3 Greetings** (Unit 3: 3.1, 3.2) | H14 | HELLO, BYE, MY, NAME via SignChecker (≥ 4/5 tries, else cut rule) · sentence "MY NAME fs:<you>" |
 | **M4 Conversation** (Unit 4: scene 4.1) | H16 | Scene 4.1 chat UI plays end to end → **feature freeze** |
 | Ship | H16–H24 | Polish, accessibility notes, Devpost (H21), backup video, rehearsal ×3 (H23) |
 
@@ -134,7 +136,7 @@ Other doc checkpoints that still apply: **H3** Figma done · skeleton on webcam 
 
 ## 7. Cut rules
 - Letters not ≥ 80% by H8 → cut to L I Y B O V; demo name stays LILY.
-- Personalization (doc a–f) not done by H12 → keep mistake memory + practice order only.
+- Adaptive pieces not done by H12 → cut adaptive word selection and/or coach variation; keep mistake memory. Lesson order, baseline and unlock rules never change.
 - Signs not ≥ 4/5 by H14 → Units 3–4 become self-checked ("I signed it" button); scene 4.1 dropped from the stage demo.
 - Any screen unfinished at H16 → cut from demo path; Lesson player is the one that must work.
 - Gemini down → server mock/cached tips (labelled cached). Wifi down → cached model, hotspot, backup video.
@@ -147,4 +149,4 @@ Other doc checkpoints that still apply: **H3** Figma done · skeleton on webcam 
 - `npm run build` before every merge to main.
 
 ## 9. Out of scope (What's next)
-Reading-fingerspelling practice, facial grammar, two-handed auto-checking, rigged glTF hand (PLANS.md #7), n8n (decide at H12 only if core works), SignGemma (10-min check at kickoff only), Databricks (dropped).
+Placement test / level quiz, hearts, daily goal, leagues, Gemini-picked word pack (`/api/path`, removed: the stretch word-pack lessons use a fixed default pack). Reading-fingerspelling practice, facial grammar, two-handed auto-checking, rigged glTF hand (PLANS.md #7), n8n (decide at H12 only if core works), SignGemma (10-min check at kickoff only), Databricks (dropped).

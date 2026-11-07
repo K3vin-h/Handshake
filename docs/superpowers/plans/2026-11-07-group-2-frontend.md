@@ -10,7 +10,7 @@
 
 **Prerequisite:** starter plan merged. **Roadmap:** `2026-11-07-roadmap.md`. Work milestone by milestone, and don't start M(n+1) features before the M(n) gate passes.
 
-**Owns:** Figma, `src/components/` (except `Camera.tsx` and `HandModel3D.tsx`, which are shared; ask Ryan first), `src/screens/Home.tsx`, `Progress.tsx`, `Complete.tsx`, `LessonPreview.tsx`, `src/styles.css`, `src/App.tsx`, `public/reference/`.
+**Owns:** Figma, `src/components/` (except `Camera.tsx` and `HandModel3D.tsx`, which are shared; ask Ryan first), `src/screens/Home.tsx`, `Progress.tsx`, `Complete.tsx`, `LessonPreview.tsx`, `src/styles.css`, `src/App.tsx`, `public/reference/`, and the Tailwind root config (`vite.config.ts`, `tsconfig.json`, `components.json`). `package.json` is shared: announce dependency changes and merge them early so the other worktrees rebase once.
 
 ## Global Constraints
 - UI copy: "matches the reference", never "correct"; "Reference only, coming later" for letters outside `PRACTICEABLE`; label cached coach replies "cached".
@@ -51,7 +51,7 @@ export default defineConfig({
   server: { proxy: { "/api": "http://localhost:8787" } },
 });
 ```
-`tsconfig.json` compilerOptions, add: `"baseUrl": ".", "paths": { "@/*": ["./src/*"] }`.
+`tsconfig.json` compilerOptions, add: `"paths": { "@/*": ["./src/*"] }` (no `baseUrl`: TypeScript 7 removed it, and `paths` resolves relative to the tsconfig).
 Top of `src/styles.css`, add: `@import "tailwindcss";`
 If `npm install` reports a peer-dependency conflict with Vite 8, stop: keep plain CSS with the Figma tokens in `:root` and skip Step 2. Note it in `docs/notes.md` → Decisions.
 - [ ] **Step 2: shadcn**
@@ -66,7 +66,7 @@ Expected: `components.json`, `src/components/ui/button.tsx` etc., and `src/lib/u
 
 ### Task 3: LessonView + fake-data preview
 
-**Files:** Modify: `src/components/LessonView.tsx` (replace stub, same props). Create: `src/components/useFakeCheck.ts`, `src/screens/LessonPreview.tsx`. Modify: `src/App.tsx` (add `#/lesson-preview`).
+**Files:** Modify: `src/components/LessonView.tsx` (replace stub, same props). Create: `src/components/useFakeCheck.ts`. Modify: `src/screens/LessonPreview.tsx` (replace stub; the starter already routes `#/lesson-preview`).
 
 **Interfaces:**
 - Consumes: `LessonViewProps` (starter; unchanged).
@@ -139,7 +139,6 @@ export function LessonPreview() {
   );
 }
 ```
-In `App.tsx`, import it, then inside `screen()` add after the `demo` line: `if (name === "lesson-preview") return <LessonPreview />;`
 - [ ] **Step 3: Build the real `LessonView`** from the Figma Lesson screen, keeping `LessonViewProps` exactly. Required behaviour:
 ```tsx
 // Hold-progress ring (reuse in LessonView)
@@ -167,14 +166,16 @@ function Ring({ value }: { value: number }) {
 
 **Files:** Modify: `src/screens/Home.tsx` (replace stub).
 
-**Interfaces:** Consumes `buildCurriculum`, `Lesson`, `Unit`; `loadProgress`, `isUnlocked`, `nextLesson`; `loadProfile`, `DEMO_PROFILE`, `fillNames`.
+**Interfaces:** Consumes `buildCurriculum`, `Lesson`, `Unit`; `loadProgress`, `isUnlocked`, `nextLesson`; `loadProfile`, `DEMO_PROFILE`, `fillNames`, `WELCOME`.
+
+Everyone sees the same trail from 1.1 (spec §2 rule 5): no placement, no skip-ahead links, no "jump to unit".
 
 - [ ] **Step 1: Implement (structure + data; style it from Figma)**
 ```tsx
 import { useMemo } from "react";
 import { buildCurriculum } from "../lib/curriculum";
 import { isUnlocked, loadProgress, nextLesson } from "../lib/progress";
-import { DEMO_PROFILE, fillNames, loadProfile } from "../lib/profile";
+import { DEMO_PROFILE, WELCOME, fillNames, loadProfile } from "../lib/profile";
 
 const XP_PER_LEVEL = 100;
 
@@ -187,7 +188,7 @@ export function Home() {
 
   return (
     <main className="page">
-      <p>{fillNames(profile.welcome, profile)}</p>
+      <p>{fillNames(WELCOME, profile)}</p>
       <section aria-label="Your stats" className="row">
         <span className="chip">🔥 {p.streakDays}-day streak</span>
         <span className="chip">Level {level}</span>
@@ -274,7 +275,7 @@ export function celebrate() {
 - [ ] **Step 2: Verify.** Press D on `#/lesson-preview`: confetti appears and a short beep plays. Turn on OS "reduce motion": no confetti, the beep still plays and the status text still updates.
 - [ ] **Step 3: Commit** `git commit -am "feat(ui): confetti + sound, reduced-motion aware"`
 
-### Task 6: Complete screen + message card
+### Task 6: Complete screen
 
 **Files:** Modify: `src/screens/Complete.tsx` (replace stub).
 
@@ -282,7 +283,7 @@ export function celebrate() {
 
 - [ ] **Step 1: Implement**
 ```tsx
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { buildCurriculum, flatLessons } from "../lib/curriculum";
 import { loadProgress, nextLesson } from "../lib/progress";
 import { DEMO_PROFILE, loadProfile } from "../lib/profile";
@@ -292,43 +293,13 @@ export function Complete({ lessonId }: { lessonId: string }) {
   const units = useMemo(() => buildCurriculum(profile), [profile]);
   const lesson = flatLessons(units).find((l) => l.id === lessonId);
   const next = nextLesson(units, loadProgress());
-  const card = useRef<HTMLCanvasElement>(null);
-  const word = (profile.theirName || "LILY").toUpperCase().replace(/[^A-Z]/g, "");
   // M2: useEffect(() => { refreshPracticeWords(); }, []);
-
-  useEffect(() => {
-    const c = card.current;
-    if (!c) return;
-    const ctx = c.getContext("2d")!;
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, c.width, c.height);
-    ctx.fillStyle = "#0f172a";
-    ctx.font = "bold 28px Inter, system-ui, sans-serif";
-    ctx.fillText(`I'm learning to fingerspell your name, ${profile.theirName}!`, 24, 50, c.width - 48);
-    [...word].forEach((l, i) => {
-      const x = 24 + i * 76;
-      ctx.fillStyle = "#16a34a";
-      ctx.fillRect(x, 80, 64, 64);
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 36px Inter, system-ui, sans-serif";
-      ctx.fillText(l, x + 20, 125);
-    });
-  }, [word, profile.theirName]);
-
-  function download() {
-    const a = document.createElement("a");
-    a.href = card.current!.toDataURL("image/png");
-    a.download = `handshake-${word.toLowerCase()}.png`;
-    a.click();
-  }
 
   return (
     <main className="page">
       <h1 tabIndex={-1} ref={(h) => h?.focus()}>{lesson ? `${lesson.title}: done!` : "Lesson done!"}</h1>
       <p>+{lesson?.xp ?? 0} XP</p>
-      <canvas ref={card} width={640} height={170} role="img" aria-label={`Card: I'm learning to fingerspell your name, ${profile.theirName}`} />
       <div className="row">
-        <button onClick={download}>Download card</button>
         {next ? <a href={`#/lesson/${next.id}`}>Next: {next.title}</a> : null}
         <a href="#/">Back to your path</a>
       </div>
@@ -336,8 +307,8 @@ export function Complete({ lessonId }: { lessonId: string }) {
   );
 }
 ```
-- [ ] **Step 2: Verify** `npm run build`. `#/complete/1.1` shows the XP, the card and a PNG download; focus lands on the heading.
-- [ ] **Step 3: Commit** `git commit -am "feat(ui): Complete screen with message card"`
+- [ ] **Step 2: Verify** `npm run build`. `#/complete/1.1` shows the XP and the next lesson; focus lands on the heading.
+- [ ] **Step 3: Commit** `git commit -am "feat(ui): Complete screen"`
 
 ### ✅ Gate M1 (H6, same checklist in all plans)
 - [ ] Onboarding (or demo profile) → Home shows "Introduce yourself" with the learner's name.
@@ -410,14 +381,15 @@ export function ProgressScreen() {
 - [ ] **Step 4: Commit** `git add public/reference && git commit -m "assets: credited reference images"`
 
 ### Task 9: M2 wiring
-- [ ] **Step 1:** In `Complete.tsx`, enable the practice-words refresh once Group 3 has merged `refreshPracticeWords`. Add `import { refreshPracticeWords } from "../lib/profile";` and uncomment `useEffect(() => { refreshPracticeWords(); }, []);`.
+- [ ] **Step 1:** In `Complete.tsx`, enable the practice-words refresh once Group 3 has merged `refreshPracticeWords`. Add `useEffect` to the React import and `import { refreshPracticeWords } from "../lib/profile";`, then uncomment `useEffect(() => { refreshPracticeWords(); }, []);`.
 - [ ] **Step 2: Commit** `git commit -am "feat(ui): refresh practice words after each lesson"`
 
 ### ✅ Gate M2 (H10)
 - [ ] `docs/test-log.md`: every letter in `PRACTICEABLE` scores ≥ 8/10.
-- [ ] 2.1–2.4 play with contrast, practice words and review.
-- [ ] "Spell LILY" unlocks after the point family and plays.
+- [ ] 2.1–2.4 play with contrast, practice words and review; Unit 2 ids are the same for any names.
+- [ ] "Spell LILY" (2.5) unlocks after the last demo family and plays.
 - [ ] Same mistake twice → a different cue; 3rd time → reference beside the live hand.
+- [ ] Gemini shown live once and recorded: a coach cue that changes on the repeated mistake, and a word drill led by a weak letter (group-3 Task 7 Step 4).
 - [ ] Progress shows mastered letters, weak letters and weak fingers. Merge, push, standup.
 
 ---
@@ -433,7 +405,7 @@ export function ProgressScreen() {
 - [ ] **Step 3: Accessibility checklist.** Tick each item in `docs/notes.md` → Decisions with the date:
   - [ ] Success and error are always visual + text (play a lesson muted: everything is still clear).
   - [ ] Confetti and animation are off under `prefers-reduced-motion`.
-  - [ ] Detection results are announced: a screen reader reads "Matches the reference: L".
+  - [ ] Detection results are announced: a screen reader reads "Matches our recording: L" ("Matches the reference" once the signer has checked).
   - [ ] A keyboard-only run works: Onboarding → Home → lesson → Complete → Progress with Tab/Enter only, and focus is always visible.
   - [ ] Every text pair is ≥ 4.5:1 in a contrast checker (record the tool and the lowest ratio).
   - [ ] Left-handed mode: the reference is mirrored (`leftHanded` profile), and the layout doesn't assume a right hand.
