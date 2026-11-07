@@ -13,12 +13,14 @@ const ICON: Record<StatusKind, string> = { match: "✓", notyet: "!", info: "i",
  * Props
  * - kind: "match" | "notyet" | "info" | "error".
  * - message: the text. Empty or undefined renders an empty (but still mounted) live region.
+ * - label: replaces the default text label ("Matches the reference", "Not yet", ...). Pass false to hide it
+ *   when the message already says it (e.g. "Not matching L yet"); the icon and colour still pair with the text.
  * - urgent: use role="alert" (assertive) instead of role="status" (polite). Fix this value for the
  *   lifetime of the component; use it only for blocking errors such as "Camera blocked".
  * Never moves focus. Do not auto-hide it quickly.
  */
-export function StatusMessage(props: { kind: StatusKind; message?: string; urgent?: boolean }) {
-  const { kind, message, urgent } = props;
+export function StatusMessage(props: { kind: StatusKind; message?: string; urgent?: boolean; label?: string | false }) {
+  const { kind, message, urgent, label = LABEL[props.kind] } = props;
   return (
     <div
       className={`status status-${kind}${message ? "" : " is-empty"}`}
@@ -30,7 +32,8 @@ export function StatusMessage(props: { kind: StatusKind; message?: string; urgen
         <>
           <span className="status-icon" aria-hidden="true">{ICON[kind]}</span>
           <span>
-            <strong>{LABEL[kind]}:</strong> {message}
+            {label !== false && <strong>{label}: </strong>}
+            {message}
           </span>
         </>
       ) : null}

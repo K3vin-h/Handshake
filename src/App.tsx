@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import { LessonDemo } from "./screens/LessonDemo";
 import { RecordPage } from "./screens/RecordPage";
 import { CurriculumPreview } from "./screens/CurriculumPreview";
@@ -27,6 +27,19 @@ function screen(hash: string): ReactElement {
   return <Home />;
 }
 
+const TITLES: Record<string, string> = {
+  path: "Your path",
+  welcome: "Welcome",
+  lesson: "Lesson",
+  complete: "Lesson complete",
+  progress: "Progress",
+  demo: "Demo",
+  record: "Record",
+  curriculum: "Curriculum",
+  components: "Components",
+  "lesson-preview": "Lesson preview",
+};
+
 const NAV: [string, string][] = [
   ["#/", "Path"],
   ["#/progress", "Progress"],
@@ -43,6 +56,14 @@ export default function App() {
     addEventListener("hashchange", on);
     return () => removeEventListener("hashchange", on);
   }, []);
+  // Route change: update the tab title and move focus to <main> so keyboard and screen-reader users land on the new page.
+  const first = useRef(true);
+  useEffect(() => {
+    const name = hash.split("/")[1] || "path";
+    document.title = `${TITLES[name] ?? "Handshake"} · Handshake`;
+    if (first.current) first.current = false;
+    else document.getElementById("main")?.focus();
+  }, [hash]);
   return (
     <>
       <a className="skip-link" href="#main" onClick={(e) => { e.preventDefault(); document.getElementById("main")?.focus(); }}>
@@ -51,7 +72,7 @@ export default function App() {
       <nav aria-label="Main">
         <b>Handshake</b>
         {NAV.map(([href, label]) => (
-          <a key={href} href={href} aria-current={hash === href ? "page" : undefined}>
+          <a key={href} href={href} aria-current={hash === href || (href !== "#/" && hash.startsWith(`${href}/`)) ? "page" : undefined}>
             {label}
           </a>
         ))}

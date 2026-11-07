@@ -3,7 +3,7 @@
  * An optional "Coach" explanation (Gemini) appears below it once available.
  *
  * Props
- * - instantTip: short tip computed locally. Always visible.
+ * - instantTip: short tip computed locally. Shown first whenever it is not empty.
  * - coachText: the Gemini explanation, if any.
  * - coachCached: true when coachText is a saved reply, not a fresh one. It is then labelled "(cached)".
  * - coachLoading: shows "Coach is thinking…" in place of coachText.
@@ -20,9 +20,11 @@ export function CoachTip(props: {
   const { instantTip, coachText, coachCached, coachLoading, onAskCoach } = props;
   return (
     <section className="coach" aria-label="Coaching">
-      <p className="coach-instant">
-        <strong>Tip:</strong> {instantTip}
-      </p>
+      {instantTip && (
+        <p className="coach-instant">
+          <strong>Tip:</strong> {instantTip}
+        </p>
+      )}
       {coachLoading && <p className="coach-ai muted">Coach is thinking…</p>}
       {!coachLoading && coachText && (
         <p className="coach-ai">
