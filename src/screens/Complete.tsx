@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { StatusMessage } from "../components/StatusMessage";
-import { StreakXpChip } from "../components/StreakXpChip";
 import { celebrate } from "../components/celebrate";
 import { buildCurriculum, flatLessons } from "../lib/curriculum";
 import { DEMO_PROFILE, loadProfile } from "../lib/profile";
@@ -58,7 +57,6 @@ export function Complete({ lessonId }: { lessonId: string }) {
       <header className="hero">
         <p className="eyebrow">Lesson {lesson.id}</p>
         <h1 ref={heading} tabIndex={-1}>Lesson complete</h1>
-        <StreakXpChip streakDays={progress.streakDays} xp={progress.xp} />
       </header>
 
       <StatusMessage kind="match" label="Lesson complete" message={`You finished ${lesson.title} and earned ${lesson.xp} XP. Your total is ${progress.xp} XP.`} />

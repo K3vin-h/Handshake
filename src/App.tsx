@@ -10,6 +10,8 @@ import { Complete } from "./screens/Complete";
 import { ProgressScreen } from "./screens/Progress";
 import { LessonPreview } from "./screens/LessonPreview";
 import { loadProfile } from "./lib/profile";
+import { loadProgress } from "./lib/progress";
+import { StreakXpChip } from "./components/StreakXpChip";
 
 // Hash router: "#/lesson/1.1" → name "lesson", param "1.1".
 // Dev tools (record, curriculum, demo) work without a profile; everything else needs onboarding first.
@@ -40,13 +42,14 @@ const TITLES: Record<string, string> = {
   "lesson-preview": "Lesson preview",
 };
 
+// Player-facing links. The dev tools (demo, record, curriculum, components) only show in `npm run dev`,
+// never in the production build, but their routes keep working.
 const NAV: [string, string][] = [
   ["#/", "Path"],
   ["#/progress", "Progress"],
-  ["#/demo", "Demo"],
-  ["#/record", "Record"],
-  ["#/curriculum", "Curriculum"],
-  ["#/components", "Components"],
+  ...(import.meta.env.DEV
+    ? ([["#/demo", "Demo"], ["#/record", "Record"], ["#/curriculum", "Curriculum"], ["#/components", "Components"]] as [string, string][])
+    : []),
 ];
 
 export default function App() {
@@ -70,12 +73,17 @@ export default function App() {
         Skip to content
       </a>
       <nav aria-label="Main">
-        <b>Handshake</b>
+        <a className="brand" href="#/">Handshake</a>
         {NAV.map(([href, label]) => (
           <a key={href} href={href} aria-current={hash === href || (href !== "#/" && hash.startsWith(`${href}/`)) ? "page" : undefined}>
             {label}
           </a>
         ))}
+        {loadProfile() && (
+          <span className="nav-chips">
+            <StreakXpChip streakDays={loadProgress().streakDays} xp={loadProgress().xp} />
+          </span>
+        )}
       </nav>
       <main id="main" tabIndex={-1}>
         {screen(hash)}

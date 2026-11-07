@@ -1,5 +1,4 @@
 import { PRACTICEABLE, isPracticeable } from "../cv";
-import { StreakXpChip } from "../components/StreakXpChip";
 import { loadMistakes, weakFingers } from "../lib/mistakes";
 import { loadProgress } from "../lib/progress";
 
@@ -26,10 +25,7 @@ export function ProgressScreen() {
   return (
     <div className="page">
       <header className="hero">
-        <div className="row spread">
-          <p className="eyebrow">Progress</p>
-          <StreakXpChip streakDays={progress.streakDays} xp={progress.xp} />
-        </div>
+        <p className="eyebrow">Progress</p>
         <h1>Your progress</h1>
         <p className="lead">
           <label htmlFor="mastered-meter">

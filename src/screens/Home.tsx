@@ -2,8 +2,7 @@ import { useMemo } from "react";
 import { isPracticeable } from "../cv";
 import { LiveCoverage } from "../components/LiveCoverage";
 import { LockedUnit } from "../components/LockedUnit";
-import { PathNode, type PathNodeState } from "../components/PathNode";
-import { StreakXpChip } from "../components/StreakXpChip";
+import { UnitSection, type MapLesson } from "../components/PathMap";
 import { buildCurriculum } from "../lib/curriculum";
 import { DEMO_PROFILE, WELCOME, fillNames, loadProfile } from "../lib/profile";
 import { dueItems, isUnlocked, loadProgress, nextLesson, weakItems } from "../lib/progress";
@@ -19,7 +18,7 @@ export function Home() {
   const weak = weakItems(progress);
   const due = dueItems(progress).length;
 
-  const stateOf = (id: string): PathNodeState => {
+  const stateOf = (id: string): MapLesson["state"] => {
     if (progress.completed.includes(id)) return "done";
     if (next?.id === id) return "current";
     return isUnlocked(units, progress, id) ? "available" : "locked";
@@ -29,14 +28,11 @@ export function Home() {
   return (
     <div className="page home">
       <header className="hero">
-        <div className="row spread">
-          <p className="eyebrow">Your path</p>
-          <StreakXpChip streakDays={progress.streakDays} xp={progress.xp} />
-        </div>
+        <p className="eyebrow">Your path</p>
         <h1>{fillNames(WELCOME, profile)}</h1>
         {next ? (
           <div className="row">
-            <button type="button" onClick={() => open(next.id)}>
+            <button type="button" className="start-button" onClick={() => open(next.id)}>
               Continue: {next.id} {next.title}
             </button>
             <a className="link-button" href="#/progress">See progress</a>
@@ -46,29 +42,26 @@ export function Home() {
         )}
       </header>
 
-      <div className="home-grid">
-        <div className="stack">
+      <div className="home-layout">
+        <div className="units">
           {units.slice(0, 2).map((u, i) => (
-            <section key={u.id} className="card" aria-labelledby={`unit-${u.id}`}>
-              <h2 id={`unit-${u.id}`}>
-                Unit {i + 1} · {u.title}
-              </h2>
-              <p className="muted">{u.goal}</p>
-              <div className="stack">
-                {u.lessons
-                  .filter((l) => l.scope === "demo")
-                  .map((l) => (
-                    <PathNode key={l.id} id={l.id} title={l.title} state={stateOf(l.id)} xp={l.xp} onOpen={open} />
-                  ))}
-              </div>
-            </section>
+            <UnitSection
+              key={u.id}
+              index={i + 1}
+              title={u.title}
+              goal={u.goal}
+              lessons={u.lessons.filter((l) => l.scope === "demo").map((l) => ({ id: l.id, title: l.title, summary: l.summary, xp: l.xp, state: stateOf(l.id) }))}
+              onOpen={open}
+            />
           ))}
-          {units.slice(2, 4).map((u, i) => (
-            <LockedUnit key={u.id} title={`Unit ${i + 3} · ${u.title}`} />
-          ))}
+          <div className="locked-grid">
+            {units.slice(2, 4).map((u, i) => (
+              <LockedUnit key={u.id} title={`Unit ${i + 3} · ${u.title}`} />
+            ))}
+          </div>
         </div>
 
-        <aside className="stack" aria-label="Your letters">
+        <aside className="side" aria-label="Your letters and practice">
           <section className="card">
             <h2>Letters in {profile.theirName}</h2>
             <LiveCoverage name={profile.theirName} isLive={isPracticeable} />
