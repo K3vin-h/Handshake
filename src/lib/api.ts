@@ -7,7 +7,7 @@ async function post<T>(url: string, body: unknown): Promise<T> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(8000), // a stalled Gemini call rejects, so every caller's fallback runs
+    signal: AbortSignal.timeout(14000), // a stalled Gemini call rejects, so every caller's fallback runs
   });
   if (!res.ok) throw new Error(`${url} failed: ${res.status}`);
   return res.json();

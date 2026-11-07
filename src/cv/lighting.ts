@@ -9,13 +9,12 @@ export const BRIGHT_THRESHOLD = 225;
 
 export type LightingStatus = "ok" | "dark" | "bright";
 
-const probe = document.createElement("canvas");
-probe.width = 32;
-probe.height = 24;
-const probeCtx = probe.getContext("2d", { willReadFrequently: true })!;
+let probe: HTMLCanvasElement | null = null;
 
 /** Average luminance of a tiny downscaled copy of the frame (cheap). */
 export function measureBrightness(source: CanvasImageSource): number {
+  if (!probe) { probe = document.createElement("canvas"); probe.width = 32; probe.height = 24; }
+  const probeCtx = probe.getContext("2d", { willReadFrequently: true })!;
   probeCtx.drawImage(source, 0, 0, probe.width, probe.height);
   const d = probeCtx.getImageData(0, 0, probe.width, probe.height).data;
   let sum = 0;

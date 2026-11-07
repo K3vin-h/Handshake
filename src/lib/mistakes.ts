@@ -4,16 +4,19 @@ import type { ErrorCode } from "../cv/types";
 export type Mistakes = Record<string, Partial<Record<ErrorCode, { count: number; lastAt: number }>>>;
 
 const KEY = "handshake.mistakes.v1";
+let memory: Mistakes = {};
 
 export function loadMistakes(): Mistakes {
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? "{}");
+    const value = JSON.parse(localStorage.getItem(KEY) ?? "null");
+    return value && typeof value === "object" && !Array.isArray(value) ? value : memory;
   } catch {
-    return {};
+    return memory;
   }
 }
 
 export function saveMistakes(m: Mistakes) {
+  memory = m;
   try {
     localStorage.setItem(KEY, JSON.stringify(m));
   } catch {
