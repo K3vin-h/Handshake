@@ -7,7 +7,7 @@ import { SIGNS, PACK_WORDS } from "../cv/signs";
 //   "stretch" → same engine, only built/tested if time allows
 //
 // Unit 1  Introduce yourself      the letters of YOUR name → spell it → checkpoint
-// Unit 2  The alphabet            handshape families, easiest first; their name unlocks as soon as you know its letters
+// Unit 2  The alphabet            handshape families, easiest first; same ids for everyone, their name after the demo families
 // Unit 3  Greetings + sentences   whole signs (assisted: handshape + location + movement), ASL word order
 // Unit 4  Conversation            scripted scenes; Gemini fills small talk from the word pack
 
@@ -54,12 +54,14 @@ export type Personalization = {
 
 const MOVING = ["J", "Z"];
 
-/** Static letter families, easiest first. Letters already learned in Unit 1 are skipped. */
+/** Static letter families, easiest first. Same for every learner: Unit 1 letters are simply practised again. */
 const FAMILIES: { id: string; title: string; letters: string[]; scope: "demo" | "stretch" }[] = [
   { id: "flat", title: "Flat and curved", letters: ["B", "C", "O"], scope: "demo" },
   { id: "point", title: "Point and pinky", letters: ["D", "I", "L", "Y"], scope: "demo" },
-  { id: "fingers", title: "Two and three fingers", letters: ["U", "V", "W", "F", "K", "R"], scope: "stretch" },
-  { id: "fist", title: "The fist family", letters: ["A", "S", "E", "T", "M", "N"], scope: "stretch" },
+  { id: "fingers", title: "Two and three fingers", letters: ["V", "W", "F"], scope: "demo" },
+  { id: "fist", title: "The fist", letters: ["A"], scope: "demo" },
+  { id: "fingers2", title: "More finger shapes", letters: ["U", "K", "R"], scope: "stretch" },
+  { id: "fist2", title: "The fist family", letters: ["S", "E", "T", "M", "N"], scope: "stretch" },
   { id: "sideways", title: "Sideways shapes", letters: ["G", "H", "P", "Q", "X"], scope: "stretch" },
 ];
 
@@ -101,11 +103,9 @@ export function buildCurriculum(p: Personalization): Unit[] {
 
   // ---------- Unit 2: the alphabet ----------
   const unit2Lessons: Lesson[] = [];
-  let theirNameAdded = false;
   let n = 1;
   for (const fam of FAMILIES) {
-    const letters = fam.letters.filter((l) => !known.has(l));
-    if (!letters.length) continue;
+    const letters = fam.letters;
     const id = `2.${n++}`;
     unit2Lessons.push({
       id,
@@ -117,15 +117,14 @@ export function buildCurriculum(p: Personalization): Unit[] {
       teaches: letters,
       steps: [...letterSteps(letters, known), ...words(id).slice(0, 3).map((w) => ({ kind: "spell", word: w, showReference: false }) as Step), { kind: "review" }],
     });
-    // Their name as soon as every letter in it is known.
-    if (!theirNameAdded && [...them].every((l) => known.has(l) || MOVING.includes(l))) {
-      theirNameAdded = true;
+    // Their name: one fixed place for everyone, right after the last demo family.
+    if (fam.id === "fist") {
       const nid = `2.${n++}`;
       unit2Lessons.push({
         id: nid,
         title: `Spell ${them}`,
         summary: "Their name, plus word drills",
-        scope: fam.scope, // demo only if it lands among the demo letter groups
+        scope: "demo",
         grading: "auto",
         xp: 30,
         steps: [{ kind: "spell", word: them, showReference: true }, { kind: "spell", word: them, showReference: false }, ...words(nid).slice(0, 3).map((w) => ({ kind: "spell", word: w, showReference: false }) as Step)],
