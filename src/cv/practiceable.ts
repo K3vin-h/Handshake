@@ -1,3 +1,5 @@
-// Letters + handshapes the recognizer is trusted on. Group 1 removes any that fail the H8 accuracy test.
-export const PRACTICEABLE = ["A", "B", "C", "D", "F", "I", "L", "O", "V", "W", "Y", "5", "H"];
-export const isPracticeable = (l: string) => PRACTICEABLE.includes(l);
+// Human-gated live letters: add a letter only after the required >=8/10 tests
+// on a non-recorder and ASL-NOW hands are logged in docs/test-log.md.
+// Recording templates alone does not qualify a letter for live grading.
+export const PRACTICEABLE: string[] = [];
+export const isPracticeable = (letter: string) => PRACTICEABLE.includes(letter);

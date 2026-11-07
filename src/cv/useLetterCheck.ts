@@ -21,7 +21,7 @@ export type LetterCheckOptions = {
 };
 
 /** A hand touching the frame edge gives bad landmarks: treat it as no hand. */
-export const inFrame = (h: HandFrame) => h.landmarks.every((p) => p.x > 0.01 && p.x < 0.99 && p.y > 0.01 && p.y < 0.99);
+export const inFrame = (h: HandFrame) => h.landmarks.length === 21 && h.landmarks.every((p) => p.x > 0.01 && p.x < 0.99 && p.y > 0.01 && p.y < 0.99);
 
 // One recognizer for the whole app, so the MLP loads once.
 let engine: { templates: Template[]; recognizer: Recognizer } | null = null;
@@ -30,11 +30,13 @@ function getEngine() {
     const templates = loadTemplates();
     engine = { templates, recognizer: new Recognizer(templates) };
   }
+  engine.templates = loadTemplates();
+  engine.recognizer.setTemplates(engine.templates);
   return engine;
 }
 
 export function useLetterCheck(target: string, lessonLetters: string[], opts: LetterCheckOptions = {}) {
-  const { templates, recognizer } = getEngine();
+  const { templates, recognizer } = useMemo(getEngine, []);
   const [progress, setProgress] = useState(0);
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [missCount, setMissCount] = useState(0);
@@ -66,6 +68,8 @@ export function useLetterCheck(target: string, lessonLetters: string[], opts: Le
       setHint(raw && !hand ? "Move your whole hand into the frame" : "");
       if (o.current.enabled === false || !target) {
         hold.current.reset();
+        votes.current.reset();
+        setProgress(0);
         since.current = now;
         return;
       }
@@ -83,7 +87,7 @@ export function useLetterCheck(target: string, lessonLetters: string[], opts: Le
       const p = votes.current.push(recognizer.predict(features, candidates));
       setPrediction(p);
       o.current.onFrame?.(hand, p, now);
-      const d = hold.current.update(p, now);
+      const d = hold.current.update(p.letter === target ? p : NONE, now);
       setProgress(hold.current.progress(now));
       if (d?.letter === target) {
         reset();

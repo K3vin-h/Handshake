@@ -36,7 +36,9 @@ export function useHandTracking(onFrame: (hand: HandFrame | null, now: number) =
     (async () => {
       try {
         const lm = await getHandLandmarker();
+        if (cancelled) return;
         stream = await openCamera();
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
         const video = videoRef.current!;
         video.srcObject = stream;
         await video.play();
@@ -77,7 +79,10 @@ export function useHandTracking(onFrame: (hand: HandFrame | null, now: number) =
             setEnhancing(!!useEnhance);
 
             const raw = detectHand(lm, source, now, dominant.current);
-            const hand = smoother.smooth(raw, now);
+            const rawInFrame = raw && raw.landmarks.length === 21 && raw.landmarks.every((p) => p.x > 0.01 && p.x < 0.99 && p.y > 0.01 && p.y < 0.99);
+            const smooth = smoother.smooth(rawInFrame ? raw : null, now);
+            // Preserve invalid raw coordinates so the consumer can explain the frame-edge problem.
+            const hand = rawInFrame ? smooth : raw;
             const canvas = canvasRef.current;
             if (canvas) {
               canvas.width = video.videoWidth;
