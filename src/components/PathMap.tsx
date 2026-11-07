@@ -29,7 +29,7 @@ function useReveal<T extends HTMLElement>() {
             io.unobserve(en.target);
           }
         }),
-      { rootMargin: "0px 0px -8% 0px" },
+      { rootMargin: "0px" },
     );
     els.forEach((e) => io.observe(e));
     return () => io.disconnect();

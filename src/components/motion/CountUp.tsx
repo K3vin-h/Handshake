@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { animate, useReducedMotion } from "motion/react";
+import { animate } from "motion/react";
+import { useReduceMotion } from "./MotionProvider";
 
 /**
  * Number that counts from its previous value to `value`. The DOM text is always the final
@@ -8,7 +9,7 @@ import { animate, useReducedMotion } from "motion/react";
 export function CountUp({ value }: { value: number }) {
   const ref = useRef<HTMLSpanElement>(null);
   const prev = useRef(value);
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   useEffect(() => {
     const el = ref.current;
     if (!el) return;

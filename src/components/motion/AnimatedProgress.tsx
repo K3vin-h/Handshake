@@ -1,4 +1,5 @@
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
+import { useReduceMotion } from "./MotionProvider";
 import "./motion.css";
 
 /**
@@ -8,7 +9,7 @@ import "./motion.css";
 export function AnimatedProgress(props: { value: number; max: number; label: string; className?: string }) {
   const { value, max, label, className = "" } = props;
   const p = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   return (
     <div
       className={`m-progress ${className}`}

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
+import { useReduceMotion } from "./MotionProvider";
 
 /**
  * Short fade/slide-in when a screen mounts. Give it a `key` (the route) so it replays on navigation.
@@ -7,7 +8,7 @@ import { motion, useReducedMotion } from "motion/react";
  * Under reduced motion it renders with no animation at all.
  */
 export function PageTransition({ children }: { children: ReactNode }) {
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   return (
     <motion.div
       initial={reduce ? false : { opacity: 0, y: 8 }}

@@ -1,5 +1,6 @@
 import { useRef } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
+import { useReduceMotion } from "./motion/MotionProvider";
 
 export type PathNodeState = "locked" | "available" | "current" | "done";
 
@@ -19,7 +20,7 @@ const ICON: Record<PathNodeState, string> = { locked: "🔒", available: "○", 
  */
 export function PathNode(props: { id: string; title: string; state: PathNodeState; xp?: number; onOpen?: (id: string) => void }) {
   const { id, title, state, xp, onOpen } = props;
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const prev = useRef(state);
   const unlocked = prev.current === "locked" && state !== "locked";
   prev.current = state;

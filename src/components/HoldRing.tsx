@@ -1,4 +1,5 @@
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
+import { useReduceMotion } from "./motion/MotionProvider";
 
 /**
  * Circular hold progress with the percentage as text in the middle.
@@ -14,7 +15,7 @@ export function HoldRing(props: { progress: number; label?: string; size?: numbe
   const { progress, label = "Hold progress", size = 96 } = props;
   const p = Math.max(0, Math.min(1, progress));
   const pct = Math.round(p * 100);
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const r = 42;
   const c = 2 * Math.PI * r;
   return (

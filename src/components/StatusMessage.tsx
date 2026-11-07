@@ -1,4 +1,5 @@
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
+import { useReduceMotion } from "./motion/MotionProvider";
 
 export type StatusKind = "match" | "notyet" | "info" | "error";
 
@@ -23,7 +24,7 @@ const ICON: Record<StatusKind, string> = { match: "✓", notyet: "!", info: "i",
  */
 export function StatusMessage(props: { kind: StatusKind; message?: string; urgent?: boolean; label?: string | false }) {
   const { kind, message, urgent, label = LABEL[props.kind] } = props;
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   return (
     <div
       className={`status status-${kind}${message ? "" : " is-empty"}`}
