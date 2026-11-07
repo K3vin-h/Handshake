@@ -384,6 +384,7 @@ a.feature-tile:hover { border-color: var(--brand-text); background: var(--tint);
 .lesson-left { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .coach-panel { position: sticky; top: 84px; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border-radius: var(--radius-lg); background: linear-gradient(180deg, var(--tint), var(--card) 55%); min-width: 0; }
 .panel-ring-row { display: flex; align-items: center; gap: var(--space-3); }
+.demo-letters { margin: var(--space-3) 0 0; }
 .panel-target { margin: 0; font-size: 1.05rem; }
 .panel-target strong { font-size: 1.6rem; }
 .coach-panel .status, .coach-panel .coach { margin-top: 0; }

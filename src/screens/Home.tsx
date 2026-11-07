@@ -58,6 +58,11 @@ export function Home() {
             <span className="muted small">Lesson {next.id} · {next.xp} XP</span>
           </a>
         )}
+        <a className="feature-tile" href="#/camera-demo">
+          <span className="feature-eyebrow">Demo</span>
+          <strong>Try the camera and coach</strong>
+          <span className="muted small">One letter at a time. Not scored or saved.</span>
+        </a>
         <a className="feature-tile" href="#/progress">
           <span className="feature-eyebrow">Progress</span>
           <strong>Your alphabet</strong>
