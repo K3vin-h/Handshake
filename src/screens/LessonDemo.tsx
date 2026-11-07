@@ -27,6 +27,8 @@ const HandModel3D = lazy(() => import("../components/HandModel3D"));
 const TARGETS = ["L", "I", "L", "Y"];
 const LESSON_LETTERS = ["L", "I", "Y"];
 const MISS_MS = 4000;
+/** Letter picker for the non-recorder test (docs/test-log.md). A single letter competes against ALL of these. */
+const TEST_LETTERS = ["A", "B", "C", "D", "F", "H", "I", "L", "O", "V", "W", "Y", "5"];
 
 export function LessonDemo() {
   const templates = useMemo(loadTemplates, []);
@@ -41,13 +43,17 @@ export function LessonDemo() {
   const [maxDist, setMaxDist] = useState(MAX_DISTANCE);
   const [restrict, setRestrict] = useState(true);
   const [mirror3d, setMirror3d] = useState(false);
+  const [mode, setMode] = useState("LILY"); // "LILY" = the demo word, or one letter to test
+  const [tally, setTally] = useState({ hits: 0, misses: 0 });
+  const targets = mode === "LILY" ? TARGETS : [mode];
+  const lessonLetters = mode === "LILY" ? LESSON_LETTERS : TEST_LETTERS;
   const hold = useRef(new HoldConfirm(holdMs));
   const votes = useRef(new VoteBuffer(10));
   const startedAt = useRef(performance.now());
   const misses = useRef(0);
   const asking = useRef(false);
   const lastHand = useRef<HandFrame | null>(null);
-  const target = TARGETS[step % TARGETS.length];
+  const target = targets[step % targets.length];
   const pose = useMemo(() => meanPose3D(target, templates, mirror3d), [target, templates, mirror3d]);
 
   useEffect(() => {
@@ -69,7 +75,7 @@ export function LessonDemo() {
       return;
     }
     const features = extractFeatures(hand);
-    const raw = recognizer.predict(features, restrict ? candidatesFor(target, LESSON_LETTERS) : undefined);
+    const raw = recognizer.predict(features, restrict ? candidatesFor(target, lessonLetters) : undefined);
     const p = votes.current.push(raw);
     setPred(p);
     const detection = hold.current.update(p, now);
@@ -77,6 +83,7 @@ export function LessonDemo() {
 
     if (detection?.letter === target) {
       setXp((x) => x + 10);
+      setTally((t) => ({ ...t, hits: t.hits + 1 }));
       setTip("");
       misses.current = 0;
       hold.current.reset();
@@ -90,6 +97,7 @@ export function LessonDemo() {
     if (now - startedAt.current > MISS_MS) {
       startedAt.current = now;
       misses.current += 1;
+      setTally((t) => ({ ...t, misses: t.misses + 1 }));
       const mean = meanTemplate(target, templates);
       if (misses.current >= 2 && mean && !asking.current) {
         asking.current = true;
@@ -109,6 +117,36 @@ export function LessonDemo() {
       <div className="row spread">
         <h1>Sign: {target}</h1>
         <span className="chip ok">XP {xp}</span>
+      </div>
+      <div className="row">
+        <label>
+          Practise{" "}
+          <select
+            value={mode}
+            onChange={(e) => {
+              setMode(e.target.value);
+              setStep(0);
+              setTally({ hits: 0, misses: 0 });
+              setTip("");
+              misses.current = 0;
+              hold.current.reset();
+              votes.current.reset();
+            }}
+          >
+            <option value="LILY">L-I-L-Y (demo)</option>
+            {TEST_LETTERS.map((l) => (
+              <option key={l} value={l}>
+                {l === "5" ? "5 (open hand)" : l}
+              </option>
+            ))}
+          </select>
+        </label>
+        <span className="chip" role="status" aria-live="polite">
+          Matches {tally.hits} · Misses {tally.misses}
+        </span>
+        <button className="secondary" onClick={() => setTally({ hits: 0, misses: 0 })}>
+          Reset count
+        </button>
       </div>
       {noData && (
         <p className="warn">
