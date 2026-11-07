@@ -63,6 +63,12 @@ export function Complete({ lessonId }: { lessonId: string }) {
 
       <StatusMessage kind="match" label="Lesson complete" message={`You finished ${lesson.title} and earned ${lesson.xp} XP. Your total is ${progress.xp} XP.`} />
 
+      <dl className="stats">
+        <div><dt>Lesson XP</dt><dd>{lesson.xp}</dd></div>
+        <div><dt>Total XP</dt><dd>{progress.xp}</dd></div>
+        <div><dt>Practice streak</dt><dd>{progress.streakDays} {progress.streakDays === 1 ? "day" : "days"}</dd></div>
+      </dl>
+
       <section className="card">
         <h2>What next</h2>
         <div className="row">

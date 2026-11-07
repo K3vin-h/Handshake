@@ -214,6 +214,11 @@ thead th { font-size: 13px; color: var(--muted); }
 .finger-name { width: 5rem; font-weight: 600; }
 .finger-count { min-width: 8rem; color: var(--muted); }
 
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); margin: var(--space-4) 0; }
+.stats > div { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); box-shadow: var(--shadow-sm); }
+.stats dt { font-size: 13px; color: var(--muted); }
+.stats dd { margin: 0; font-size: 1.6rem; font-weight: 700; }
+
 /* Lesson screen */
 .lesson-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); margin-bottom: var(--space-3); }
 .lesson-head h1 { margin: 0; font-size: clamp(1.5rem, 4vw, 2.1rem); }
