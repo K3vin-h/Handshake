@@ -1,9 +1,41 @@
 import type { ErrorCode } from "../cv/types";
 
-// STUB (Group 1 replaces in group-1 Task 2). Per letter, per error code: how often and when last.
+// Mistake memory (doc item b): per letter, how often each error happened and when last. Browser only.
 export type Mistakes = Record<string, Partial<Record<ErrorCode, { count: number; lastAt: number }>>>;
-export const loadMistakes = (): Mistakes => ({});
-export const saveMistakes = (_m: Mistakes) => {};
-export const recordMistake = (m: Mistakes, _letter: string, _code: ErrorCode, _now = Date.now()): Mistakes => m;
-export const mistakeCount = (_m: Mistakes, _letter: string, _code: ErrorCode) => 0;
-export const weakFingers = (_m: Mistakes, _limit = 3): { finger: string; count: number }[] => [];
+
+const KEY = "handshake.mistakes.v1";
+
+export function loadMistakes(): Mistakes {
+  try {
+    return JSON.parse(localStorage.getItem(KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+export function saveMistakes(m: Mistakes) {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(m));
+  } catch {
+    /* session only */
+  }
+}
+
+export function recordMistake(m: Mistakes, letter: string, code: ErrorCode, now = Date.now()): Mistakes {
+  const count = (m[letter]?.[code]?.count ?? 0) + 1;
+  const next = { ...m, [letter]: { ...m[letter], [code]: { count, lastAt: now } } };
+  saveMistakes(next);
+  return next;
+}
+
+export const mistakeCount = (m: Mistakes, letter: string, code: ErrorCode) => m[letter]?.[code]?.count ?? 0;
+
+export function weakFingers(m: Mistakes, limit = 3) {
+  const by = new Map<string, number>();
+  for (const codes of Object.values(m))
+    for (const [code, s] of Object.entries(codes)) {
+      const finger = code.split(":")[0];
+      by.set(finger, (by.get(finger) ?? 0) + (s?.count ?? 0));
+    }
+  return [...by].map(([finger, count]) => ({ finger, count })).sort((a, b) => b.count - a.count).slice(0, limit);
+}
