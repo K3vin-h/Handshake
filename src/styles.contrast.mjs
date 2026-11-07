@@ -57,6 +57,8 @@ const pairs = [
   ["text on light 3D panel", rgb("on-panel-light"), rgb("panel-light"), 4.5],
   ["white text on camera message (#000)", toRgb("#ffffff"), toRgb("#000000"), 4.5],
   ["light-hint: white on 92% bg over white (worst case)", toRgb("#ffffff"), blend(rgb("bg"), 0.92, toRgb("#ffffff")), 4.5],
+  ["shadcn destructive text on --notyet", rgb("notyet-bg"), rgb("notyet"), 4.5],
+  ["shadcn secondary/muted text on raised", rgb("text"), rgb("raised"), 4.5],
   // non-text: borders, rings, focus
   ["focus ring on page (non-text)", rgb("focus"), rgb("bg"), 3],
   ["focus ring on card (non-text)", rgb("focus"), rgb("card"), 3],

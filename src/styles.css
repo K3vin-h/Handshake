@@ -1,3 +1,9 @@
+/* Tailwind v4 WITHOUT preflight (no reset), so existing screens keep their look.
+   Layer order: our legacy CSS sits below components and utilities, so shadcn/Tailwind classes win. */
+@layer theme, base, legacy, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
 /* Handshake design tokens + styles. Plain CSS, no framework. Dark theme.
    Contrast for every text/background pair is checked by `node src/styles.contrast.mjs`. */
 :root {
@@ -60,6 +66,54 @@
   background: var(--bg);
   color-scheme: dark;
 }
+
+/* shadcn/Tailwind names -> our tokens. The tokens above stay the single source of truth
+   (--brand, --match, --notyet, --reference ...); nothing is duplicated here. */
+@theme inline {
+  --font-sans: var(--font);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--card);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--card);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--brand);
+  --color-primary-foreground: var(--brand-ink);
+  --color-secondary: var(--raised);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--raised);
+  --color-muted-foreground: var(--muted);
+  --color-accent: var(--tint);
+  --color-accent-foreground: var(--text);
+  --color-destructive: var(--notyet);
+  --color-destructive-foreground: var(--notyet-bg);
+  --color-border: var(--border);
+  --color-input: var(--border-strong);
+  --color-ring: var(--focus);
+  --color-brand: var(--brand);
+  --color-brand-text: var(--brand-text);
+  --color-brand-2: var(--brand-2);
+  --color-brand-2-foreground: var(--brand-2-ink);
+  --color-match: var(--match);
+  --color-match-bg: var(--match-bg);
+  --color-notyet: var(--notyet);
+  --color-notyet-bg: var(--notyet-bg);
+  --color-reference: var(--reference);
+  --color-reference-bg: var(--reference-bg);
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 24px;
+}
+
+/* shadcn components carry data-slot. Without preflight we set the few defaults they expect. */
+@layer components {
+  [data-slot] { border-color: var(--border); box-sizing: border-box; }
+  [data-slot="button"] { border-width: 0; border-bottom-width: 0; font-weight: 700; }
+  [data-slot="button"]:hover:not(:disabled), [data-slot="button"]:active:not(:disabled) { transform: none; }
+}
+
+@layer legacy {
 
 body {
   margin: 0;
@@ -319,4 +373,5 @@ thead th { font-size: 13px; color: var(--muted); }
     scroll-behavior: auto !important;
   }
   .reveal { opacity: 1; transform: none; }
+}
 }
