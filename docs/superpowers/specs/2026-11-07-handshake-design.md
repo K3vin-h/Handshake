@@ -59,18 +59,27 @@ Home/Progress ← buildCurriculum(personalization) + loadProgress + mistakes
 type FingerFeedback = { finger: string; issue: string; code: ErrorCode };
 type ErrorCode = `${"thumb"|"index"|"middle"|"ring"|"pinky"}:${"curl"|"direction"|"placement"}`;
 const PRACTICEABLE: string[];            // letters + "5" + "H" that pass the accuracy bar
-useLetterCheck(target: string, lessonLetters: string[], opts?: { leftHanded?: boolean, holdMs?: number })
-  → { cam /* useHandTracking result, pass to <Camera> */, progress: 0..1, prediction: Prediction | null,
-      detection: SignDetection | null /* matched target this frame */, feedback: FingerFeedback[] /* after a miss */,
-      missCount: number, reset(): void }
+isPracticeable(letter: string): boolean;
+useLetterCheck(target: string, lessonLetters: string[], opts?: {
+    leftHanded?: boolean; holdMs?: number; enabled?: boolean;
+    onMatch?(d: SignDetection): void;                              // target held ~0.8 s
+    onMiss?(feedback: FingerFeedback[], missCount: number): void;  // every 4 s without a match
+    onFrame?(hand: HandFrame | null, pred: Prediction, now: number): void }) // for SignChecker
+  → { cam /* pass to <Camera {...cam}/> */, progress: 0..1, prediction, missCount, hint, templates, snapshot(), reset() }
 ```
-`useLetterCheck` wraps Recognizer → VoteBuffer → HoldConfirm → miss timer (4 s) → getHandFeedback. Left-handed mode mirrors landmarks before features (does not loosen any threshold).
+`useLetterCheck` wraps Recognizer → VoteBuffer → HoldConfirm → miss timer → getHandFeedback. `features.ts` already mirrors left hands, so left-handed mode means picking the dominant hand when two are visible (`numHands: 2`) and mirroring the 3D reference. It never loosens a threshold. A hand partly out of frame counts as no hand, and `hint` asks the learner to move it in.
 
 ### Frontend view contract (owner Group 2)
 ```ts
-<LessonView target reference progress tip landmarkTip cached status onSkip camera={<Camera …/>} />
+type LessonViewProps = { title; target; word?: { letters: string[]; index: number }; reference: ReactNode; showReference;
+  camera: ReactNode; progress; landmarkTip; coachTip; coachCached; sideBySide; status /* aria-live */; stepLabel;
+  actionLabel /* "Skip" | "Continue" */; onAction(); onSelfCheck?() };
+type SceneViewProps = { turns: { them: { gloss; english }; you: { tokens: string[]; english } }[];
+  turnIndex; tokenIndex; camera: ReactNode; prompt; onSelfCheck?() };
+celebrate(): void   // src/components/celebrate.ts: confetti (skipped under reduced motion) + short sound
 ```
-Presentational only. Until H10 Group 2 drives it with `useFakeCheck` (Space = detection, M = miss with canned feedback).
+Presentational only. Before H10, Group 2 drives them from `#/lesson-preview` with `useFakeCheck`: the D key counts as a detection and M as a miss.
+`SEND_SNAPSHOT` (in `api.ts`, owner Group 3) stays `false` unless the H4 snapshot test passes.
 
 ### Mistake memory (`src/lib/mistakes.ts`, owner Group 1; no imports so `node --test` runs it)
 ```ts
@@ -102,20 +111,26 @@ POST /api/words { knownLetters: string[], weakLetters: string[] }
 
 | Group | Owner | Owns | Delivers |
 |---|---|---|---|
-| 1 · CV + integration | Ryan | `src/cv/`, `src/lib/mistakes.ts`, `RecordPage`, `LessonDemo`, `LessonPlayer`, `training/`, `docs/test-log.md` | Reliable letters + signs, `useLetterCheck`, error codes, mistake memory, left-hand mode, H10 integration |
-| 2 · Design + frontend | Teammate A | Figma, `src/components/`, `src/screens/` (Home, Progress, Complete, scene UI), `styles.css`, `App.tsx` routes | 5 polished screens, XP/streak/confetti, reference images, scene chat UI, accessibility |
+| 1 · CV + integration | Ryan | `src/cv/`, `src/lib/mistakes.ts`, `RecordPage`, `LessonDemo`, `LessonPlayer`, `TokenRunner`, `training/`, `docs/test-log.md` | Reliable letters + signs, `useLetterCheck`, error codes, mistake memory, left-hand mode, H10 integration |
+| 2 · Design + frontend | Teammate A | Figma, `src/components/`, `src/screens/` (Home, Progress, Complete, LessonPreview), `styles.css`, `App.tsx` routes | 5 polished screens, XP/streak/confetti, reference images, scene chat UI, accessibility |
 | 3 · Gemini + backend + pitch | Teammate B | `server/`, `src/lib/api.ts`, `src/lib/profile.ts`, `src/lib/curriculum.ts`, `Onboarding.tsx`, `docs/notes.md` | 3 endpoints, onboarding, practice order, adaptive coach, cache, interviews, Devpost, slides, video |
 
 `progress.ts` is shared: Group 2 reads it; nobody changes its exports without telling the team.
 Seams: Group 2 builds `LessonView` and `SceneView` (presentational, in `src/components/`); Group 1 wires them inside `LessonPlayer`. The starter plan adds every route and an empty stub for every new file at H0.5, so nobody edits `App.tsx` for routing afterwards.
 
-## 6. Timeline and gates (hours from kickoff)
-- **H0.5** starter plan done: repo pushed, interfaces in `CLAUDE.md`, stubs compile, everyone runs `npm run dev`.
-- **H3** Figma done · skeleton on webcam · Gemini real reply · fluent signer lined up.
-- **H8** 11 letters ≥ 80% · screens on fake data · 3 endpoints + onboarding working.
-- **H10** integration: real sign → real screen → real coach.
-- **H14** signs HELLO, BYE, MY, NAME ≥ 4/5 tries, else cut (below).
-- **H16** feature freeze. **H21** Devpost submitted. **H23** demo rehearsed 3×.
+## 6. Roadmap: milestones follow the curriculum (hours from kickoff)
+Work is built in curriculum order. Each milestone is a **playable vertical slice**: all three groups deliver their part, merge, and demo it end to end before anyone starts the next milestone's features. Polish and pitch work can run alongside.
+
+| Milestone | Done by | Playable at the gate |
+|---|---|---|
+| **M0 Foundation** | H0.5 | Starter plan: repo, stubs, routes, interfaces; everyone runs `npm run dev` |
+| **M1 Your name** (Unit 1: lessons 1.1–1.3) | H6 | Onboarding → Home (Unit 1) → learn/practise/spell your name with real recognition → landmark tip + Gemini coach → Complete. Letters: the practiceable letters of the user's name (RYAN → A, Y; R, N "reference only") |
+| **M2 Alphabet + their name** (Unit 2) | H10 | All 11 letters ≥ 80% · contrast + review steps · practice words from `/api/words` · "Spell LILY" · Progress screen · mistake memory + adaptive coach |
+| **M3 Greetings** (Unit 3: 3.1, 3.2) | H14 | `5` and `H` handshapes · HELLO, BYE, MY, NAME via SignChecker (≥ 4/5 tries, else cut rule) · sentence "MY NAME fs:<you>" · word pack from `/api/path` |
+| **M4 Conversation** (Unit 4: scene 4.1) | H16 | Scene 4.1 chat UI plays end to end → **feature freeze** |
+| Ship | H16–H24 | Polish, accessibility notes, Devpost (H21), backup video, rehearsal ×3 (H23) |
+
+Other doc checkpoints that still apply: **H3** Figma done · skeleton on webcam · Gemini returns a real reply · fluent signer lined up. **H4** snapshot test. **H12** interviews done · n8n decision · personalization cut rule.
 
 ## 7. Cut rules
 - Letters not ≥ 80% by H8 → cut to L I Y B O V; demo name stays LILY.
