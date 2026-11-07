@@ -1,23 +1,22 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StatusMessage } from "../components/StatusMessage";
 import { StreakXpChip } from "../components/StreakXpChip";
 import { celebrate } from "../components/celebrate";
 import { buildCurriculum, flatLessons } from "../lib/curriculum";
 import { DEMO_PROFILE, loadProfile } from "../lib/profile";
-import { loadProgress, nextLesson } from "../lib/progress";
+import { isUnlocked, loadProgress, nextLesson } from "../lib/progress";
 
-// Level-complete. Focus moves to the heading on arrival; the result is also announced as text.
-// Confetti is skipped under prefers-reduced-motion (see celebrate()).
+// Level-complete. The player records completion: visiting this route never awards XP or unlocks a lesson.
+// Focus moves to the heading on arrival and the result is also shown as text. Confetti is skipped under
+// prefers-reduced-motion (see celebrate()). Only Units 1-2 are active, so only they are considered.
 
 export function Complete({ lessonId }: { lessonId: string }) {
-  const profile = loadProfile() ?? DEMO_PROFILE;
-  const units = useMemo(() => buildCurriculum(profile), []); // eslint-disable-line react-hooks/exhaustive-deps
-  const lesson = flatLessons(units).find((l) => l.id === lessonId);
-  const progress = loadProgress();
-  const next = nextLesson(units, progress);
-  const done = progress.completed.includes(lessonId);
   const heading = useRef<HTMLHeadingElement>(null);
   const celebrated = useRef(false);
+  const [progress] = useState(loadProgress);
+  const [units] = useState(() => buildCurriculum(loadProfile() ?? DEMO_PROFILE).filter((u) => ["u1", "u2"].includes(u.id)));
+  const lesson = flatLessons(units).find((l) => l.id === lessonId);
+  const done = !!lesson && progress.completed.includes(lessonId);
 
   useEffect(() => {
     heading.current?.focus();
@@ -25,41 +24,55 @@ export function Complete({ lessonId }: { lessonId: string }) {
       celebrated.current = true;
       celebrate();
     }
-  }, [done]);
+  }, [lessonId, done]);
 
   if (!lesson) {
     return (
       <div className="page">
-        <h1 ref={heading} tabIndex={-1}>Lesson not found</h1>
+        <h1 ref={heading} tabIndex={-1}>Lesson unavailable</h1>
         <a href="#/">Back to your path</a>
       </div>
     );
   }
 
+  if (!done) {
+    return (
+      <div className="page complete">
+        <header className="hero">
+          <p className="eyebrow">Lesson {lesson.id}</p>
+          <h1 ref={heading} tabIndex={-1}>Keep practising</h1>
+        </header>
+        <StatusMessage kind="info" message={`Finish ${lesson.title} to save its completion and earn XP.`} />
+        <div className="row">
+          {isUnlocked(units, progress, lessonId) && <a className="link-button primary" href={`#/lesson/${lessonId}`}>Return to lesson</a>}
+          <a className="link-button" href="#/">Back to your path</a>
+        </div>
+      </div>
+    );
+  }
+
+  const next = nextLesson(units, progress);
+  const nextOpen = next && isUnlocked(units, progress, next.id);
   return (
     <div className="page complete">
       <header className="hero">
         <p className="eyebrow">Lesson {lesson.id}</p>
-        <h1 ref={heading} tabIndex={-1}>{done ? `${lesson.title} complete` : `${lesson.title} not finished yet`}</h1>
+        <h1 ref={heading} tabIndex={-1}>Lesson complete</h1>
         <StreakXpChip streakDays={progress.streakDays} xp={progress.xp} />
       </header>
 
-      <StatusMessage
-        kind={done ? "match" : "info"}
-        label={done ? "Lesson complete" : "Note"}
-        message={done ? `You earned ${lesson.xp} XP. Your total is ${progress.xp} XP.` : "Finish every step of this lesson to earn its XP."}
-      />
+      <StatusMessage kind="match" label="Lesson complete" message={`You finished ${lesson.title} and earned ${lesson.xp} XP. Your total is ${progress.xp} XP.`} />
 
       <section className="card">
         <h2>What next</h2>
         <div className="row">
-          {next ? (
-            <a className="link-button primary" href={`#/lesson/${next.id}`}>Next: {next.id} {next.title}</a>
+          {nextOpen ? (
+            <a className="link-button primary" href={`#/lesson/${next.id}`}>Continue: {next.id} {next.title}</a>
           ) : (
-            <p>You have finished every lesson that is available right now.</p>
+            <p>You finished the current path. Greetings and conversations are coming later.</p>
           )}
           <a className="link-button" href="#/">Back to your path</a>
-          <a className="link-button" href="#/progress">See progress</a>
+          <a className="link-button" href="#/progress">View progress</a>
         </div>
       </section>
     </div>

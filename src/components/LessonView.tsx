@@ -60,7 +60,7 @@ export function LessonView(p: LessonViewProps) {
       )}
 
       <div className="lesson-grid">
-        {p.showReference && (
+        {(p.showReference || p.sideBySide) && (
           <section className="card" aria-label={p.sideBySide ? "Compare: reference vs your hand" : "Reference"}>
             <h2 className="small-title">{p.sideBySide ? "Compare: reference vs your hand" : "Reference"}</h2>
             {p.reference}
