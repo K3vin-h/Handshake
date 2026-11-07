@@ -126,7 +126,7 @@ ${style} Say what to move. Never say the sign is correct or incorrect. No emojis
     const ok = (w) => w.length >= 2 && [...w].every((c) => known.includes(c));
     const weakScore = (w) => [...w].filter((c) => weak.includes(c)).length;
     const fallback = { words: MOCK_WORDS.filter(ok).sort((a, b) => weakScore(b) - weakScore(a)).slice(0, 6), cached: true };
-    if (!ai || known.length < 2) return res.json(fallback);
+    if (known.length < 2) return res.json(fallback);
     try {
       const key = `words:${known.join("")}:${weak.join("")}`;
       const normalize = (out) => {
@@ -140,6 +140,7 @@ ${style} Say what to move. Never say the sign is correct or incorrect. No emojis
         try { return res.json({ ...normalize(cache.get(key)), cached: true }); }
         catch { cache.delete(key); }
       }
+      if (!ai) return res.json(fallback);
       const out = await cached(key, async () => normalize(await askJson(
         `List 6 real, common English words for fingerspelling practice, 3 to 5 letters each, using ONLY these letters: ${known.join(", ")}. Prefer words containing: ${weak.join(", ") || "any"}. Return each word as an array of single letters.`,
         { type: Type.OBJECT, properties: { words: { type: Type.ARRAY, items: { type: Type.ARRAY, items: { type: Type.STRING, enum: known } } } }, required: ["words"] },

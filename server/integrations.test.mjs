@@ -53,3 +53,16 @@ test("assembled API rate-limits malformed JSON before Gemini's global parser", a
     assert.equal(typeof (await s.post("/api/coach", { target: "L" })).body.tip, "string");
   } finally { await s.close(); }
 });
+
+test("disabled sponsor endpoints retain local planning and reject missing consent", async () => {
+  const s = await serve(app => registerIntegrations(app, {}));
+  const id = randomUUID();
+  try {
+    assert.equal((await s.post("/api/subscribe", { action: "subscribe", learnerId: id, contactEmail: "a@example.com" })).status, 400);
+    assert.deepEqual((await s.post("/api/subscribe", { action: "subscribe", learnerId: id, consent: true, contactEmail: "a@example.com" })).body,
+      { ok: false, reason: "disabled" });
+    const plan = await s.post("/api/plan", { learnerId: id, candidates: [{ id: "1.1", letters: ["L"] }], knownLetters: [] });
+    assert.equal(plan.body.source, "local");
+    assert.equal(plan.body.lessonId, "1.1");
+  } finally { await s.close(); }
+});
