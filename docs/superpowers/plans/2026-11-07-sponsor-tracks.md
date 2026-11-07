@@ -8,8 +8,8 @@
 **Tech stack:** Express 5, `pg`, Node 26 `node --test`, `@google/genai`, React 19 + TypeScript, Caddy + systemd, Databricks + MLflow, n8n.
 
 ## Context
-- **Merged and working today:** Vite + React app, `server/index.mjs` with `/api/path|coach|words`, `src/lib/{api,curriculum,progress}.ts`, `training/train.py`.
-- **Hard prerequisite (Task 0 checks it):** the starter plan and group-3 Task 2 are merged: `server/app.mjs` exports `createApp`, `src/lib/profile.ts` exports `loadProfile` and `DEMO_PROFILE`, `package.json` has `"test": "node --test ..."`, and `/api/path` no longer receives names.
+- **Merged and working today:** Vite + React app, `server/index.mjs` with `/api/path|coach|words` (`/api/path` is removed by the starter plan and group-3 Task 2), `src/lib/{api,curriculum,progress}.ts`, `training/train.py`.
+- **Hard prerequisite (Task 0 checks it):** the starter plan and group-3 Task 2 are merged: `server/app.mjs` exports `createApp`, `src/lib/profile.ts` exports `loadProfile` and `DEMO_PROFILE`, `package.json` has `"test": "node --test ..."`, and `/api/path` is removed (names never reach Gemini).
 - **Delivers:** the six units in the spec (U0–U11).
 - **Out of scope:** Auth0, Solana, Lovable, DeepSpace, Freebuff, hardware (spec → Track Coverage). `LessonPlayer` itself (plan 2).
 - **Real chain for every mutation here:** per-IP `rateLimit` (first, so junk requests can't flood us) → JSON body shape/regex validation (`server/validate.mjs`) → write/forward. There is no auth and no ownership check; the spec's Security section accepts that.
@@ -1018,6 +1018,12 @@ test("review lessons follow completion order, not curriculum order", () => {
   assert.deepEqual(req.candidates.map((c) => c.id), ["1.2", "1.1", "1.3"]);
 });
 
+test("stretch lessons are never picked as the next lesson", () => {
+  const mixed = [{ id: "u", title: "", goal: "", lessons: [lesson("2.1", "", []), { ...lesson("2.2", "", []), scope: "stretch" }, lesson("3.1", "", [])] }] as Unit[];
+  const req = buildPlanRequest(mixed, { completed: ["2.1"], items: {} }, [], ID)!;
+  assert.equal(req.candidates[0].id, "3.1");
+});
+
 test("returns at most 4 review lessons, never titles, and null with no lessons", () => {
   const many = [{ id: "u", title: "", goal: "", lessons: ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6"].map((id) => lesson(id, `Secret title ${id}`, [])) }] as Unit[];
   const req = buildPlanRequest(many, { completed: ["1.1", "1.2", "1.3", "1.4", "1.5"], items: {} }, [], ID)!;
@@ -1131,7 +1137,7 @@ export function lessonLetters(l: Lesson): string[] {
  */
 export function buildPlanRequest(units: Unit[], p: ProgressLike, weak: string[], learnerId: string): PlanRequest | null {
   const all = units.flatMap((u) => u.lessons);
-  const next = all.find((l) => !p.completed.includes(l.id));
+  const next = all.find((l) => l.scope === "demo" && !p.completed.includes(l.id)); // same as nextLesson: stretch lessons are never "next"
   const byId = new Map(all.map((l) => [l.id, l]));
   // p.completed is in completion order (progress.ts completeLesson appends), so "recent" = the end of it.
   const review = [...p.completed].reverse().map((id) => byId.get(id)).filter((l): l is Lesson => !!l).slice(0, MAX_REVIEW);
@@ -1148,7 +1154,7 @@ export function buildPlanRequest(units: Unit[], p: ProgressLike, weak: string[],
   };
 }
 ```
-- [ ] **Step 4: Run, confirm PASS** — same command → PASS (8 tests)
+- [ ] **Step 4: Run, confirm PASS** — same command → PASS (9 tests)
 - [ ] **Step 5: Extend `src/lib/api.ts`.** Append (the existing `post` stays):
 ```ts
 async function get<T>(url: string): Promise<T> {

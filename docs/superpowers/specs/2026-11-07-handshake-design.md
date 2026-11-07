@@ -11,7 +11,7 @@ Pitch line: **"MediaPipe measures your hands, Gemini coaches you."** Gemini neve
 Persona: a hearing adult with a Deaf friend, relative or coworker. Demo: Ryan learning for Lily (coworker).
 
 ### Demo path (must work on stage)
-1. **Onboarding** (`#/welcome`): your name, the name of who you're learning for, signing hand. No level or placement questions: everyone starts at lesson 1.1. Shows which letters of both names are practiceable now and which are "reference only, coming later". Names stay on the device.
+1. **Onboarding** (`#/welcome`): your name, the name of who you're learning for, signing hand. No level or placement questions: everyone starts at lesson 1.1. Shows which letters of both names are practiceable now and which are "reference only, coming later". Names stay on the device (they leave it only if the learner opts in to notifications on `#/stats`, see §10).
 2. **Home** (`#/`): Duolingo-style trail from `buildCurriculum`, streak, XP bar, Level badge (`floor(xp / 100) + 1`; replays earn XP again; Level never affects unlocking), locked/stretch badges.
 3. **Lesson player** (`#/lesson/<id>`): reference (3D hand / image) beside the webcam, hold-progress ring, tip box. Instant landmark tip on a miss, Gemini tip added when it arrives. Confetti + XP on a match.
 4. **Complete** (`#/complete/<id>`): XP earned, next lesson, back to the path.
@@ -33,7 +33,7 @@ Demo lessons (`scope: "demo"`): 1.1–1.3 (your name), the Unit 2 families cover
 
 ## 2. Rules (from the doc, binding on all groups)
 1. `getHandFeedback` (landmarks) is the truth. Gemini only rewords it and must not contradict it. Show the landmark tip first, then Gemini's.
-2. Gemini never sees names, relationship or goal. Allowed prompt inputs: the target letter, structured landmark feedback (`finger`, `issue`, `code`, validated server-side), the repeat count, known/weak letters for `/api/words`, and a hand snapshot only if the H4 test passes.
+2. Gemini never sees names, relationship or goal. Allowed prompt inputs: the target letter, structured landmark feedback (`finger`, `issue`, `code`, validated server-side), the repeat count, known/weak letters for `/api/words`, and a hand snapshot only if the H4 test passes. The Maritime planner agent (§10) gets the learner UUID, lesson ids and letters only.
 3. Both endpoints use `responseSchema`; letter fields are constrained by an `enum` of allowed letters.
 4. Any cached/pre-generated response returns `cached: true` and the UI labels it "cached".
 5. Same baseline, Duolingo-style: no placement test, no skipping ahead. Every learner gets the same units in the same order (intro → alphabet → greetings and sentences → conversation) and the same unlock rule. Content differs only where it uses your names (Unit 1 letters, the word in "Spell <them>", the scene). Unit 2 never skips letters Unit 1 taught; they are practised again. Inside a lesson, only the practice words and the review pick adapt to your mistakes. Stretch lessons never gate `isUnlocked` or `nextLesson`. `#/lesson/<id>` for a locked lesson shows "Locked" instead of the player. "Skip" moves past a graded item without counting it as a match; the lesson still completes.
@@ -132,7 +132,7 @@ Work is built in curriculum order. Each milestone is a **playable vertical slice
 | **M4 Conversation** (Unit 4: scene 4.1) | H16 | Scene 4.1 chat UI plays end to end → **feature freeze** |
 | Ship | H16–H24 | Polish, accessibility notes, Devpost (H21), backup video, rehearsal ×3 (H23) |
 
-Other doc checkpoints that still apply: **H3** Figma done · skeleton on webcam · Gemini returns a real reply · fluent signer lined up. **H4** snapshot test. **H12** interviews done · n8n decision · personalization cut rule.
+Other doc checkpoints that still apply: **H3** Figma done · skeleton on webcam · Gemini returns a real reply · fluent signer lined up. **H4** snapshot test. **H12** interviews done · adaptive cut rule.
 
 ## 7. Cut rules
 - Letters not ≥ 80% by H8 → cut to L I Y B O V; demo name stays LILY.
@@ -149,4 +149,12 @@ Other doc checkpoints that still apply: **H3** Figma done · skeleton on webcam 
 - `npm run build` before every merge to main.
 
 ## 9. Out of scope (What's next)
-Placement test / level quiz, hearts, daily goal, leagues, Gemini-picked word pack (`/api/path`, removed: the stretch word-pack lessons use a fixed default pack). Reading-fingerspelling practice, facial grammar, two-handed auto-checking, rigged glTF hand (PLANS.md #7), n8n (decide at H12 only if core works), SignGemma (10-min check at kickoff only), Databricks (dropped).
+Placement test / level quiz, hearts, daily goal, leagues, Gemini-picked word pack (`/api/path`, removed: the stretch word-pack lessons use a fixed default pack). Reading-fingerspelling practice, facial grammar, two-handed auto-checking, rigged glTF hand (PLANS.md #7), SignGemma (10-min check at kickoff only).
+
+## 10. Sponsor tracks (built from their own spec and plan)
+`2026-11-07-sponsor-tracks-spec.md` and `plans/2026-11-07-sponsor-tracks.md` add Tiger Data, Databricks, Maritime, n8n, Vultr + GoDaddy and Entire. This spec only sets the boundaries:
+- Each integration is off until its env vars are set; with none set the app behaves as specified above.
+- They never change the baseline: same units, order and unlock rule for everyone. The planner agent's "next lesson" uses `nextLesson` (demo scope only).
+- New surface: `#/stats` (added by that plan, not by the starter plan) and the server routes `/api/attempts`, `/api/stats`, `/api/plan`, `/api/subscribe`, `/api/lesson-complete`, `/api/features`. `/api/coach` and `/api/words` do not move.
+- Privacy: names and emails go only to n8n, only after the consent checkbox. Gemini, the agent and Tiger Data never get names; `fs:` word items are never reported.
+- Build order: after the M2 gate. `LessonPlayer` call sites for `reportAttempt` / `reportLessonComplete` are its Task 13, once group-1 Task 6 exists. Claim a track on Devpost only if its unit shipped.

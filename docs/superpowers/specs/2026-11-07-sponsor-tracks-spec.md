@@ -29,7 +29,7 @@ Every track in the HackCamp list, with its status. "Opt in" means ticking it in 
 | Best Problem-Solution Fit (beginner) | Already targeted               | problem statement + solution description                                                                         |
 | Best Design                          | Already targeted               | Figma link                                                                                                       |
 | Community Impact                     | Already targeted               | impact statement (Deaf and hard-of-hearing communities); the n8n "notify the person" flow is the concrete impact |
-| Best Use of Gemini API               | Already targeted, strengthened | Gemini coach/words/path plus the Maritime planner agent (Gemini function calling)                                |
+| Best Use of Gemini API               | Already targeted, strengthened | Gemini coach/words plus the Maritime planner agent (Gemini function calling)                                |
 | Best Use of Tiger Data               | **New: U1, U2, U8**            | schema.sql + the accuracy chart                                                                                  |
 | Best Use of Vultr                    | **New: U9**                    | live URL on the Vultr VM                                                                                         |
 | Best Domain from GoDaddy Registry    | **New: U9**                    | the eligible domain, same URL                                                                                    |
@@ -52,7 +52,7 @@ Out-of-scope rows can be pulled in later as their own spec. Don't claim a track 
 - Moving `/api/coach` into the agent (it's on the latency-critical demo path).
 - Continuous aggregates, retention policies and dashboards beyond one chart.
 - Storing emails or names in our own database.
-- Changing the CLAUDE.md interfaces of `src/cv` or the existing three endpoints.
+- Changing the CLAUDE.md interfaces of `src/cv` or the existing two Gemini endpoints (`/api/coach`, `/api/words`).
 
 ## Users & Flows
 
@@ -64,9 +64,9 @@ Out-of-scope rows can be pulled in later as their own spec. Don't claim a track 
    - Empty (no DB or no attempts): "Practice a lesson to see your accuracy here."
    - Loading: skeleton text "Loading your stats…".
    - Error: same as empty, logged to the console.
-3. **Planner (Maritime).** On `#/stats` load the client builds `candidates`: the next lesson (the first not completed, so unlocked by `isUnlocked`) plus the 4 most recently completed lessons (review options),
+3. **Planner (Maritime).** On `#/stats` load the client builds `candidates`: the next lesson (same rule as `nextLesson`: the first **demo-scope** lesson not completed, so stretch lessons are never planned as "next") plus the 4 most recently completed lessons (review options, any `scope`),
 
-   next lesson first, any `scope`. Each is sent as `{ id, letters }` (`teaches`, or the letters of the lesson's words,
+   next lesson first. Each is sent as `{ id, letters }` (`teaches`, or the letters of the lesson's words,
     uppercase A–Z only; titles are never sent because they contain names). It also sends `knownLetters` (single letters the learner has attempted, or that completed lessons teach) and
     `weakLetters` (`weakItems` limited to single letters in `knownLetters`) → `POST /api/plan` → the server calls the Maritime agent (8 s timeout) →
     the agent calls `get_stats` and `get_practice_words({ focus })` → it returns `{ lessonId, focus, words, tip }`.
@@ -208,7 +208,7 @@ out, with reasons. This is an interpretation; widening it means a new spec.
 ## Assumptions
 
 - **Hard prerequisite:** the starter plan and group-3 Task 2 are merged first (`server/app.mjs` `createApp`, `npm test` = `node --test`,
-and `/api/path` no longer receives names). Today's `server/index.mjs:55` still sends names to Gemini, so deploying before that merge
+and `/api/path` is removed, per the Handshake spec §4). Today's `server/index.mjs` `/api/path` still sends names to Gemini, so deploying before that merge
 would break the privacy claim.
 - `npm test` globs are extended to include `agent/**/*.test.mjs`.
 - `LessonPlayer` (plan 2) calls `reportAttempt` / `reportLessonComplete` right after each `recordAttempt` / `completeLesson`. Until it exists

@@ -502,7 +502,7 @@ and import `refreshPracticeWords`. Lessons opened after it finishes include the 
 
 ### Task 8: H12 decisions
 - [ ] **Step 2: Interviews (H12, human).** Talk to 5+ people at the venue using the 5 questions in the doc, and log every answer in `docs/notes.md` → Interviews. Get ≥ 1 quote from someone who signs or is learning, and use it to replace `[NEEDS: quote]` in the problem statement. **Decision rule:** if ≥ 3 of 5 say production feedback isn't what beginners need, narrow the pitch to "your first handshapes and names" and lead What's next with reading practice.
-- [ ] **Step 3: n8n (H12).** Only if Gate M2 passed: decide whether to build session results → webhook → summary email. Log the decision in `docs/notes.md`. If yes, the summary contains letters and counts only, never names.
+- [ ] **Step 3: n8n.** No H12 go/no-go: it is built by the sponsor-tracks plan (Tasks 3 and 11). Names and emails reach n8n only after the consent checkbox on `#/stats`.
 - [ ] **Step 4: Adaptive cut (H12, spec §7).** If adaptive word selection or coach variation isn't working, cut it and keep mistake memory. Never cut the baseline, unlock rules, local profile or signing-hand support. Tell the team.
 
 ### ✅ Gate M3 (H14)
@@ -529,5 +529,5 @@ and import `refreshPracticeWords`. Lessons opened after it finishes include the 
 ### Task 10: Pitch and submission
 - [ ] **H18:** Slides: problem → person → demo → why different → impact → what's next (reading practice, whole signs via ASL-LEX / ASL Citizen, facial grammar, SignGemma if released).
 - [ ] **H20:** Record a backup demo video (≤ 4 min) of the full path: onboarding → name → LILY → HELLO → scene.
-- [ ] **H21:** Submit on Devpost: repo link, Figma link ("anyone can view"), video, and opt-ins for all 5 prizes. Work through the doc's submission checklist; claim only what shipped.
+- [ ] **H21:** Submit on Devpost: repo link, Figma link ("anyone can view"), video, and opt-ins for the 5 core prizes plus each sponsor track that shipped (`docs/devpost-tracks.md`). Work through the doc's submission checklist; claim only what shipped.
 - [ ] **H23:** Rehearse the pitch 3× with a timer. Prepare answers to likely judge questions: "Is it correct ASL?" (matches our reference, checked by a fluent signer), "Where do names go?" (nowhere: letters only), "Why not full signs?" (ASL Citizen baseline 63%), and "How is this different from Signiq?".
