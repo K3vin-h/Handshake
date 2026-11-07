@@ -26,7 +26,8 @@ export type Item =
 export function expand(steps: Step[], _progress: Progress): Item[] {
   const out: Item[] = [];
   for (const s of steps) {
-    if (s.kind === "learn") out.push({ kind: "learn", letter: s.letter, referenceOnly: !isPracticeable(s.letter) });
+    // Live letters: the practice step already shows the reference beside the camera, so no separate "learn" page.
+    if (s.kind === "learn") { if (!isPracticeable(s.letter)) out.push({ kind: "learn", letter: s.letter, referenceOnly: true }); }
     else if (s.kind === "practice") {
       const practiceStart = out.length;
       if (isPracticeable(s.letter)) for (let i = 0; i < s.reps; i++) out.push({ kind: "check", letter: s.letter, showReference: true, practiceStart });
