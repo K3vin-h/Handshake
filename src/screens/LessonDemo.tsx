@@ -154,6 +154,19 @@ export function LessonDemo() {
           <input type="checkbox" checked={restrict} onChange={(e) => setRestrict(e.target.checked)} />
           Only compare against this lesson's letters + look-alikes
         </label>
+        <button
+          className="secondary"
+          onClick={() => {
+            const s = cam.snapshot(lastHand.current);
+            if (!s) return;
+            const a = document.createElement("a");
+            a.href = s;
+            a.download = `snap-${target}-${Date.now()}.jpg`;
+            a.click();
+          }}
+        >
+          Download snapshot
+        </button>
       </details>
     </div>
   );
