@@ -1,20 +1,36 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { LessonDemo } from "./screens/LessonDemo";
 import { RecordPage } from "./screens/RecordPage";
 import { CurriculumPreview } from "./screens/CurriculumPreview";
 import { ComponentGallery } from "./screens/ComponentGallery";
+import { Home } from "./screens/Home";
+import { Onboarding } from "./screens/Onboarding";
+import { LessonPlayer } from "./screens/LessonPlayer";
+import { Complete } from "./screens/Complete";
+import { ProgressScreen } from "./screens/Progress";
+import { LessonPreview } from "./screens/LessonPreview";
+import { loadProfile } from "./lib/profile";
 
-// Tiny hash router so nobody has to set up react-router during the hackathon.
-// Add routes here: "#/onboarding", "#/path", "#/progress", ...
-const routes: Record<string, () => React.ReactElement> = {
-  "#/": LessonDemo,
-  "#/record": RecordPage,
-  "#/curriculum": CurriculumPreview,
-  "#/components": ComponentGallery,
-};
+// Hash router: "#/lesson/1.1" → name "lesson", param "1.1".
+// Dev tools (record, curriculum, demo) work without a profile; everything else needs onboarding first.
+function screen(hash: string): ReactElement {
+  const [, name = "", param = ""] = hash.split("/");
+  if (name === "record") return <RecordPage />;
+  if (name === "curriculum") return <CurriculumPreview />;
+  if (name === "demo") return <LessonDemo />;
+  if (name === "lesson-preview") return <LessonPreview />;
+  if (name === "components") return <ComponentGallery />;
+  if (name === "welcome" || !loadProfile()) return <Onboarding />;
+  if (name === "lesson") return <LessonPlayer key={param} lessonId={param} />;
+  if (name === "complete") return <Complete lessonId={param} />;
+  if (name === "progress") return <ProgressScreen />;
+  return <Home />;
+}
 
 const NAV: [string, string][] = [
-  ["#/", "Lesson"],
+  ["#/", "Path"],
+  ["#/progress", "Progress"],
+  ["#/demo", "Demo"],
   ["#/record", "Record"],
   ["#/curriculum", "Curriculum"],
   ["#/components", "Components"],
@@ -27,7 +43,6 @@ export default function App() {
     addEventListener("hashchange", on);
     return () => removeEventListener("hashchange", on);
   }, []);
-  const Screen = routes[hash] ?? LessonDemo;
   return (
     <>
       <a className="skip-link" href="#main" onClick={(e) => { e.preventDefault(); document.getElementById("main")?.focus(); }}>
@@ -42,7 +57,7 @@ export default function App() {
         ))}
       </nav>
       <main id="main" tabIndex={-1}>
-        <Screen />
+        {screen(hash)}
       </main>
     </>
   );

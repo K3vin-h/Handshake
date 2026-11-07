@@ -2,14 +2,16 @@
 
 ASL learning app built around one person you want to talk to. Path: your own name → the alphabet →
 greetings and sentences → a conversation with them. The webcam checks your signing live (MediaPipe),
-and Gemini coaches mistakes and personalizes the path. Implementation plans: see PLANS.md.
+and Gemini coaches mistakes and personalizes the path. Spec, roadmap and plans: `docs/superpowers/` (start with `plans/2026-11-07-roadmap.md`).
 
 ## Pitch in one line
-"MediaPipe sees your hands, Gemini understands your mistakes."
+"MediaPipe measures your hands, Gemini coaches you." Gemini never judges signs.
 
 ## Prizes we're targeting
 Beginner Overall (auto), Best Problem-Solution Fit, Community Impact, Best Design (needs Figma link),
 Most Accessible Design (needs Figma + accessibility notes), Best Use of Gemini API.
+Sponsor/MLH: Tiger Data, Vultr, GoDaddy Registry domain, Databricks, Maritime, n8n, Entire. Spec:
+docs/superpowers/specs/2026-11-07-sponsor-tracks-spec.md. Plan: docs/superpowers/plans/2026-11-07-sponsor-tracks.md.
 
 ## Stack
 - React 19 + TypeScript + Vite (frontend), plain CSS for now → Tailwind/shadcn later
@@ -21,41 +23,79 @@ Most Accessible Design (needs Figma + accessibility notes), Best Use of Gemini A
 - Express server (`server/index.mjs`) proxies Gemini via @google/genai. API key lives in `.env` only.
 - Run everything: `npm run dev` → web on :5173, API on :8787 (Vite proxies /api)
 
-## Ownership (only edit your own folders; ask before touching others)
-| Person | Owns |
-|---|---|
-| Ryan: CV + integration | `src/cv/`, `src/screens/RecordPage.tsx`, `src/screens/LessonDemo.tsx` |
-| Teammate A: design + frontend | Figma, `src/screens/*` (other screens), `src/components/`, `src/styles.css` |
-| Teammate B: Gemini + backend + pitch | `server/`, `src/lib/api.ts`, onboarding screen, Devpost |
+## Ownership (only edit your own files; ask before touching others)
+| Group | Owner | Owns | Delivers |
+|---|---|---|---|
+| 1 · CV + integration | Ryan | `src/cv/`, `src/lib/mistakes.ts`, `RecordPage`, `LessonDemo`, `LessonPlayer`, `TokenRunner`, `training/`, `docs/test-log.md` | Reliable letters + signs, `useLetterCheck`, error codes, mistake memory, left-hand mode, H10 integration |
+| 2 · Design + frontend | Teammate A | Figma, `src/components/`, `src/screens/` (Home, Progress, Complete, LessonPreview), `styles.css`, `App.tsx` routes | 5 polished screens, XP/streak/confetti, reference images, scene chat UI, accessibility |
+| 3 · Gemini + backend + pitch | Teammate B | `server/`, `src/lib/api.ts`, `src/lib/profile.ts`, `src/lib/curriculum.ts`, `Onboarding.tsx`, `docs/notes.md` | 2 endpoints (coach, words), onboarding, practice order, adaptive coach, cache, interviews, Devpost, slides, video |
 
-## Interfaces (do NOT change without telling the team)
+`progress.ts` is shared: Group 2 reads it; nobody changes its exports without telling the team. `docs/notes.md` is owned by Group 3 but append-only for everyone (Groups 1 and 2 log decisions and sources there).
+Seams: Group 2 builds `LessonView` and `SceneView` (presentational, in `src/components/`); Group 1 wires them inside `LessonPlayer`. The starter plan adds every route and an empty stub for every new file at H0.5, so nobody edits `App.tsx` for routing afterwards.
+
+## Rules (binding)
+- getHandFeedback (landmarks) is the truth; Gemini only rewords it. Landmark tip first, Gemini tip after.
+- Gemini never sees names: letters and error codes only. Names live in localStorage.
+- Same baseline, Duolingo-style: everyone starts at 1.1, no placement or level quiz, same units and unlock rule. Only practice words and review adapt.
+- Say "matches the reference", never "correct". Label any cached response "cached".
+- Sound is never the only cue; respect prefers-reduced-motion; announce detections via aria-live.
+- Personalization never lowers the pass threshold.
+- Specs and plans: docs/superpowers/specs and docs/superpowers/plans.
+
+## Interfaces (do NOT change without telling the team; source: spec §4)
+Starter interfaces (useHandTracking, Recognizer, VoteBuffer, HoldConfirm, buildCurriculum, progress.ts, SignChecker) are unchanged. Additions:
+
+### CV → frontend (`src/cv`, owner Group 1)
 ```ts
-// CV → Frontend (import from "src/cv")
-useHandTracking(onFrame: (hand: HandFrame | null, now: number) => void)
-  → { videoRef, canvasRef, status, error }
-extractFeatures(hand) → number[88]   (normalize() is an alias)
-new Recognizer(templates).predict(features, candidatesFor(target, lessonLetters))
-  → { letter: string | null, confidence: 0..1, distance, source: "mlp" | "knn" }
-new VoteBuffer(10).push(prediction) → smoothed prediction
-useHandTracking(...) also returns { lighting: "ok"|"dark"|"bright", enhancing, snapshot(hand) }
-new HoldConfirm(holdMs = 800, minConfidence = 0.6).update(pred, now) → SignDetection | null
-getHandFeedback(userFeatures, meanTemplate(letter)) → { finger, issue }[]
-
-// Curriculum + progress (src/lib)
-buildCurriculum({ userName, theirName, relationship, wordPack?, practiceWords? }) → Unit[] → Lesson[] → Step[]
-  Step kinds: learn | practice | contrast | spell | sign | sentence | review | scene
-  Lesson.scope: "demo" | "stretch";  Lesson.grading: "auto" (letters) | "assisted" (signs) | "self"
-loadProgress / recordAttempt / completeLesson / isUnlocked / nextLesson / dueItems / weakItems
-// Whole signs (src/cv/signs.ts)
-SIGNS[id] = { handshape, zone, movement, howTo, grading }; new SignChecker(SIGNS.HELLO).update(hand, pred, now)
-  → { stage: "handshape"|"position"|"movement"|"done", message }
-
-// Frontend → Backend
-POST /api/path   { userName, learningFor, relationship, allowedWords[] } → { wordPack: string[], welcome }
-POST /api/coach  { target, feedback[], snapshot? } → { tip: string }
-POST /api/words  { knownLetters[], weakLetters[] } → { words: string[] }
+type FingerFeedback = { finger: string; issue: string; code: ErrorCode };
+type ErrorCode = `${"thumb"|"index"|"middle"|"ring"|"pinky"}:${"curl"|"direction"|"placement"}`;
+const PRACTICEABLE: string[];            // letters + "5" + "H" that pass the accuracy bar
+isPracticeable(letter: string): boolean;
+useLetterCheck(target: string, lessonLetters: string[], opts?: {
+    leftHanded?: boolean; holdMs?: number; enabled?: boolean;
+    onMatch?(d: SignDetection): void;                              // target held ~0.8 s
+    onMiss?(feedback: FingerFeedback[], missCount: number): void;  // every 4 s without a match
+    onFrame?(hand: HandFrame | null, pred: Prediction, now: number): void }) // for SignChecker
+  → { cam /* pass to <Camera {...cam}/> */, progress: 0..1, prediction, missCount, hint, templates, snapshot(), reset() }
 ```
-The server returns mock data when GEMINI_API_KEY is missing, so the frontend never blocks on it.
+`useLetterCheck` wraps Recognizer → VoteBuffer → HoldConfirm → miss timer → getHandFeedback. `features.ts` already mirrors left hands, so left-handed mode means picking the dominant hand when two are visible (`numHands: 2`) and mirroring the 3D reference. It never loosens a threshold. A hand partly out of frame counts as no hand, and `hint` asks the learner to move it in.
+
+### Frontend view contract (owner Group 2)
+```ts
+type LessonViewProps = { title; target; word?: { letters: string[]; index: number }; reference: ReactNode; showReference;
+  camera: ReactNode; progress; landmarkTip; coachTip; coachCached; sideBySide; status /* aria-live */; stepLabel;
+  actionLabel /* "Skip" | "Continue" */; onAction(); onSelfCheck?() };
+type SceneViewProps = { turns: { them: { gloss; english }; you: { tokens: string[]; english } }[];
+  turnIndex; tokenIndex; camera: ReactNode; prompt; onSelfCheck?() };
+celebrate(): void   // src/components/celebrate.ts: confetti (skipped under reduced motion) + short sound
+```
+Presentational only. Before H10, Group 2 drives them from `#/lesson-preview` with `useFakeCheck`: the D key counts as a detection and M as a miss.
+`SEND_SNAPSHOT` (in `api.ts`, owner Group 3) stays `false` unless the H4 snapshot test passes.
+
+### Mistake memory (`src/lib/mistakes.ts`, owner Group 1; no imports so `node --test` runs it)
+```ts
+recordMistake(m: Mistakes, letter: string, code: ErrorCode, now?) → Mistakes   // count + lastAt
+mistakeCount(m, letter, code) → number
+weakFingers(m, limit?) → { finger, count }[]
+loadMistakes() / saveMistakes(m)   // localStorage "handshake.mistakes.v1"
+```
+
+### Profile (`src/lib/profile.ts`, owner Group 3)
+```ts
+type Profile = Personalization & { leftHanded: boolean };   // Personalization.relationship is optional (default pack)
+const WELCOME: string;   // uses {you}/{them}; fillNames(WELCOME, profile)
+loadProfile(): Profile | null; saveProfile(p)    // localStorage "handshake.profile.v1"
+```
+
+### Frontend → backend (owner Group 3)
+```
+POST /api/coach { target, feedback: FingerFeedback[], repeat: number, snapshot?: string }
+             → { tip: string, cached?: boolean }
+             repeat 1: one short cue · 2: a different cue or comparison · 3+: UI also shows reference beside live hand
+POST /api/words { knownLetters: string[], weakLetters: string[] }
+             → { words: string[], cached?: boolean }    // words built only from knownLetters, weak letters first
+```
+`snapshot` is accepted only if the H4 snapshot test passes (≥ 8/10 letter named, ≤ 1/10 contradicts landmarks); otherwise the field is ignored server-side and dropped client-side.
 
 ## How recognition works
 1. Webcam (720p, auto exposure) → brightness check; if dark, OpenCV.js CLAHE enhances the frame.
@@ -128,10 +168,18 @@ Problem Research · Technical Implementation · Design (UI/UX, accessibility) ·
 | Most Accessible Design (beginner only) | Figma link + accessibility considerations that match what the app actually does | Teammate A |
 | Best Design | Real Figma file matching the final app (the layouts canvas is not Figma); 1 font, 2 colours, 3 status colours | Teammate A |
 | Best Use of Gemini API | 3 endpoints with responseSchema; Gemini rewords feedback, never grades signs; explained on Devpost | Teammate B |
-| n8n (optional) | Only if the core works at H12: session results -> webhook -> summary email | Decide at H12 |
+| Best Use of Tiger Data | `attempts` hypertable + the #/stats chart; empty state when no DB; schema.sql in the repo | Sponsor plan T2, T7 |
+| Best Use of Vultr + Best Domain (GoDaddy Registry) | Live HTTPS URL on a Vultr VM at an eligible domain; the camera works on a phone | Sponsor plan T9 |
+| Best Use of Databricks | MLflow runs comparing 3 network sizes on the recognizer data + report.txt; exported model.json | Sponsor plan T10 |
+| Best Agent on Maritime | Practice-planner agent deployed on Maritime, demo clip, local fallback when it is down | Sponsor plan T8 |
+| Best Use of Entire | Repo + sessions on Entire, one screenshot each of Sessions, Graph, Brain | Sponsor plan T12 |
+| n8n | Built behind the consent form and env vars (lesson-complete message to the person you learn for + weekly recap). Only demoed if the core works at H12. | Sponsor plan T3, T11 |
 
 ## Privacy rules
-- Learner profile, names and mistake history stay in the browser (localStorage).
+- Learner profile, names and mistake history stay in the browser (localStorage). Two opt-in exceptions, both off unless env vars are set:
+  - Tiger Data receives per-attempt rows: letter or sign id, pass/fail, error codes, an anonymous random id. Never names or emails.
+  - n8n receives first names and emails ONLY after the user ticks the consent checkbox on #/stats, and can be stopped there. Names and emails never go to Gemini, Maritime or Tiger Data.
+  - The Devpost must say both, plus the known risk: anyone holding a learner id could trigger emails to that learner's saved contact.
 - Gemini receives letters and error codes only. Never names, never video.
 - A webcam snapshot goes to Gemini ONLY if it passed the H4 test (names the intended letter in 8/10, contradicts the landmarks at most 1/10). If kept, the Devpost says a photo is sent to Google's API.
 - Hand snapshots (e.g. the "download card") stay in the browser or are cut.
@@ -155,7 +203,7 @@ Problem Research · Technical Implementation · Design (UI/UX, accessibility) ·
 - Never say "works". End every task with: Tested (what you ran, what you saw) / Not tested.
 
 ## Working rules
-- Stay in your own folders; a file outside your area is a question for the owner.
+- Stay in your own folders; a file outside your area is a question for the owner. Exception: the sponsor-tracks plan edits server/, src/lib/api.ts, src/App.tsx and training/train.py by agreement; tell the owner before you merge those.
 - Commit after each working step. Never merge or push to main unless asked; whoever merges runs the app first.
 - Do not change the interfaces in this file without telling the team.
 - The Gemini key lives only in .env (gitignored), never in frontend code or the repo.

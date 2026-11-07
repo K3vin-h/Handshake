@@ -94,7 +94,7 @@ export function LessonDemo() {
       if (misses.current >= 2 && mean && !asking.current) {
         asking.current = true;
         const feedback = getHandFeedback(features, mean);
-        getCoachTip(target, feedback, cam.snapshot(lastHand.current))
+        getCoachTip(target, feedback, misses.current, cam.snapshot(lastHand.current))
           .then((r) => setTip(r.tip))
           .catch(() => setTip("Couldn't reach the coach. Compare your hand to the reference."))
           .finally(() => (asking.current = false));
