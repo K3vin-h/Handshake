@@ -15,9 +15,9 @@ test('onboarding offers names and signing hand; practice refresh sends only elig
   try {
     const { Onboarding } = await vite.ssrLoadModule('/src/screens/Onboarding.tsx');
     const html = renderToStaticMarkup(createElement(Onboarding));
-    assert.match(html, /Your name/);
-    assert.match(html, /Their name/);
-    assert.match(html, /Your signing hand/);
+    assert.match(html, /Your first name/);
+    assert.match(html, /Their first name/);
+    assert.match(html, /Dominant hand/);
     assert.match(html, /type="radio"/);
     const profile = await vite.ssrLoadModule('/src/lib/profile.ts');
     const { PRACTICEABLE } = await vite.ssrLoadModule('/src/cv/practiceable.ts');

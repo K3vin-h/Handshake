@@ -1,0 +1,21 @@
+/**
+ * Streak and XP as one chip. The numbers are text, so nothing depends on icon or colour.
+ *
+ * Props
+ * - streakDays: consecutive days practised (from loadProgress().streakDays).
+ * - xp: total XP (from loadProgress().xp).
+ */
+export function StreakXpChip(props: { streakDays: number; xp: number }) {
+  const { streakDays, xp } = props;
+  return (
+    <p className="streak-chip">
+      <span>
+        <strong>{streakDays}</strong> {streakDays === 1 ? "day" : "days"} streak
+      </span>
+      <span aria-hidden="true"> · </span>
+      <span>
+        <strong>{xp}</strong> XP
+      </span>
+    </p>
+  );
+}
