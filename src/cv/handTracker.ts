@@ -16,7 +16,7 @@ export function getHandLandmarker(): Promise<HandLandmarker> {
       return HandLandmarker.createFromOptions(vision, {
         baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
         runningMode: "VIDEO",
-        numHands: 1,
+        numHands: 2, // pick the dominant hand when two are visible
         minHandDetectionConfidence: 0.6,
         minTrackingConfidence: 0.5,
       });
@@ -25,11 +25,16 @@ export function getHandLandmarker(): Promise<HandLandmarker> {
   return landmarkerPromise;
 }
 
-/** Runs the model on the current video frame. Returns null when no hand is visible. */
-export function detectHand(lm: HandLandmarker, video: HTMLVideoElement | HTMLCanvasElement, now: number): HandFrame | null {
+/** MediaPipe's label for the signer's RIGHT hand on our unmirrored video. Verified on #/demo 2026-11-07: "Right". */
+export const RIGHT_HAND_LABEL: "Left" | "Right" = "Right";
+
+/** Runs the model on the current frame. With two hands visible, returns the signer's dominant hand. */
+export function detectHand(lm: HandLandmarker, video: HTMLVideoElement | HTMLCanvasElement, now: number, dominant: "left" | "right" = "right"): HandFrame | null {
   const result = lm.detectForVideo(video, now);
   if (!result.landmarks.length) return null;
-  const label = result.handedness[0]?.[0]?.categoryName === "Left" ? "Left" : "Right";
-  // worldLandmarks = true 3D positions in metres (origin near the hand's centre): better depth for the 3D viewer.
-  return { landmarks: result.landmarks[0], worldLandmarks: result.worldLandmarks?.[0], handedness: label };
+  const labels = result.handedness.map((h) => (h[0]?.categoryName === "Left" ? "Left" : "Right") as "Left" | "Right");
+  const want = dominant === "right" ? RIGHT_HAND_LABEL : RIGHT_HAND_LABEL === "Left" ? "Right" : "Left";
+  const i = Math.max(0, labels.indexOf(want));
+  // worldLandmarks = true 3D positions in metres: better depth for the 3D viewer.
+  return { landmarks: result.landmarks[i], worldLandmarks: result.worldLandmarks?.[i], handedness: labels[i] };
 }
