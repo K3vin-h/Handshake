@@ -1,4 +1,6 @@
 import { cn } from "@/lib/utils";
+import { motion } from "motion/react";
+import { useReduceMotion } from "./motion/MotionProvider";
 
 export type StatusKind = "match" | "notyet" | "info" | "error";
 
@@ -31,6 +33,7 @@ const STYLE: Record<StatusKind, string> = {
  */
 export function StatusMessage(props: { kind: StatusKind; message?: string; urgent?: boolean; label?: string | false }) {
   const { kind, message, urgent, label = LABEL[props.kind] } = props;
+  const reduce = useReduceMotion();
   return (
     <div
       className={cn("status", message ? cn("flex items-start gap-2 rounded-md border-2 px-4 py-3", STYLE[kind]) : "")}
@@ -40,9 +43,16 @@ export function StatusMessage(props: { kind: StatusKind; message?: string; urgen
     >
       {message ? (
         <>
-          <span className="inline-grid size-[1.4em] flex-none place-items-center rounded-full border-2 border-current text-[0.85em] font-extrabold" aria-hidden="true">
+          <motion.span
+            key={kind}
+            className="inline-grid size-[1.4em] flex-none place-items-center rounded-full border-2 border-current text-[0.85em] font-extrabold"
+            aria-hidden="true"
+            initial={reduce ? false : { scale: 0.4, rotate: kind === "match" ? -30 : 0 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 18 }}
+          >
             {ICON[kind]}
-          </span>
+          </motion.span>
           <span>
             {label !== false && <strong>{label}: </strong>}
             {message}

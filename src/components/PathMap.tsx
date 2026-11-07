@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import type { PathNodeState } from "./PathNode";
+import { AnimatedProgress } from "./motion/AnimatedProgress";
 
 // The curriculum as a winding path of glowing "platform" nodes, one section per unit.
 // Presentational only: Home maps buildCurriculum() + progress into these props.
@@ -31,7 +31,7 @@ function useReveal<T extends HTMLElement>() {
             io.unobserve(en.target);
           }
         }),
-      { rootMargin: "0px 0px -8% 0px" },
+      { rootMargin: "0px" },
     );
     els.forEach((e) => io.observe(e));
     return () => io.disconnect();
@@ -71,7 +71,7 @@ export function UnitSection(props: { index: number; title: string; goal: string;
           <span aria-hidden="true"> · </span>
           <span>{xp} XP</span>
         </p>
-        <Progress value={lessons.length ? (done / lessons.length) * 100 : 0} aria-label={`Unit ${index} progress`} />
+        <AnimatedProgress value={done} max={lessons.length} label={`Unit ${index} progress`} />
         <p className="muted small">
           {done} of {lessons.length} done
         </p>

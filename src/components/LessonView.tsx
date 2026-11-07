@@ -48,11 +48,8 @@ export function LessonView(p: LessonViewProps) {
         <progress className="lesson-progress" value={p.lessonProgress} max={1} aria-label={p.stepLabel} />
       )}
       <header className="lesson-head">
-        <div>
-          <p className="eyebrow">{p.stepLabel}</p>
-          <h1>{p.title}</h1>
-        </div>
-        <HoldRing progress={p.progress} label={`Hold progress for ${p.target}`} />
+        <p className="eyebrow">{p.stepLabel}</p>
+        <h1>{p.title}</h1>
       </header>
 
       {p.word && (
@@ -71,43 +68,51 @@ export function LessonView(p: LessonViewProps) {
         </ol>
       )}
 
-      <div className="lesson-grid">
-        {(p.showReference || p.sideBySide) && (
-          <section className="card" aria-label={p.sideBySide ? "Compare: reference vs your hand" : "Reference"}>
-            <h2 className="small-title">{p.sideBySide ? "Compare: reference vs your hand" : "Reference"}</h2>
-            {p.reference}
+      <div className="lesson-main">
+        <div className="lesson-left">
+          <section className="card lesson-camera" aria-label="Your camera">
+            <h2 className="small-title">Your hand</h2>
+            {p.camera}
           </section>
-        )}
-        <section className="card" aria-label="Your camera">
-          <h2 className="small-title">Your hand</h2>
-          {p.camera}
-        </section>
-      </div>
-
-      <div className={`lesson-footer ${p.feedback ?? ""}`}>
-        <StatusMessage kind={kindOf(p.status, p.feedback)} label={false} message={p.status} />
-        <CoachTip instantTip={p.landmarkTip} coachText={p.coachTip || undefined} coachCached={p.coachCached} />
-
-        <div className="row">
-          {p.onSelfCheck && (
-            <button type="button" onClick={p.onSelfCheck}>
-              I signed it
+          <div className="row">
+            {p.onSelfCheck && (
+              <button type="button" onClick={p.onSelfCheck}>
+                I signed it
+              </button>
+            )}
+            {p.onSkip && (
+              <button type="button" className="secondary" onClick={p.onSkip}>
+                Skip
+              </button>
+            )}
+            {p.onRetry && (
+              <button type="button" className="secondary" onClick={p.onRetry}>
+                Try again
+              </button>
+            )}
+            <button type="button" className={primary ? "" : "secondary"} onClick={p.onAction} disabled={p.actionDisabled}>
+              {p.actionLabel}
             </button>
-          )}
-          {p.onSkip && (
-            <button type="button" className="secondary" onClick={p.onSkip}>
-              Skip
-            </button>
-          )}
-          {p.onRetry && (
-            <button type="button" className="secondary" onClick={p.onRetry}>
-              Try again
-            </button>
-          )}
-          <button type="button" className={primary ? "" : "secondary"} onClick={p.onAction} disabled={p.actionDisabled}>
-            {p.actionLabel}
-          </button>
+          </div>
         </div>
+
+        {/* Side panel: hold progress, the live result, the coach, and the reference. Sticky on wide screens. */}
+        <aside className="card coach-panel" aria-label="Coach and reference">
+          <div className="panel-ring-row">
+            <HoldRing progress={p.progress} label={`Hold progress for ${p.target}`} size={84} />
+            <p className="panel-target">
+              Target <strong>{p.target}</strong>
+            </p>
+          </div>
+          <StatusMessage kind={kindOf(p.status, p.feedback)} label={false} message={p.status} />
+          <CoachTip instantTip={p.landmarkTip} coachText={p.coachTip || undefined} coachCached={p.coachCached} />
+          {(p.showReference || p.sideBySide) && (
+            <section aria-label={p.sideBySide ? "Compare: reference vs your hand" : "Reference"}>
+              <h2 className="small-title">{p.sideBySide ? "Compare: reference vs your hand" : "Reference"}</h2>
+              {p.reference}
+            </section>
+          )}
+        </aside>
       </div>
     </div>
   );
