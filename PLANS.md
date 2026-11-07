@@ -1,3 +1,5 @@
+> **Superseded** by `docs/superpowers/plans/` (starter + one plan per group). Kept below for reference only.
+
 # Handshake implementation plans
 
 Each plan is one Claude session in its own worktree: `claude --worktree <name>`, then paste the prompt.
