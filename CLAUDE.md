@@ -21,6 +21,10 @@ docs/superpowers/specs/2026-11-07-sponsor-tracks-spec.md. Plan: docs/superpowers
 - Accuracy helpers: One Euro filter (landmark smoothing), majority vote over 10 frames, lesson-restricted
   candidates + look-alikes, brightness check with OpenCV.js CLAHE in dark rooms, camera auto exposure/white balance
 - Express server (`server/index.mjs`) proxies Gemini via @google/genai. API key lives in `.env` only.
+- Optional, env-gated server pieces: `server/precache.json` (cached coach/word replies, labelled "cached"; mock
+  until a live run), Maritime planner agent in `agent/` behind `/api/plan` with a local fallback, n8n
+  notifications (`server/routes/notify.mjs`, `n8n/README.md`; consent first, double opt-in for the contact is
+  specified but not built), `#/stats` page, Vultr/Caddy deploy in `deploy/`.
 - Run everything: `npm run dev` → web on :5173, API on :8787 (Vite proxies /api)
 
 ## Ownership (only edit your own files; ask before touching others)
@@ -109,8 +113,9 @@ POST /api/words { knownLetters: string[], weakLetters: string[] }
 
 ## Curriculum (src/lib/curriculum.ts — preview at #/curriculum)
 - Unit 1 Introduce yourself: letters of YOUR name → spell it → checkpoint.
-- Unit 2 Alphabet by handshape family (flat · point · two/three fingers · fist · sideways), letters from
-  Unit 1 skipped; "Spell <their name>" appears as soon as its letters are known; J/Z self-checked; checkpoint.
+- Unit 2 Alphabet by handshape family, identical for every learner (same ids and order; Unit 1 letters are
+  simply practised again): 2.1 B C O · 2.2 D I L Y · 2.3 V W F · 2.4 A · 2.5 "Spell <their name>" (fixed slot
+  after the last demo family) · stretch families U K R / S E T M N / G H P Q X · J/Z self-checked · checkpoint.
 - Unit 3 Greetings + sentences: HELLO/BYE, MY NAME <fs>, polite words, questions (eyebrows), answers,
   a relationship word pack chosen by Gemini from SIGNS, checkpoint introduction.
 - Unit 4 Conversation: 4 scripted scenes; first hello → how are you → small talk → full conversation.
