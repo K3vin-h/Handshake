@@ -25,8 +25,8 @@ export function getHandLandmarker(): Promise<HandLandmarker> {
   return landmarkerPromise;
 }
 
-// Default from the CV plan for unmirrored input. A human must verify this on the demo camera.
-export const RIGHT_HAND_LABEL: "Left" | "Right" = "Left";
+// MediaPipe label for the signer’s right hand on unmirrored video; verified on #/demo 2026-11-07.
+export const RIGHT_HAND_LABEL: "Left" | "Right" = "Right";
 
 /** Runs the model on the current video frame. Returns null when no hand is visible. */
 export function detectHand(lm: HandLandmarker, video: HTMLVideoElement | HTMLCanvasElement, now: number, dominant: "left" | "right" = "right"): HandFrame | null {
