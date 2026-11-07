@@ -10,6 +10,8 @@ and Gemini coaches mistakes and personalizes the path. Spec, roadmap and plans: 
 ## Prizes we're targeting
 Beginner Overall (auto), Best Problem-Solution Fit, Community Impact, Best Design (needs Figma link),
 Most Accessible Design (needs Figma + accessibility notes), Best Use of Gemini API.
+Sponsor/MLH: Tiger Data, Vultr, GoDaddy Registry domain, Databricks, Maritime, n8n, Entire. Spec:
+docs/superpowers/specs/2026-11-07-sponsor-tracks-spec.md. Plan: docs/superpowers/plans/2026-11-07-sponsor-tracks.md.
 
 ## Stack
 - React 19 + TypeScript + Vite (frontend), plain CSS for now → Tailwind/shadcn later
@@ -166,10 +168,18 @@ Problem Research · Technical Implementation · Design (UI/UX, accessibility) ·
 | Most Accessible Design (beginner only) | Figma link + accessibility considerations that match what the app actually does | Teammate A |
 | Best Design | Real Figma file matching the final app (the layouts canvas is not Figma); 1 font, 2 colours, 3 status colours | Teammate A |
 | Best Use of Gemini API | 3 endpoints with responseSchema; Gemini rewords feedback, never grades signs; explained on Devpost | Teammate B |
-| n8n (optional) | Only if the core works at H12: session results -> webhook -> summary email | Decide at H12 |
+| Best Use of Tiger Data | `attempts` hypertable + the #/stats chart; empty state when no DB; schema.sql in the repo | Sponsor plan T2, T7 |
+| Best Use of Vultr + Best Domain (GoDaddy Registry) | Live HTTPS URL on a Vultr VM at an eligible domain; the camera works on a phone | Sponsor plan T9 |
+| Best Use of Databricks | MLflow runs comparing 3 network sizes on the recognizer data + report.txt; exported model.json | Sponsor plan T10 |
+| Best Agent on Maritime | Practice-planner agent deployed on Maritime, demo clip, local fallback when it is down | Sponsor plan T8 |
+| Best Use of Entire | Repo + sessions on Entire, one screenshot each of Sessions, Graph, Brain | Sponsor plan T12 |
+| n8n | Built behind the consent form and env vars (lesson-complete message to the person you learn for + weekly recap). Only demoed if the core works at H12. | Sponsor plan T3, T11 |
 
 ## Privacy rules
-- Learner profile, names and mistake history stay in the browser (localStorage).
+- Learner profile, names and mistake history stay in the browser (localStorage). Two opt-in exceptions, both off unless env vars are set:
+  - Tiger Data receives per-attempt rows: letter or sign id, pass/fail, error codes, an anonymous random id. Never names or emails.
+  - n8n receives first names and emails ONLY after the user ticks the consent checkbox on #/stats, and can be stopped there. Names and emails never go to Gemini, Maritime or Tiger Data.
+  - The Devpost must say both, plus the known risk: anyone holding a learner id could trigger emails to that learner's saved contact.
 - Gemini receives letters and error codes only. Never names, never video.
 - A webcam snapshot goes to Gemini ONLY if it passed the H4 test (names the intended letter in 8/10, contradicts the landmarks at most 1/10). If kept, the Devpost says a photo is sent to Google's API.
 - Hand snapshots (e.g. the "download card") stay in the browser or are cut.
@@ -193,7 +203,7 @@ Problem Research · Technical Implementation · Design (UI/UX, accessibility) ·
 - Never say "works". End every task with: Tested (what you ran, what you saw) / Not tested.
 
 ## Working rules
-- Stay in your own folders; a file outside your area is a question for the owner.
+- Stay in your own folders; a file outside your area is a question for the owner. Exception: the sponsor-tracks plan edits server/, src/lib/api.ts, src/App.tsx and training/train.py by agreement; tell the owner before you merge those.
 - Commit after each working step. Never merge or push to main unless asked; whoever merges runs the app first.
 - Do not change the interfaces in this file without telling the team.
 - The Gemini key lives only in .env (gitignored), never in frontend code or the repo.

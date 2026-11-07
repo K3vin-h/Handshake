@@ -1,4 +1,4 @@
-x`# Sponsor Tracks Spec
+# Sponsor Tracks Spec
 2026-11-07 · Handshake · Status: draft
 
 ## Problem & Goal
@@ -25,7 +25,7 @@ Every track in the HackCamp list, with its status. "Opt in" means ticking it in 
 | Track                                | Status                         | Evidence for Devpost                                                                                             |
 | ------------------------------------ | ------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
 | nwChoice                             | Automatic                      | none                                                                                                             |
-|                                      |                                |                                                                                                                  |
+| Most Accessible Design (beginner)    | Already targeted               | Figma link; accessibility notes that match what shipped (keyboard-only flow, 4.5:1 contrast, `aria-live` status, chart has a text-table equivalent, no audio needed) |
 | Best Problem-Solution Fit (beginner) | Already targeted               | problem statement + solution description                                                                         |
 | Best Design                          | Already targeted               | Figma link                                                                                                       |
 | Community Impact                     | Already targeted               | impact statement (Deaf and hard-of-hearing communities); the n8n "notify the person" flow is the concrete impact |
@@ -61,7 +61,7 @@ Out-of-scope rows can be pulled in later as their own spec. Don't claim a track 
    and fire-and-forgets `POST /api/attempts`. If there's no DB, the network fails or the request is rate-limited:
     nothing visible happens and local progress is unaffected.
 2. **Stats (**`#/stats`**).** It shows a 14-day accuracy line, the 5 weakest letters, the planner card and notification settings.
-   - Empty (no DB or no attempts): "Practice a lesson to see your accuracy here."
+   - Empty (no DB or no attempts): "Practice a lesson to see how often you match the reference."
    - Loading: skeleton text "Loading your stats…".
    - Error: same as empty, logged to the console.
 3. **Planner (Maritime).** On `#/stats` load the client builds `candidates`: the next lesson (same rule as `nextLesson`: the first **demo-scope** lesson not completed, so stretch lessons are never planned as "next") plus the 4 most recently completed lessons (review options, any `scope`),
@@ -193,6 +193,16 @@ a fixed template (only validated names and the lesson title are inserted); each 
 - Manual: deploy checklist (HTTPS camera works on a phone), n8n test webhook, Databricks run visible in MLflow,
 `entire` session listed.
 - Done = `npm run build && npm test` pass with all env unset **and** with env set.
+
+## Rules alignment (CLAUDE.md judging map)
+
+- **Targets:** every unit maps to a row in the CLAUDE.md prize table (Tiger Data → U1/U2/U8, Vultr + GoDaddy → U9, Databricks → U10, Maritime → U6, Entire → U11, n8n → U3).
+- **Privacy:** CLAUDE.md now allows two opt-in exceptions to "stays in the browser": anonymous attempt rows in Tiger Data, and names/emails to n8n only after consent. Gemini and the agent still get letters, lesson ids and aggregate stats only, never names.
+- **Honesty:** the UI says "matches the reference", never "correct" or "accuracy". The planner label "planned by: agent | local" plays the role of the cached-response label. Claims on Devpost are limited to what shipped.
+- **Accessibility:** every status is text (not colour alone), `aria-live` on form results, the chart has a text table, no animation is added (so `prefers-reduced-motion` is unaffected).
+- **n8n gate:** the code ships behind env vars; the live demo of it happens only if the core works at H12.
+- **Scope:** Units 1-2 only. The planner picks among the next lesson and completed lessons, so locked Units 3-4 never appear.
+- **Working rules:** one commit per working step; no push to main unless asked; each task ends with "Tested / Not tested".
 
 ## Decisions
 

@@ -48,6 +48,8 @@
 5. **Tasks 11, 12** are human setup (n8n, Entire). **Task 13** (call-site wiring + Devpost doc) last. Wiring needs `LessonPlayer`.
 6. Run `/check` after Task 5 (server unit), after Task 7 (client unit), and before `/ship`. Security-sensitive: Tasks 3, 4, 5, 9 get `security-reviewer` (user data: emails and names → `model: "opus"` per the global rules).
 
+**Reporting rule (CLAUDE.md):** every task report ends with "Tested (what you ran, what you saw) / Not tested", and never says "works". Commit after each working step; no push to main unless asked.
+
 ## Parallel agent split
 | Agent | Tasks | Exclusive files | Verify |
 |---|---|---|---|
@@ -1197,13 +1199,13 @@ const H = 120;
 const PAD = 16;
 
 export function AccuracyChart({ daily }: { daily: Stats["daily"] }) {
-  if (!daily.length) return <p>Practice a lesson to see your accuracy here.</p>;
+  if (!daily.length) return <p>Practice a lesson to see how often you match the reference.</p>;
   const x = (i: number) => (daily.length === 1 ? W / 2 : PAD + (i * (W - 2 * PAD)) / (daily.length - 1));
   const y = (a: number) => H - PAD - a * (H - 2 * PAD);
   return (
     <figure>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-labelledby="acc-title">
-        <title id="acc-title">Daily accuracy over the last 14 days</title>
+        <title id="acc-title">Share of attempts that matched the reference, last 14 days</title>
         <text x="0" y={y(1) + 4} fontSize="10" fill="currentColor">100%</text>
         <text x="0" y={y(0) + 4} fontSize="10" fill="currentColor">0%</text>
         {daily.length > 1 && (
@@ -1214,9 +1216,9 @@ export function AccuracyChart({ daily }: { daily: Stats["daily"] }) {
         ))}
       </svg>
       <table className="visually-hidden">
-        <caption>Daily accuracy</caption>
+        <caption>Share of attempts that matched the reference, by day</caption>
         <thead>
-          <tr><th scope="col">Day</th><th scope="col">Attempts</th><th scope="col">Accuracy</th></tr>
+          <tr><th scope="col">Day</th><th scope="col">Attempts</th><th scope="col">Matched</th></tr>
         </thead>
         <tbody>
           {daily.map((d) => (
@@ -1367,14 +1369,14 @@ export function StatsPage() {
       <h1>Your stats</h1>
       <PlanCard plan={plan} hasCandidates={!!planReq} failed={planFailed} />
       <section aria-labelledby="acc-h">
-        <h2 id="acc-h">Accuracy</h2>
+        <h2 id="acc-h">Matches the reference</h2>
         {stats ? <AccuracyChart daily={stats.daily} /> : <p>Loading your stats…</p>}
         {stats && stats.items.length > 0 && (
           <>
             <h3>Weakest letters</h3>
             <ul>
               {stats.items.map((i) => (
-                <li key={i.item}>{i.item}: {Math.round(i.accuracy * 100)}% ({i.attempts} tries)</li>
+                <li key={i.item}>{i.item}: matched the reference {Math.round(i.accuracy * 100)}% of {i.attempts} tries</li>
               ))}
             </ul>
           </>
@@ -1834,7 +1836,7 @@ return {
   json: {
     to: learner.learnerEmail,
     subject: "Your Handshake week",
-    text: "You practised on " + stats.daily.length + " day(s) with " + total + " attempts and " + pct + "% accuracy. Letters to practise: " + weak + ".",
+    text: "You practised on " + stats.daily.length + " day(s) with " + total + " attempts and " + pct + "% matched the reference. Letters to practise: " + weak + ".",
   },
 };
 ```
