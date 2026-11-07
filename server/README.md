@@ -36,11 +36,26 @@ requests per minute per server process. The response cache holds 256 entries.
 
 ## Demo cache
 
-Set `CACHE_EXPORT_ENABLED=1` only for local demo preparation. Run the demo with
-a real key, then save `GET /api/cache` to `server/precache.json`. Review every
-cue before using it. Restart the API to load the file. Unusable cache entries
-are discarded. Cache export is disabled by default. No live Gemini recording
-or reviewed precache is included in this change.
+`server/precache.json` is read once at startup, relative to the server module
+(independent of the working directory). It includes a few mock responses to edit
+or replace; they are not live Gemini output. Hits on both endpoints work without
+a key and return `cached: true`, which the client displays as "cached". Missing
+files use an empty cache; malformed files warn and fall back safely.
+
+The file is a JSON object mapping request keys to `{ "tip": "..." }` or
+`{ "words": ["..."] }`. Coach keys are
+`coach:<target>:<code>:<issue>:<repeat>` (repeat is capped at 3; no feedback uses
+`coach:<target>:none::<repeat>`). Additional feedback is appended as JSON by the
+server, so use an export for those keys. Tips must match the server's grounded
+cues. Word keys are `words:<knownLetters joined>:<weakLetters joined>`; letters
+are uppercased and deduplicated in request order. Words are filtered against
+known letters and sorted with weak letters first.
+
+Once a key is set, move the mock file aside and restart to generate fresh replies.
+Set `CACHE_EXPORT_ENABLED=1` only for local demo preparation, run the demo, then
+save `curl --fail http://localhost:8787/api/cache -o server/precache.json`.
+Review every cue before using it and restart the API to load the file. Unusable
+cache entries are discarded. Cache export is disabled by default.
 
 ## Complete screen handoff
 

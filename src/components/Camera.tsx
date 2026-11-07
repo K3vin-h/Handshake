@@ -14,11 +14,11 @@ export function Camera(props: {
   const { videoRef, canvasRef, status, error, progress = 0, lighting = "ok", enhancing } = props;
   return (
     <div className="camera">
-      <video ref={videoRef} playsInline muted />
-      <canvas ref={canvasRef} />
-      {progress > 0 && <div className="hold-bar" style={{ width: `${progress * 100}%` }} />}
-      {status === "loading" && <div className="camera-msg">Loading hand tracking…</div>}
-      {status === "error" && <div className="camera-msg">Camera error: {error}</div>}
+      <video ref={videoRef} playsInline muted aria-label="Your camera, mirrored" />
+      <canvas ref={canvasRef} aria-hidden="true" />
+      {progress > 0 && <div className="hold-bar" aria-hidden="true" style={{ width: `${progress * 100}%` }} />}
+      {status === "loading" && <div className="camera-msg" role="status">Loading hand tracking…</div>}
+      {status === "error" && <div className="camera-msg" role="alert">Camera error: {error}</div>}
       {status === "ready" && lighting !== "ok" && (
         <div className="light-hint" role="status">
           {lighting === "dark"

@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { isPracticeable, meanPose3D, useLetterCheck } from "../cv";
 import { buildCurriculum, flatLessons, type Step } from "../lib/curriculum";
 import { completeLesson, dueItems, isUnlocked, loadProgress, recordAttempt, type Progress } from "../lib/progress";
-import { reportAttempt } from "../lib/track";
+import { reportAttempt, reportLessonComplete } from "../lib/track";
 import { loadMistakes, mistakeCount, recordMistake } from "../lib/mistakes";
 import { DEMO_PROFILE, loadProfile } from "../lib/profile";
 import { SEND_SNAPSHOT, getCoachTip } from "../lib/api";
@@ -66,7 +66,10 @@ function Player({ lessonId }: { lessonId: string }) {
     if (finishing.current) return;
     if (i + 1 < items.length) return setI(i + 1);
     finishing.current = true;
-    if (!progress.current.completed.includes(lesson!.id)) progress.current = completeLesson(progress.current, lesson!.id, lesson!.xp);
+    if (!progress.current.completed.includes(lesson!.id)) {
+      progress.current = completeLesson(progress.current, lesson!.id, lesson!.xp);
+      reportLessonComplete(lesson!.id, lesson!.title, lesson!.xp);
+    }
     location.hash = `#/complete/${lesson!.id}`;
   }
 
