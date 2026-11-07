@@ -25,8 +25,8 @@ export function getHandLandmarker(): Promise<HandLandmarker> {
   return landmarkerPromise;
 }
 
-/** MediaPipe's label for the signer's RIGHT hand on our unmirrored video. Verify on #/demo (group-1 Task 1 Step 2). */
-export const RIGHT_HAND_LABEL: "Left" | "Right" = "Left";
+/** MediaPipe's label for the signer's RIGHT hand on our unmirrored video. Verified on #/demo 2026-11-07: "Right". */
+export const RIGHT_HAND_LABEL: "Left" | "Right" = "Right";
 
 /** Runs the model on the current frame. With two hands visible, returns the signer's dominant hand. */
 export function detectHand(lm: HandLandmarker, video: HTMLVideoElement | HTMLCanvasElement, now: number, dominant: "left" | "right" = "right"): HandFrame | null {
