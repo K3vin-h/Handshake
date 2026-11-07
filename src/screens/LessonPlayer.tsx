@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { isPracticeable, meanPose3D, useLetterCheck } from "../cv";
 import { buildCurriculum, flatLessons, type Step } from "../lib/curriculum";
 import { completeLesson, dueItems, isUnlocked, loadProgress, recordAttempt, type Progress } from "../lib/progress";
+import { reportAttempt } from "../lib/track";
 import { loadMistakes, mistakeCount, recordMistake } from "../lib/mistakes";
 import { DEMO_PROFILE, loadProfile } from "../lib/profile";
 import { SEND_SNAPSHOT, getCoachTip } from "../lib/api";
@@ -128,6 +129,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, progres
     enabled: item.kind === "check",
     onMatch: (d) => {
       progress.current = recordAttempt(progress.current, d.letter, true);
+      reportAttempt(d.letter, true);
       setStatus(`${MATCH_WORDING}: ${d.letter}`);
       celebrate();
       onNext();
@@ -135,6 +137,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, progres
     onMiss: (feedback) => {
       onRestart();
       progress.current = recordAttempt(progress.current, target, false);
+      reportAttempt(target, false, feedback.map((f) => f.code));
       setCoach({ tip: "", cached: false });
       const first = feedback[0];
       setStatus(`Not matching ${target} yet`);
