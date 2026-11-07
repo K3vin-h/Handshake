@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { buildCurriculum, flatLessons } from "../lib/curriculum";
-import { DEMO_PROFILE, loadProfile } from "../lib/profile";
+import { DEMO_PROFILE, loadProfile, refreshPracticeWords } from "../lib/profile";
 import { isUnlocked, loadProgress, nextLesson } from "../lib/progress";
 
 // The player records completion. Visiting this route never awards XP or unlocks a lesson.
@@ -9,6 +9,9 @@ export function Complete({ lessonId }: { lessonId: string }) {
   useEffect(() => { heading.current?.focus(); }, [lessonId]);
   const [progress] = useState(loadProgress);
   const [units] = useState(() => buildCurriculum(loadProfile() ?? DEMO_PROFILE).filter((unit) => ["u1", "u2"].includes(unit.id)));
+  useEffect(() => {
+    if (progress.completed.includes(lessonId)) void refreshPracticeWords();
+  }, [lessonId, progress]);
   const lesson = flatLessons(units).find((item) => item.id === lessonId);
   if (!lesson) return <main className="page"><h1 ref={heading} tabIndex={-1}>Lesson unavailable</h1><a href="#/">Back to your path</a></main>;
   if (!progress.completed.includes(lessonId)) {
