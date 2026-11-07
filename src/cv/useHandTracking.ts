@@ -9,11 +9,13 @@ import type { HandFrame } from "./types";
  * Webcam → (lighting check, CLAHE when dark) → MediaPipe → One Euro smoothing → onFrame.
  * Attach videoRef / canvasRef to a <video> and <canvas> (see components/Camera.tsx).
  */
-export function useHandTracking(onFrame: (hand: HandFrame | null, now: number) => void, opts: { enhance?: boolean } = {}) {
+export function useHandTracking(onFrame: (hand: HandFrame | null, now: number) => void, opts: { enhance?: boolean; dominant?: "left" | "right" } = {}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cb = useRef(onFrame);
   cb.current = onFrame;
+  const dominant = useRef(opts.dominant ?? "right");
+  dominant.current = opts.dominant ?? "right";
   const enhanceAllowed = opts.enhance ?? true;
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
@@ -34,7 +36,9 @@ export function useHandTracking(onFrame: (hand: HandFrame | null, now: number) =
     (async () => {
       try {
         const lm = await getHandLandmarker();
+        if (cancelled) return;
         stream = await openCamera();
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
         const video = videoRef.current!;
         video.srcObject = stream;
         await video.play();
@@ -74,8 +78,11 @@ export function useHandTracking(onFrame: (hand: HandFrame | null, now: number) =
             }
             setEnhancing(!!useEnhance);
 
-            const raw = detectHand(lm, source, now);
-            const hand = smoother.smooth(raw, now);
+            const raw = detectHand(lm, source, now, dominant.current);
+            const rawInFrame = raw && raw.landmarks.length === 21 && raw.landmarks.every((p) => p.x > 0.01 && p.x < 0.99 && p.y > 0.01 && p.y < 0.99);
+            const smooth = smoother.smooth(rawInFrame ? raw : null, now);
+            // Preserve invalid raw coordinates so the consumer can explain the frame-edge problem.
+            const hand = rawInFrame ? smooth : raw;
             const canvas = canvasRef.current;
             if (canvas) {
               canvas.width = video.videoWidth;

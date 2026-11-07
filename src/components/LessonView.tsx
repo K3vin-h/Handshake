@@ -26,10 +26,11 @@ export function LessonView(p: LessonViewProps) {
       <h1>{p.title}</h1>
       <p className="muted">{p.stepLabel}</p>
       {p.word && <p>{p.word.letters.map((l, i) => (i === p.word!.index ? `[${l}]` : l)).join(" ")}</p>}
-      <div className="lesson-grid">
-        <section>{p.showReference && p.reference}</section>
+      <div className={`lesson-grid${p.sideBySide ? " side-by-side" : ""}`}>
+        <section>{(p.showReference || p.sideBySide) && p.reference}</section>
         <section>{p.camera}</section>
       </div>
+      <progress aria-label="Hold to match the reference" max={1} value={p.progress} />
       <p role="status" aria-live="polite">{p.status}</p>
       {p.landmarkTip && <div className="tip">{p.landmarkTip}</div>}
       {p.coachTip && <div className="tip">Coach{p.coachCached ? " (cached)" : ""}: {p.coachTip}</div>}
