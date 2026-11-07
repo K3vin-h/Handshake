@@ -25,3 +25,25 @@ export const getCoachTip = (target: string, feedback: FingerFeedback[], repeat: 
 
 export const getPracticeWords = (knownLetters: string[], weakLetters: string[]) =>
   post<{ words: string[] } & Cached>("/api/words", { knownLetters, weakLetters });
+
+async function get<T>(url: string): Promise<T> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) throw new Error(`${url} failed: ${res.status}`);
+  return res.json();
+}
+
+export type Features = { stats: boolean; notify: boolean; agent: boolean };
+export type Stats = {
+  daily: { day: string; attempts: number; accuracy: number }[];
+  items: { item: string; attempts: number; accuracy: number }[];
+};
+export type Plan = { lessonId: string; focus: string[]; words: string[]; tip: string; source: "agent" | "local" };
+
+export const getFeatures = () => get<Features>("/api/features");
+export const getStats = (learnerId: string) => get<Stats>(`/api/stats/${learnerId}`);
+export const planToday = (req: import("./planInput").PlanRequest) => post<Plan>("/api/plan", req);
+
+export type SubscribeBody =
+  | { action: "subscribe"; learnerId: string; consent: true; userName?: string; theirName?: string; learnerEmail?: string; contactEmail?: string }
+  | { action: "unsubscribe"; learnerId: string };
+export const subscribe = (body: SubscribeBody) => post<{ ok: boolean; reason?: string }>("/api/subscribe", body);

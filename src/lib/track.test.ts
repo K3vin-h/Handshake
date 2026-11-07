@@ -31,3 +31,16 @@ test("network failures never throw or produce an unhandled rejection", async () 
   assert.doesNotThrow(() => reportAttempt("L", true, [], async () => { throw new Error("offline"); }, ID));
   await new Promise((resolve) => setTimeout(resolve, 0));
 });
+
+test("lesson events require opt-in and remain non-blocking offline", async () => {
+  const { reportLessonComplete } = await import("./track.ts");
+  const calls: unknown[] = [];
+  const send = async (url: string, body: unknown) => { calls.push({ url, body }); };
+  reportLessonComplete("1.2", "Spell RYAN", 20, send, ID, false);
+  assert.equal(calls.length, 0);
+  reportLessonComplete("1.2", "Spell RYAN", 20, send, ID, true);
+  assert.deepEqual(calls, [{ url: "/api/lesson-complete", body: { learnerId: ID, lessonId: "1.2", lessonTitle: "Spell RYAN", xp: 20 } }]);
+  assert.doesNotThrow(() => reportLessonComplete("1.2", "t", 20, () => { throw new Error("offline"); }, ID, true));
+  reportLessonComplete("1.2", "t", 20, async () => { throw new Error("offline"); }, ID, true);
+  await new Promise(resolve => setTimeout(resolve, 0));
+});

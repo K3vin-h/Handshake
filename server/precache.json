@@ -1,0 +1,7 @@
+{
+  "coach:L:none::1": { "tip": "Compare your hand with the L reference and hold still." },
+  "coach:I:none::1": { "tip": "Compare your hand with the I reference and hold still." },
+  "coach:Y:none::1": { "tip": "Compare your hand with the Y reference and hold still." },
+  "coach:A:thumb:placement:is too far from the index finger:1": { "tip": "Move your thumb a little closer to your index finger." },
+  "words:LIY:L": { "words": ["LILY", "ILL"] }
+}
