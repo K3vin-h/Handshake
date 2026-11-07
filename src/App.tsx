@@ -11,6 +11,8 @@ import { ProgressScreen } from "./screens/Progress";
 import { LessonPreview } from "./screens/LessonPreview";
 import { loadProfile } from "./lib/profile";
 import { loadProgress } from "./lib/progress";
+import { ReduceMotionToggle } from "./components/motion/MotionProvider";
+import { PageTransition } from "./components/motion/PageTransition";
 import { StreakXpChip } from "./components/StreakXpChip";
 
 // Hash router: "#/lesson/1.1" → name "lesson", param "1.1".
@@ -84,9 +86,10 @@ export default function App() {
             <StreakXpChip streakDays={loadProgress().streakDays} xp={loadProgress().xp} />
           </span>
         )}
+        <ReduceMotionToggle />
       </nav>
       <main id="main" tabIndex={-1}>
-        {screen(hash)}
+        <PageTransition key={hash}>{screen(hash)}</PageTransition>
       </main>
     </>
   );
