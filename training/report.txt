@@ -1,0 +1,23 @@
+Test accuracy: 1.000 on 150 samples
+
+              precision    recall  f1-score   support
+
+           B       1.00      1.00      1.00        30
+           I       1.00      1.00      1.00        30
+           L       1.00      1.00      1.00        30
+           O       1.00      1.00      1.00        30
+           Y       1.00      1.00      1.00        30
+
+    accuracy                           1.00       150
+   macro avg       1.00      1.00      1.00       150
+weighted avg       1.00      1.00      1.00       150
+
+Confusion matrix (rows = true, cols = predicted):
+       B   I   L   O   Y
+  B   30   0   0   0   0
+  I    0  30   0   0   0
+  L    0   0  30   0   0
+  O    0   0   0  30   0
+  Y    0   0   0   0  30
+
+Most confused (true -> predicted):

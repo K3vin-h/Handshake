@@ -1,0 +1,109 @@
+import { flatLessons, type Unit } from "./curriculum";
+
+// Learner progress in localStorage: XP, daily streak, per-item mastery, spaced review.
+// Item ids: a letter ("A"), a sign ("HELLO"), or a word ("fs:LILY").
+//
+// Mastery: 3 correct in a row. Review uses Leitner boxes: each correct review moves an item
+// up a box (seen again later); a miss sends it back to box 0 (seen again today).
+
+const KEY = "handshake.progress.v1";
+const BOX_DAYS = [0, 1, 3, 7, 14];
+const DAY = 86_400_000;
+
+export type ItemState = { streak: number; mastered: boolean; box: number; due: number; attempts: number; misses: number };
+export type Progress = {
+  xp: number;
+  streakDays: number;
+  lastActiveDay: string | null;
+  completed: string[]; // lesson ids
+  items: Record<string, ItemState>;
+};
+
+const empty = (): Progress => ({ xp: 0, streakDays: 0, lastActiveDay: null, completed: [], items: {} });
+const today = (now = Date.now()) => new Date(now).toISOString().slice(0, 10);
+
+export function loadProgress(): Progress {
+  try {
+    return { ...empty(), ...JSON.parse(localStorage.getItem(KEY) ?? "{}") };
+  } catch {
+    return empty();
+  }
+}
+
+export function saveProgress(p: Progress) {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(p));
+  } catch {
+    /* storage unavailable: progress lasts for this session only */
+  }
+}
+
+/** Call after every graded attempt. Returns the updated progress (also saved). */
+export function recordAttempt(p: Progress, itemId: string, correct: boolean, now = Date.now()): Progress {
+  const it: ItemState = p.items[itemId] ?? { streak: 0, mastered: false, box: 0, due: now, attempts: 0, misses: 0 };
+  it.attempts++;
+  if (correct) {
+    it.streak++;
+    if (it.streak >= 3) it.mastered = true;
+    it.box = Math.min(BOX_DAYS.length - 1, it.box + 1);
+  } else {
+    it.streak = 0;
+    it.misses++;
+    it.box = 0;
+  }
+  it.due = now + BOX_DAYS[it.box] * DAY;
+  const next = { ...p, items: { ...p.items, [itemId]: it } };
+  touchStreak(next, now);
+  saveProgress(next);
+  return next;
+}
+
+export function addXp(p: Progress, amount: number): Progress {
+  const next = { ...p, xp: p.xp + amount };
+  saveProgress(next);
+  return next;
+}
+
+export function completeLesson(p: Progress, lessonId: string, xp: number): Progress {
+  const next = { ...p, xp: p.xp + xp, completed: p.completed.includes(lessonId) ? p.completed : [...p.completed, lessonId] };
+  saveProgress(next);
+  return next;
+}
+
+function touchStreak(p: Progress, now: number) {
+  const t = today(now);
+  if (p.lastActiveDay === t) return;
+  const yesterday = today(now - DAY);
+  p.streakDays = p.lastActiveDay === yesterday ? p.streakDays + 1 : 1;
+  p.lastActiveDay = t;
+}
+
+/** Items due for review (weakest first). Used by "review" steps and the Daily review card. */
+export function dueItems(p: Progress, now = Date.now(), limit = 5): string[] {
+  return Object.entries(p.items)
+    .filter(([, s]) => s.due <= now)
+    .sort((a, b) => a[1].box - b[1].box || b[1].misses - a[1].misses)
+    .slice(0, limit)
+    .map(([id]) => id);
+}
+
+/** A lesson is unlocked when the lesson before it (in path order) is completed. */
+export function isUnlocked(units: Unit[], p: Progress, lessonId: string): boolean {
+  const all = flatLessons(units);
+  const i = all.findIndex((l) => l.id === lessonId);
+  return i <= 0 || p.completed.includes(all[i - 1].id);
+}
+
+/** Next lesson to do (first not completed). */
+export function nextLesson(units: Unit[], p: Progress) {
+  return flatLessons(units).find((l) => !p.completed.includes(l.id)) ?? null;
+}
+
+/** Letters that need practice: most misses relative to attempts. */
+export function weakItems(p: Progress, limit = 3): string[] {
+  return Object.entries(p.items)
+    .filter(([, s]) => s.attempts >= 2 && !s.mastered)
+    .sort((a, b) => b[1].misses / b[1].attempts - a[1].misses / a[1].attempts)
+    .slice(0, limit)
+    .map(([id]) => id);
+}

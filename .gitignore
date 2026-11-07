@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+.claude/worktrees/
+.DS_Store
+.venv
+training/data/*.task
+training/data/*.npz
+__pycache__
