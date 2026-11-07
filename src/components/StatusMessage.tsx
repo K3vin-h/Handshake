@@ -1,3 +1,5 @@
+import { motion, useReducedMotion } from "motion/react";
+
 export type StatusKind = "match" | "notyet" | "info" | "error";
 
 const LABEL: Record<StatusKind, string> = { match: "Matches the reference", notyet: "Not yet", info: "Note", error: "Error" };
@@ -21,6 +23,7 @@ const ICON: Record<StatusKind, string> = { match: "✓", notyet: "!", info: "i",
  */
 export function StatusMessage(props: { kind: StatusKind; message?: string; urgent?: boolean; label?: string | false }) {
   const { kind, message, urgent, label = LABEL[props.kind] } = props;
+  const reduce = useReducedMotion();
   return (
     <div
       className={`status status-${kind}${message ? "" : " is-empty"}`}
@@ -30,7 +33,16 @@ export function StatusMessage(props: { kind: StatusKind; message?: string; urgen
     >
       {message ? (
         <>
-          <span className="status-icon" aria-hidden="true">{ICON[kind]}</span>
+          <motion.span
+            key={kind}
+            className="status-icon"
+            aria-hidden="true"
+            initial={reduce ? false : { scale: 0.4, rotate: kind === "match" ? -30 : 0 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 18 }}
+          >
+            {ICON[kind]}
+          </motion.span>
           <span>
             {label !== false && <strong>{label}: </strong>}
             {message}

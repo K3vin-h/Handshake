@@ -1,3 +1,5 @@
+import { CountUp } from "./motion/CountUp";
+
 /**
  * Streak and XP as one chip. The numbers are text, so nothing depends on icon or colour.
  *
@@ -10,11 +12,11 @@ export function StreakXpChip(props: { streakDays: number; xp: number }) {
   return (
     <p className="streak-chip">
       <span>
-        <strong>{streakDays}</strong> {streakDays === 1 ? "day" : "days"} streak
+        <strong><CountUp value={streakDays} /></strong> {streakDays === 1 ? "day" : "days"} streak
       </span>
       <span aria-hidden="true"> · </span>
       <span>
-        <strong>{xp}</strong> XP
+        <strong><CountUp value={xp} /></strong> XP
       </span>
     </p>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { PathNodeState } from "./PathNode";
+import { AnimatedProgress } from "./motion/AnimatedProgress";
 
 // The curriculum as a winding path of glowing "platform" nodes, one section per unit.
 // Presentational only: Home maps buildCurriculum() + progress into these props.
@@ -68,7 +69,7 @@ export function UnitSection(props: { index: number; title: string; goal: string;
           <span aria-hidden="true"> · </span>
           <span>{xp} XP</span>
         </p>
-        <progress className="meter" value={done} max={lessons.length} aria-label={`Unit ${index} progress`} />
+        <AnimatedProgress value={done} max={lessons.length} label={`Unit ${index} progress`} />
         <p className="muted small">
           {done} of {lessons.length} done
         </p>
