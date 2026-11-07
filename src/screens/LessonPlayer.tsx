@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
-import { isPracticeable, meanPose3D, useLetterCheck } from "../cv";
+import { SIGNS, isPracticeable, meanPose3D, useLetterCheck } from "../cv";
+import { TokenRunner } from "./TokenRunner";
 import { buildCurriculum, flatLessons, type Step } from "../lib/curriculum";
 import { completeLesson, dueItems, isUnlocked, loadProgress, recordAttempt, type Progress } from "../lib/progress";
 import { reportAttempt, reportLessonComplete } from "../lib/track";
@@ -54,7 +55,7 @@ export function LessonPlayer({ lessonId }: { lessonId: string }) {
 }
 function Player({ lessonId }: { lessonId: string }) {
   const profile = loadProfile() ?? DEMO_PROFILE;
-  const units = useMemo(() => buildCurriculum(profile).filter((u) => u.id === "u1" || u.id === "u2"), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const units = useMemo(() => buildCurriculum(profile).filter((u) => ["u1", "u2", "u3"].includes(u.id)), []); // eslint-disable-line react-hooks/exhaustive-deps
   const lesson = useMemo(() => flatLessons(units).find((l) => l.id === lessonId), [units, lessonId]);
   const progress = useRef(loadProgress()); // a ref, not state: recordAttempt mutates, and StrictMode would double-apply updaters
   const items = useMemo(() => (lesson ? expand(lesson.steps, progress.current) : []), [lesson]);
@@ -80,6 +81,22 @@ function Player({ lessonId }: { lessonId: string }) {
   if (!item) return <div className="page"><p>Nothing to practise here yet.</p><button onClick={next}>Continue</button></div>;
   const stepLabel = `Step ${i + 1} of ${items.length}`;
 
+  // Whole signs and sentences: one TokenRunner walks the parts (handshape → place → movement) on one camera.
+  if (item.kind === "other" && (item.step.kind === "sign" || item.step.kind === "sentence")) {
+    const s = item.step;
+    const tokens = s.kind === "sign" ? [s.sign] : s.tokens;
+    const title = s.kind === "sign" ? `Sign "${SIGNS[s.sign]?.english ?? s.sign}"` : s.english;
+    return (
+      <TokenRunner tokens={tokens} leftHanded={profile.leftHanded}
+        onDone={() => { progress.current = recordAttempt(progress.current, tokens.join(" "), true); celebrate(); next(); }}
+        render={(r) => (
+          <LessonView title={title} target={tokens.join(" ")} reference={null} showReference={false} progress={0}
+            camera={r.camera} status={r.prompt} landmarkTip="" coachTip="" coachCached={false} sideBySide={false}
+            stepLabel={`${stepLabel} · part ${r.index + 1} of ${r.units.length}`} lessonProgress={i / items.length}
+            actionLabel="Skip" onAction={next} onSelfCheck={r.selfCheck} />
+        )} />
+    );
+  }
   // ONE camera at a time: LetterItem stays mounted across consecutive letter items (no key), so the camera never restarts.
   if (item.kind === "other")
     return <div className="page"><p>Coming in a later milestone: {item.step.kind}</p><button onClick={next}>Continue</button></div>;
@@ -170,9 +187,11 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     },
   });
 
+  // Once the target matches, the ring and bar stay full until "Try again" (retry() resets the check, so this goes back to live progress).
+  const shownProgress = result === "match" ? 1 : check.progress;
   const camera = (
     <>
-      <Camera {...check.cam} progress={check.progress} />
+      <Camera {...check.cam} progress={shownProgress} />
       {check.hint && <p role="status">{check.hint}</p>}
     </>
   );
@@ -192,7 +211,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
 
   return (
     <LessonView {...common} title={item.word ? `Spell ${item.word.letters.join("")}` : `Sign ${item.letter}`} word={item.word}
-      showReference={item.showReference || sideBySide} progress={check.progress}
+      showReference={item.showReference || sideBySide} progress={shownProgress}
       status={status || `Hold the sign for ${target}`} feedback={result || undefined}
       actionLabel="Continue" actionDisabled={result !== "match"} onAction={onNext}
       onRetry={result === "match" ? retry : undefined} onSkip={result === "match" ? undefined : onNext} />
