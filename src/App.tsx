@@ -1,15 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { LessonDemo } from "./screens/LessonDemo";
 import { RecordPage } from "./screens/RecordPage";
 import { CurriculumPreview } from "./screens/CurriculumPreview";
+import { Home } from "./screens/Home";
+import { Onboarding } from "./screens/Onboarding";
+import { LessonPlayer } from "./screens/LessonPlayer";
+import { Complete } from "./screens/Complete";
+import { ProgressScreen } from "./screens/Progress";
+import { loadProfile } from "./lib/profile";
 
-// Tiny hash router so nobody has to set up react-router during the hackathon.
-// Add routes here: "#/onboarding", "#/path", "#/progress", ...
-const routes: Record<string, () => React.ReactElement> = {
-  "#/": LessonDemo,
-  "#/record": RecordPage,
-  "#/curriculum": CurriculumPreview,
-};
+// Hash router: "#/lesson/1.1" → name "lesson", param "1.1".
+// Dev tools (record, curriculum, demo) work without a profile; everything else needs onboarding first.
+function screen(hash: string): ReactElement {
+  const [, name = "", param = ""] = hash.split("/");
+  if (name === "record") return <RecordPage />;
+  if (name === "curriculum") return <CurriculumPreview />;
+  if (name === "demo") return <LessonDemo />;
+  if (name === "welcome" || !loadProfile()) return <Onboarding />;
+  if (name === "lesson") return <LessonPlayer key={param} lessonId={param} />;
+  if (name === "complete") return <Complete lessonId={param} />;
+  if (name === "progress") return <ProgressScreen />;
+  return <Home />;
+}
 
 export default function App() {
   const [hash, setHash] = useState(location.hash || "#/");
@@ -18,16 +30,17 @@ export default function App() {
     addEventListener("hashchange", on);
     return () => removeEventListener("hashchange", on);
   }, []);
-  const Screen = routes[hash] ?? LessonDemo;
   return (
     <>
       <nav>
         <b>Handshake</b>
-        <a href="#/">Lesson</a>
+        <a href="#/">Path</a>
+        <a href="#/progress">Progress</a>
+        <a href="#/demo">Demo</a>
         <a href="#/record">Record</a>
         <a href="#/curriculum">Curriculum</a>
       </nav>
-      <Screen />
+      {screen(hash)}
     </>
   );
 }

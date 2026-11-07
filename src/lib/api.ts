@@ -12,12 +12,18 @@ async function post<T>(url: string, body: unknown): Promise<T> {
   return res.json();
 }
 
-/** Onboarding: Gemini picks a word pack for the relationship from signs the app can teach. */
-export const personalizePath = (userName: string, learningFor: string, relationship: string, allowedWords: string[]) =>
-  post<{ wordPack: string[]; welcome: string }>("/api/path", { userName, learningFor, relationship, allowedWords });
+export type Cached = { cached?: boolean };
 
-export const getCoachTip = (target: string, feedback: FingerFeedback[], snapshot?: string) =>
-  post<{ tip: string }>("/api/coach", { target, feedback, snapshot });
+/** Set to true ONLY if the H4 snapshot test passes (Group 3). Then a hand photo is sent to Google's API. */
+export const SEND_SNAPSHOT = false;
+
+/** Onboarding: letters only (never names). The welcome uses {you}/{them}; fill with fillNames(). */
+export const personalizePath = (letters: string[], relationship: string, allowedWords: string[]) =>
+  post<{ wordPack: string[]; welcome: string } & Cached>("/api/path", { letters, relationship, allowedWords });
+
+/** repeat = how many times this learner has made this mistake on this letter (from mistakes.ts). */
+export const getCoachTip = (target: string, feedback: FingerFeedback[], repeat: number, snapshot?: string) =>
+  post<{ tip: string } & Cached>("/api/coach", { target, feedback, repeat, snapshot });
 
 export const getPracticeWords = (knownLetters: string[], weakLetters: string[]) =>
-  post<{ words: string[] }>("/api/words", { knownLetters, weakLetters });
+  post<{ words: string[] } & Cached>("/api/words", { knownLetters, weakLetters });
