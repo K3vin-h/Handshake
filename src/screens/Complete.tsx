@@ -22,6 +22,7 @@ export function Complete({ lessonId }: { lessonId: string }) {
       <p role="status">You finished {lesson.title}.</p>
       <dl><dt>Lesson XP</dt><dd>{lesson.xp}</dd><dt>Total XP</dt><dd>{progress.xp}</dd><dt>Practice streak</dt><dd>{progress.streakDays} {progress.streakDays === 1 ? "day" : "days"}</dd></dl>
       {next && isUnlocked(units, progress, next.id) ? <p><a href={`#/lesson/${next.id}`}>Continue: {next.title}</a></p> : <p>You finished the current path. Greetings and conversations are coming later.</p>}
+      <p><a href={`#/lesson/${lessonId}`}>Practice again</a></p>
       <p><a href="#/progress">View progress</a></p>
       <a href="#/">Back to your path</a>
     </main>

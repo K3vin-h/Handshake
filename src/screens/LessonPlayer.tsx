@@ -79,13 +79,14 @@ function Player({ lessonId }: { lessonId: string }) {
   if (item.kind === "other")
     return <div className="page"><p>Coming in a later milestone: {item.step.kind}</p><button onClick={next}>Continue</button></div>;
   if (item.kind === "learn") return <main className="page">
+    <progress className="lesson-progress" value={i / items.length} max={1} aria-label={stepLabel} />
     <h1>Learn {item.letter}</h1><p>{stepLabel}</p>
     <p>{item.referenceOnly ? "Reference only: live checking is not validated for this letter yet." : "Study the reference, then practise."}</p>
     <Suspense fallback={<p>Loading reference…</p>}><HandModel3D pose={meanPose3D(item.letter, loadTemplates(), profile.leftHanded)} letter={item.letter} /></Suspense>
     <p>Matches our recording; this is not a fluent signer’s assessment.</p>
     <button onClick={next}>Continue</button><p><a href="#/">Back to your path</a></p>
   </main>;
-  return <LetterItem index={i} item={item} lessonLetters={lessonLetters} leftHanded={profile.leftHanded} stepLabel={stepLabel} progress={progress} onRestart={() => { if (item.practiceStart !== undefined) setI(item.practiceStart); }} onNext={next} />;
+  return <LetterItem index={i} item={item} lessonLetters={lessonLetters} leftHanded={profile.leftHanded} stepLabel={stepLabel} lessonProgress={i / items.length} progress={progress} onRestart={() => { if (item.practiceStart !== undefined) setI(item.practiceStart); }} onNext={next} />;
 }
 
 type LetterItemProps = {
@@ -94,16 +95,18 @@ type LetterItemProps = {
   lessonLetters: string[];
   leftHanded: boolean;
   stepLabel: string;
+  lessonProgress: number;
   progress: { current: Progress };
   onNext: () => void;
   onRestart: () => void;
 };
 
-function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, progress, onNext, onRestart }: LetterItemProps) {
+function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonProgress, progress, onNext, onRestart }: LetterItemProps) {
   const [landmarkTip, setLandmarkTip] = useState("");
   const [coach, setCoach] = useState({ tip: "", cached: false });
   const [sideBySide, setSideBySide] = useState(false);
   const [status, setStatus] = useState("");
+  const [result, setResult] = useState<"" | "match" | "miss">(""); // drives the green/red footer
   const queue = useMemo(() => createCoachQueue<{ key: string; target: string; feedback: FingerFeedback[]; repeat: number; snapshot?: string }, {tip: string; cached?: boolean}>(
     request => getCoachTip(request.target, request.feedback, request.repeat, request.snapshot),
     result => setCoach({ tip: result.tip, cached: !!result.cached }),
@@ -121,23 +124,36 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, progres
     setStatus("");
   }, [feedbackGroup]);
 
-  useEffect(() => { check.reset(); }, [index]);
+  useEffect(() => { check.reset(); setResult(""); }, [index]);
+
+  function retry() {
+    queue.reset();
+    setLandmarkTip("");
+    setCoach({ tip: "", cached: false });
+    setStatus("");
+    setResult("");
+    check.reset();
+  }
 
   const check = useLetterCheck(target, lessonLetters, {
     leftHanded,
-    enabled: item.kind === "check",
+    enabled: item.kind === "check" && result !== "match", // stop checking once matched; "Try again" restarts
     onMatch: (d) => {
       progress.current = recordAttempt(progress.current, d.letter, true);
+      queue.reset();
+      setLandmarkTip("");
+      setCoach({ tip: "", cached: false });
+      setResult("match");
       setStatus(`${MATCH_WORDING}: ${d.letter}`);
       celebrate();
-      onNext();
     },
     onMiss: (feedback) => {
       onRestart();
       progress.current = recordAttempt(progress.current, target, false);
       setCoach({ tip: "", cached: false });
       const first = feedback[0];
-      setStatus(`Not matching ${target} yet`);
+      setResult("miss");
+      setStatus(`Not matching ${target} yet. Keep trying.`);
       setLandmarkTip(first ? `Your ${first.finger} ${first.issue}.` : "Compare your hand with the reference and hold it still.");
       if (!first) return;
       const repeat = mistakeCount(recordMistake(loadMistakes(), target, first.code), target, first.code);
@@ -158,7 +174,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, progres
       <HandModel3D pose={meanPose3D(target, check.templates, leftHanded)} letter={target} />
     </Suspense>
   );
-  const common = { target, reference, camera, landmarkTip, coachTip: coach.tip, coachCached: coach.cached, sideBySide, stepLabel };
+  const common = { target, reference, camera, landmarkTip, coachTip: coach.tip, coachCached: coach.cached, sideBySide, stepLabel, lessonProgress };
 
   if (item.kind === "learn")
     return (
@@ -169,6 +185,9 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, progres
 
   return (
     <LessonView {...common} title={item.word ? `Spell ${item.word.letters.join("")}` : `Sign ${item.letter}`} word={item.word}
-      showReference={item.showReference || sideBySide} progress={check.progress} status={status} actionLabel="Skip" onAction={onNext} />
+      showReference={item.showReference || sideBySide} progress={check.progress}
+      status={status || `Hold the sign for ${target}`} feedback={result || undefined}
+      actionLabel="Continue" actionDisabled={result !== "match"} onAction={onNext}
+      onRetry={result === "match" ? retry : undefined} onSkip={result === "match" ? undefined : onNext} />
   );
 }
