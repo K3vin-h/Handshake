@@ -47,3 +47,46 @@ Recordings are repeated 3× in training (`--recorded-weight`) because they match
 
 Useful flags: `--letters ABCDFILOVWY` (train only demo letters, usually more accurate),
 `--per-class 600 --augment 3` (more data, slower), `--hidden 256,128`.
+
+## Databricks + MLflow (sponsor U10)
+
+Contract and edge cases: [databricks/SPEC.md](databricks/SPEC.md).
+The job compares `64`, `128,64`, and `256,128` on the same evaluation split,
+logs each model/report and per-letter recall to MLflow, and publishes the highest
+accuracy model (ties keep the smaller network). A failed training/logging run
+leaves previously published files unchanged. Random-split evaluation is explicitly
+labelled optimistic; use at least two people's recordings for a held-out person.
+
+1. Add this repository as a Databricks Git folder. Use compute with Unity Catalog
+   volume access and permission to create MLflow runs.
+2. Upload `kaggle_features.npz` and/or `recorded/*.json` to a volume such as
+   `/Volumes/main/default/handshake`. Keep one JSON per recorded person.
+3. Open `training/databricks/train_job.py` as a source notebook. Set `training_dir`
+   to the Git folder's absolute `training/` path and `data_dir` to the volume path.
+4. Run all cells. Confirm **three finished runs** in the notebook experiment, with
+   `hidden`, `evaluation`, `holdout_accuracy`, `recall_<letter>`, and both artifacts.
+5. Review `report.txt` and `model.json` in the volume. Download the model to
+   `public/model/model.json` only when the evaluation is acceptable. Keep the
+   MLflow experiment screenshot and report for the submission. A local synthetic
+   test is not evidence of real-hand accuracy or a completed Databricks run.
+
+Local regression tests (no Databricks credentials or personal recordings needed):
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r training/databricks/requirements-test.txt
+.venv/bin/python -m pytest training/test_train_smoke.py training/test_databricks.py -q
+.venv/bin/python training/test_parity.py
+```
+
+`train.main(argv=None)` returns `{accuracy, out, report}`; `--report` supports a
+custom report path. Malformed/stale/nonfinite recordings fail with the filename
+instead of being silently omitted. Filtering must leave at least two training
+classes and a nonempty holdout containing only classes present in training.
+
+MLflow API: https://mlflow.org/docs/latest/api_reference/python_api/mlflow.html
+Databricks workspace files: https://docs.databricks.com/aws/en/files/workspace
+
+Publication stages both files first, but the two final replacements are not a
+transactional pair. Rerun after a storage interruption during publication; run
+only one job per output directory at a time.
