@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, type ElementRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
@@ -52,8 +52,14 @@ function SkeletonHand({ pose }: { pose: Vec3[] }) {
   );
 }
 
+// Stays still, facing the learner (palm toward them, as recorded). Turns only when dragged, within limits,
+// so it can never flip round to the back of the hand.
+const FRONT = Math.PI / 2;
+const TILT = 0.5; // ~30° up/down
+const TURN = 1.15; // ~65° left/right
+
 export function HandModel3D({ pose, letter, height = 320 }: { pose: Vec3[] | null; letter: string; height?: number }) {
-  const [spin, setSpin] = useState(true);
+  const controls = useRef<ElementRef<typeof OrbitControls>>(null);
 
   if (!pose) {
     return (
@@ -65,17 +71,29 @@ export function HandModel3D({ pose, letter, height = 320 }: { pose: Vec3[] | nul
 
   return (
     <div className="hand3d" style={{ height }}>
-      <Canvas camera={{ position: [0, 2, 22], fov: 40 }} dpr={[1, 2]} aria-label={`3D model of the ASL letter ${letter}. Drag to rotate.`}>
+      <Canvas camera={{ position: [0, 0, 34], fov: 40 }} dpr={[1, 2]} aria-label={`3D model of the ASL letter ${letter}, facing you. Drag to turn.`}>
         <ambientLight intensity={0.7} />
         <directionalLight position={[5, 10, 8]} intensity={1.1} />
         <directionalLight position={[-6, -4, -6]} intensity={0.35} />
         <SkeletonHand pose={pose} />
-        <OrbitControls enablePan={false} minDistance={10} maxDistance={40} autoRotate={spin} autoRotateSpeed={1.5} />
+        <OrbitControls
+          ref={controls}
+          enablePan={false}
+          minDistance={10}
+          maxDistance={55}
+          rotateSpeed={0.5}
+          enableDamping
+          dampingFactor={0.12}
+          minPolarAngle={FRONT - TILT}
+          maxPolarAngle={FRONT + TILT}
+          minAzimuthAngle={-TURN}
+          maxAzimuthAngle={TURN}
+        />
       </Canvas>
       <div className="hand3d-bar">
-        <span>Drag to spin · scroll to zoom</span>
-        <button className="secondary" onClick={() => setSpin((s) => !s)} aria-pressed={spin}>
-          {spin ? "Pause" : "Auto-rotate"}
+        <span>Drag to turn · scroll to zoom</span>
+        <button className="secondary" onClick={() => controls.current?.reset()}>
+          Reset view
         </button>
       </div>
     </div>

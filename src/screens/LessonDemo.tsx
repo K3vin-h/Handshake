@@ -137,6 +137,7 @@ export function LessonDemo() {
         <p className="muted">
           Seeing <b>{pred?.letter ?? "—"}</b> · confidence {pred ? Math.round(pred.confidence * 100) : 0}%
           {source === "knn" && pred && isFinite(pred.distance) && <> · distance {pred.distance.toFixed(2)}</>}
+          {" "}· hand <b>{lastHand.current?.handedness ?? "—"}</b>
           {" "}· lighting {cam.lighting}
           {cam.enhancing ? " (CLAHE on)" : ""}
         </p>
@@ -154,6 +155,19 @@ export function LessonDemo() {
           <input type="checkbox" checked={restrict} onChange={(e) => setRestrict(e.target.checked)} />
           Only compare against this lesson's letters + look-alikes
         </label>
+        <button
+          className="secondary"
+          onClick={() => {
+            const s = cam.snapshot(lastHand.current);
+            if (!s) return;
+            const a = document.createElement("a");
+            a.href = s;
+            a.download = `snap-${target}-${Date.now()}.jpg`;
+            a.click();
+          }}
+        >
+          Download snapshot
+        </button>
       </details>
     </div>
   );
