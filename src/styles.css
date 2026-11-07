@@ -42,3 +42,12 @@ input { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); 
 .hand3d.empty { display: grid; place-items: center; padding: 16px; text-align: center; color: var(--muted); min-height: 200px; }
 .hand3d-bar { position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .check { display: flex; gap: 6px; align-items: center; font-size: 14px; margin-top: 8px; }
+/* Duolingo-style lesson: progress bar on top, feedback footer that turns green/red (always with ✓/✗ text too). */
+.lesson-progress { width: 100%; height: 12px; accent-color: var(--primary); margin-bottom: 8px; }
+.lesson-footer { margin-top: 16px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); background: var(--card); }
+.lesson-footer.match { background: #dcfce7; border-color: #16a34a; color: #166534; }
+.lesson-footer.miss { background: #fee2e2; border-color: #dc2626; color: #991b1b; }
+.lesson-status { margin: 0 0 8px; font-size: 1.25rem; font-weight: 700; }
+.lesson-footer .tip { color: var(--text); margin-bottom: 8px; }
+@media (prefers-reduced-motion: no-preference) { .lesson-footer.match, .lesson-footer.miss { animation: pop 200ms ease-out; } }
+@keyframes pop { from { transform: translateY(6px); opacity: 0.6; } }

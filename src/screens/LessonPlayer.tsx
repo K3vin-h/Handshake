@@ -51,7 +51,7 @@ export function LessonPlayer({ lessonId }: { lessonId: string }) {
   }
 
   if (!lesson) return <div className="page"><p>Lesson not found. <a href="#/">Back to your path</a></p></div>;
-  // Same baseline: no skipping ahead by URL. "Skip" inside a lesson passes an item without counting it as a match.
+  // Same baseline: no skipping ahead by URL. Inside a lesson, "Continue" unlocks only after the sign matches; "Skip" moves on without counting a match.
   if (!isUnlocked(units, progress.current, lesson.id)) return <div className="page"><p>Locked: finish the lessons before it first. <a href="#/">Back to your path</a></p></div>;
   const item = items[i];
   if (!item) return <div className="page"><p>Nothing to practise here yet.</p><button onClick={next}>Continue</button></div>;
@@ -60,7 +60,7 @@ export function LessonPlayer({ lessonId }: { lessonId: string }) {
   // ONE camera at a time: LetterItem stays mounted across consecutive letter items (no key), so the camera never restarts.
   if (item.kind === "other")
     return <div className="page"><p>Coming in a later milestone: {item.step.kind}</p><button onClick={next}>Continue</button></div>;
-  return <LetterItem index={i} item={item} lessonLetters={lessonLetters} leftHanded={profile.leftHanded} stepLabel={stepLabel} progress={progress} onNext={next} />;
+  return <LetterItem index={i} item={item} lessonLetters={lessonLetters} leftHanded={profile.leftHanded} stepLabel={stepLabel} lessonProgress={i / items.length} progress={progress} onNext={next} />;
 }
 
 type LetterItemProps = {
@@ -69,40 +69,54 @@ type LetterItemProps = {
   lessonLetters: string[];
   leftHanded: boolean;
   stepLabel: string;
+  lessonProgress: number;
   progress: { current: Progress };
   onNext: () => void;
 };
 
-function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, progress, onNext }: LetterItemProps) {
+function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonProgress, progress, onNext }: LetterItemProps) {
   const [landmarkTip, setLandmarkTip] = useState("");
   const [coach, setCoach] = useState({ tip: "", cached: false });
   const [sideBySide, setSideBySide] = useState(false);
   const [status, setStatus] = useState("");
+  const [result, setResult] = useState<"" | "match" | "miss">(""); // drives the green/red footer
   const asking = useRef(false);
   const gen = useRef(0); // bumps per item: a late coach reply for the previous item is dropped
   const target = item.letter;
 
-  useEffect(() => {
+  function clear() {
     gen.current++;
     asking.current = false;
     setLandmarkTip("");
     setCoach({ tip: "", cached: false });
+    setStatus("");
+    setResult("");
+  }
+  useEffect(() => {
+    clear();
     setSideBySide(false);
   }, [index]);
 
+  function retry() {
+    clear();
+    check.reset();
+  }
+
   const check = useLetterCheck(target, lessonLetters, {
     leftHanded,
-    enabled: item.kind === "check",
+    enabled: item.kind === "check" && result !== "match", // stop checking once matched; "Try again" restarts
     onMatch: (d) => {
       progress.current = recordAttempt(progress.current, d.letter, true);
+      clear();
+      setResult("match");
       setStatus(`${MATCH_WORDING}: ${d.letter}`);
       celebrate();
-      onNext();
     },
     onMiss: (feedback) => {
       progress.current = recordAttempt(progress.current, target, false);
       const first = feedback[0];
-      setStatus(`Not matching ${target} yet`);
+      setResult("miss");
+      setStatus(`Not matching ${target} yet. Keep trying.`);
       setLandmarkTip(first ? `Your ${first.finger} ${first.issue}.` : "Compare your hand with the reference and hold it still.");
       if (!first) return;
       const repeat = mistakeCount(recordMistake(loadMistakes(), target, first.code), target, first.code);
@@ -128,17 +142,20 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, progres
       <HandModel3D pose={meanPose3D(target, check.templates, leftHanded)} letter={target} />
     </Suspense>
   );
-  const common = { target, reference, camera, landmarkTip, coachTip: coach.tip, coachCached: coach.cached, sideBySide, stepLabel };
+  const common = { target, reference, camera, landmarkTip, coachTip: coach.tip, coachCached: coach.cached, sideBySide, stepLabel, lessonProgress };
 
   if (item.kind === "learn")
     return (
       <LessonView {...common} title={`Learn ${item.letter}`} showReference progress={0}
-        status={item.referenceOnly ? "Reference only, coming later" : `This is ${item.letter}. Try it, then continue.`}
+        status={item.referenceOnly ? "Reference only, coming later" : `This is ${item.letter}. Look at the hand, then continue to try it.`}
         actionLabel="Continue" onAction={onNext} />
     );
 
   return (
     <LessonView {...common} title={item.word ? `Spell ${item.word.letters.join("")}` : `Sign ${item.letter}`} word={item.word}
-      showReference={item.showReference || sideBySide} progress={check.progress} status={status} actionLabel="Skip" onAction={onNext} />
+      showReference={item.showReference || sideBySide} progress={check.progress}
+      status={status || `Hold the sign for ${target}`} feedback={result || undefined}
+      actionLabel="Continue" actionDisabled={result !== "match"} onAction={onNext}
+      onRetry={result === "match" ? retry : undefined} onSkip={result === "match" ? undefined : onNext} />
   );
 }

@@ -3,7 +3,10 @@ export function Complete({ lessonId }: { lessonId: string }) {
   return (
     <div className="page">
       <h1>Lesson {lessonId} complete</h1>
-      <a href="#/">Back to your path</a>
+      <p className="row">
+        <a href={`#/lesson/${lessonId}`}>Practice again</a>
+        <a href="#/">Back to your path</a>
+      </p>
     </div>
   );
 }
