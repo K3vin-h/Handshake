@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { isPracticeable } from "../cv";
+import { HaloField } from "../components/HaloField";
 import { LiveCoverage } from "../components/LiveCoverage";
 import { LockedUnit } from "../components/LockedUnit";
 import { StatusMessage } from "../components/StatusMessage";
@@ -26,6 +27,7 @@ export function Onboarding() {
   const [relationship, setRelationship] = useState<Personalization["relationship"]>(saved?.relationship);
   const [leftHanded, setLeftHanded] = useState(saved?.leftHanded ?? false);
   const [error, setError] = useState("");
+  const [fieldErr, setFieldErr] = useState({ you: "", them: "" });
   const youRef = useRef<HTMLInputElement>(null);
   const themRef = useRef<HTMLInputElement>(null);
 
@@ -39,16 +41,21 @@ export function Onboarding() {
   function submit(e: FormEvent) {
     e.preventDefault();
     if (!hasLetter(you)) {
-      setError("Enter your first name using at least one letter A to Z.");
+      const msg = "Enter your first name using at least one letter A to Z.";
+      setError(msg);
+      setFieldErr({ you: msg, them: "" });
       youRef.current?.focus();
       return;
     }
     if (!hasLetter(them)) {
-      setError("Enter their first name using at least one letter A to Z.");
+      const msg = "Enter their first name using at least one letter A to Z.";
+      setError(msg);
+      setFieldErr({ you: "", them: msg });
       themRef.current?.focus();
       return;
     }
     setError("");
+    setFieldErr({ you: "", them: "" });
     saveProfile({ userName: you.trim(), theirName: them.trim(), relationship, leftHanded });
     location.hash = "#/";
   }
@@ -65,14 +72,10 @@ export function Onboarding() {
         <form className="card" onSubmit={submit} noValidate aria-labelledby="form-title">
           <h2 id="form-title">About you</h2>
 
-          <div className="field">
-            <label htmlFor="you">Your first name</label>
-            <input id="you" ref={youRef} value={you} maxLength={20} autoComplete="given-name" onChange={(e) => setYou(e.target.value)} aria-describedby="form-status" />
-          </div>
-          <div className="field">
-            <label htmlFor="them">Their first name</label>
-            <input id="them" ref={themRef} value={them} maxLength={20} autoComplete="off" onChange={(e) => setThem(e.target.value)} aria-describedby="form-status" />
-          </div>
+          <HaloField id="you" inputRef={youRef} label="Your first name" value={you} maxLength={20} autoComplete="given-name" error={fieldErr.you}
+            onChange={(e) => { setYou(e.target.value); if (fieldErr.you) setFieldErr({ ...fieldErr, you: "" }); }} />
+          <HaloField id="them" inputRef={themRef} label="Their first name" value={them} maxLength={20} autoComplete="off" error={fieldErr.them}
+            onChange={(e) => { setThem(e.target.value); if (fieldErr.them) setFieldErr({ ...fieldErr, them: "" }); }} />
 
           <fieldset className="field">
             <legend>How you know them (optional)</legend>

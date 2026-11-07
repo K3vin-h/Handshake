@@ -37,7 +37,7 @@ export function LiveCoverage(props: { name: string; isLive: (letter: string) => 
         </strong>
         {!allLive && <span className="muted"> · {c.total - c.liveCount} of its letters are reference only (no pass/fail)</span>}
       </p>
-      <div className="grid">
+      <div className="chip-row">
         {c.letters.map((l) => (
           <LetterBadge key={l} letter={l} status={isLive(l) ? "live" : "reference-only"} />
         ))}

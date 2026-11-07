@@ -3,10 +3,12 @@
 // - The sound is never the only cue: callers also show text (see <StatusMessage>).
 // - No libraries, no network. Confetti pieces remove themselves.
 
-const COLOURS = ["#1d4ed8", "#0f766e", "#b45309", "#7c3aed", "#be123c"];
+const COLOURS = ["#0090ff", "#6e56cf", "#aa99ec", "#5eb1ef", "#8ec8f6"];
 
 function reducedMotion() {
-  return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // OS setting OR the in-app "Reduce motion" switch (data-reduce-motion on <html>).
+  const os = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return os || (typeof document !== "undefined" && document.documentElement.hasAttribute("data-reduce-motion"));
 }
 
 function beep() {
