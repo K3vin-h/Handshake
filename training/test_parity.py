@@ -4,6 +4,7 @@ Run from the repo root:  python training/test_parity.py
 """
 import json
 import random
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -30,7 +31,7 @@ console.log(JSON.stringify(cases.map(c => extractFeatures({
 tmp = ROOT / "training" / ".parity.ts"
 tmp.write_text(script)
 try:
-    proc = subprocess.run(["npx", "--yes", "tsx", str(tmp)], cwd=ROOT, input=json.dumps(cases), capture_output=True, text=True)
+    proc = subprocess.run([shutil.which("npx") or "npx", "--yes", "tsx", str(tmp)], cwd=ROOT, input=json.dumps(cases), capture_output=True, text=True)
     if proc.returncode != 0:
         raise SystemExit(f"tsx failed:\n{proc.stderr}")
     out = proc.stdout
