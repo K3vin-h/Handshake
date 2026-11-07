@@ -45,7 +45,7 @@ export type Unit = { id: string; title: string; goal: string; lessons: Lesson[] 
 export type Personalization = {
   userName: string;
   theirName: string;
-  relationship: "coworker" | "friend" | "family" | "classmate" | "partner";
+  relationship?: "coworker" | "friend" | "family" | "classmate" | "partner";
   /** Sign ids picked for the relationship (from /api/path; falls back to PACK_WORDS). */
   wordPack?: string[];
   /** Real words from letters the learner knows (from /api/words); keyed by lesson id. */
@@ -137,7 +137,7 @@ export function buildCurriculum(p: Personalization): Unit[] {
   const unit2: Unit = { id: "u2", title: "The alphabet", goal: "Fingerspell any word", lessons: unit2Lessons };
 
   // ---------- Unit 3: greetings and sentences ----------
-  const pack = (p.wordPack?.length ? p.wordPack : PACK_WORDS(p.relationship)).filter((w) => SIGNS[w]).slice(0, 4);
+  const pack = (p.wordPack?.length ? p.wordPack : PACK_WORDS(p.relationship ?? "friend")).filter((w) => SIGNS[w]).slice(0, 4);
   const signLesson = (id: string, title: string, signs: string[], scope: "demo" | "stretch", extra: Step[] = []): Lesson => ({
     id,
     title,
@@ -157,7 +157,7 @@ export function buildCurriculum(p: Personalization): Unit[] {
       signLesson("3.3", "Being polite", ["PLEASE", "THANK-YOU", "SORRY"], "stretch"),
       signLesson("3.4", "Asking questions", ["YOU", "YOUR", "HOW", "WHAT"], "stretch", [{ kind: "sentence", tokens: ["YOUR", "NAME", "WHAT"], english: "What's your name? (eyebrows down)" }]),
       signLesson("3.5", "Answering", ["YES", "NO", "GOOD", "FINE"], "stretch"),
-      signLesson("3.6", `Words for your ${p.relationship}`, pack, "stretch"),
+      signLesson("3.6", p.relationship ? `Words for your ${p.relationship}` : "Everyday words", pack, "stretch"),
       { id: "3.7", title: "Checkpoint: a full introduction", summary: `HELLO, MY NAME ${me}`, scope: "stretch", grading: "assisted", xp: 50, steps: [{ kind: "sentence", tokens: ["HELLO", "MY", "NAME", `fs:${me}`], english: `Hello, my name is ${p.userName || me}.` }] },
     ],
   };

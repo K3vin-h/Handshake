@@ -87,16 +87,17 @@ export function dueItems(p: Progress, now = Date.now(), limit = 5): string[] {
     .map(([id]) => id);
 }
 
-/** A lesson is unlocked when the lesson before it (in path order) is completed. */
+/** A lesson is unlocked when the previous DEMO lesson (in path order) is completed. Stretch lessons never gate. */
 export function isUnlocked(units: Unit[], p: Progress, lessonId: string): boolean {
   const all = flatLessons(units);
   const i = all.findIndex((l) => l.id === lessonId);
-  return i <= 0 || p.completed.includes(all[i - 1].id);
+  const prev = all.slice(0, Math.max(0, i)).filter((l) => l.scope === "demo").at(-1);
+  return !prev || p.completed.includes(prev.id);
 }
 
-/** Next lesson to do (first not completed). */
+/** Next lesson to do (first demo lesson not completed). */
 export function nextLesson(units: Unit[], p: Progress) {
-  return flatLessons(units).find((l) => !p.completed.includes(l.id)) ?? null;
+  return flatLessons(units).find((l) => l.scope === "demo" && !p.completed.includes(l.id)) ?? null;
 }
 
 /** Letters that need practice: most misses relative to attempts. */

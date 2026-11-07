@@ -1,7 +1,11 @@
 import type { Personalization } from "./curriculum";
 
 // The learner profile lives ONLY in this browser. Names never go to the server.
-export type Profile = Personalization & { leftHanded: boolean; goal: string; welcome: string };
+// Onboarding asks names + signing hand only; everyone starts at lesson 1.1.
+export type Profile = Personalization & { leftHanded: boolean };
+
+/** Home welcome line, same for everyone; names are filled in on the device with fillNames(). */
+export const WELCOME = "Let's start with your name, {you}. In a few lessons you'll be saying hello to {them}.";
 
 const KEY = "handshake.profile.v1";
 let memory: Profile | null = null; // fallback when localStorage is blocked
@@ -9,10 +13,7 @@ let memory: Profile | null = null; // fallback when localStorage is blocked
 export const DEMO_PROFILE: Profile = {
   userName: "Ryan",
   theirName: "Lily",
-  relationship: "coworker",
   leftHanded: false,
-  goal: "Introduce myself to Lily",
-  welcome: "Let's start with your name, {you}. In a few lessons you'll be saying hello to {them}.",
 };
 
 export function loadProfile(): Profile | null {
@@ -33,6 +34,6 @@ export function saveProfile(p: Profile) {
   }
 }
 
-/** Gemini writes {you}/{them}; the names are filled in here, on the device. */
+/** Fills {you}/{them} on the device. */
 export const fillNames = (text: string, p: Pick<Profile, "userName" | "theirName">) =>
   text.replaceAll("{you}", p.userName).replaceAll("{them}", p.theirName);

@@ -7,6 +7,7 @@ import { Onboarding } from "./screens/Onboarding";
 import { LessonPlayer } from "./screens/LessonPlayer";
 import { Complete } from "./screens/Complete";
 import { ProgressScreen } from "./screens/Progress";
+import { LessonPreview } from "./screens/LessonPreview";
 import { loadProfile } from "./lib/profile";
 
 // Hash router: "#/lesson/1.1" → name "lesson", param "1.1".
@@ -16,6 +17,7 @@ function screen(hash: string): ReactElement {
   if (name === "record") return <RecordPage />;
   if (name === "curriculum") return <CurriculumPreview />;
   if (name === "demo") return <LessonDemo />;
+  if (name === "lesson-preview") return <LessonPreview />;
   if (name === "welcome" || !loadProfile()) return <Onboarding />;
   if (name === "lesson") return <LessonPlayer key={param} lessonId={param} />;
   if (name === "complete") return <Complete lessonId={param} />;
