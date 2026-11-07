@@ -10,4 +10,7 @@ export { getHandFeedback } from "./feedback";
 export { meanPose3D, worldPose, HAND_BONES, type Vec3 } from "./pose3d";
 export type { LightingStatus } from "./lighting";
 export type { SignDetection, FingerFeedback, HandFrame, Prediction } from "./types";
+export { PRACTICEABLE, isPracticeable } from "./practiceable";
+export { useLetterCheck, inFrame, type LetterCheckOptions } from "./useLetterCheck";
+export type { ErrorCode, Finger } from "./types";
 export { SIGNS, SignChecker, zoneOf, classifyMovement, ZONES, type SignDef } from "./signs";

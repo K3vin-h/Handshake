@@ -1,4 +1,4 @@
-import { fingerCurls, fingerDirections } from "./features";
+import { fingerCurls, fingerDirections } from "./features.ts";
 import type { FeatureVector, FingerFeedback } from "./types";
 
 // Fingerpose-style feedback: describe each finger by curl and pointing direction,
@@ -30,15 +30,12 @@ export function getHandFeedback(user: FeatureVector, target: FeatureVector, curl
   for (const finger of Object.keys(uc) as (keyof typeof uc)[]) {
     const diff = uc[finger] - tc[finger];
     if (Math.abs(diff) > curlThreshold) {
-      issues.push({
-        finger,
-        issue: `is ${CURL_LEVEL(uc[finger])} but should be ${CURL_LEVEL(tc[finger])}`,
-      });
+      issues.push({ finger, code: `${finger}:curl`, issue: `is ${CURL_LEVEL(uc[finger])} but should be ${CURL_LEVEL(tc[finger])}` });
       continue;
     }
     // Direction only matters for fingers that are extended in the target sign.
     if (tc[finger] < 0.5 && angleBetween(ud[finger], td[finger]) > dirThresholdDeg) {
-      issues.push({ finger, issue: `points ${directionWord(ud[finger])} but should point ${directionWord(td[finger])}` });
+      issues.push({ finger, code: `${finger}:direction`, issue: `points ${directionWord(ud[finger])} but should point ${directionWord(td[finger])}` });
     }
   }
 
@@ -46,7 +43,7 @@ export function getHandFeedback(user: FeatureVector, target: FeatureVector, curl
   const thumbGap = (f: FeatureVector) => Math.hypot(f[12] - f[15], f[13] - f[16]);
   const gap = thumbGap(user) - thumbGap(target);
   if (Math.abs(gap) > 0.35 && !issues.some((i) => i.finger === "thumb")) {
-    issues.push({ finger: "thumb", issue: gap > 0 ? "is too far from the index finger" : "is too close to the index finger" });
+    issues.push({ finger: "thumb", code: "thumb:placement", issue: gap > 0 ? "is too far from the index finger" : "is too close to the index finger" });
   }
   return issues;
 }

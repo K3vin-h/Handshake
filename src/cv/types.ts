@@ -28,5 +28,7 @@ export type Prediction = {
 /** Emitted once a sign has been held steadily (see holdConfirm.ts). */
 export type SignDetection = { letter: string; confidence: number };
 
-/** "What's off" for the Gemini coach, e.g. { finger: "thumb", issue: "too open" }. */
-export type FingerFeedback = { finger: string; issue: string };
+export type Finger = "thumb" | "index" | "middle" | "ring" | "pinky";
+export type ErrorCode = `${Finger}:${"curl" | "direction" | "placement"}`;
+/** "What's off", e.g. { finger: "thumb", issue: "is too far from the index finger", code: "thumb:placement" }. */
+export type FingerFeedback = { finger: Finger; issue: string; code: ErrorCode };
