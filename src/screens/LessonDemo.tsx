@@ -137,6 +137,7 @@ export function LessonDemo() {
         <p className="muted">
           Seeing <b>{pred?.letter ?? "—"}</b> · confidence {pred ? Math.round(pred.confidence * 100) : 0}%
           {source === "knn" && pred && isFinite(pred.distance) && <> · distance {pred.distance.toFixed(2)}</>}
+          {" "}· hand <b>{lastHand.current?.handedness ?? "—"}</b>
           {" "}· lighting {cam.lighting}
           {cam.enhancing ? " (CLAHE on)" : ""}
         </p>
