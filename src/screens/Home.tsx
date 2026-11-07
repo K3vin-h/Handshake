@@ -3,6 +3,9 @@ import { isPracticeable } from "../cv";
 import { LiveCoverage } from "../components/LiveCoverage";
 import { LockedUnit } from "../components/LockedUnit";
 import { UnitSection, type MapLesson } from "../components/PathMap";
+import { StatusBadge } from "../components/StatusBadge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildCurriculum } from "../lib/curriculum";
 import { DEMO_PROFILE, WELCOME, fillNames, loadProfile } from "../lib/profile";
 import { dueItems, isUnlocked, loadProgress, nextLesson, weakItems } from "../lib/progress";
@@ -32,10 +35,12 @@ export function Home() {
         <h1>{fillNames(WELCOME, profile)}</h1>
         {next ? (
           <div className="row">
-            <button type="button" className="start-button" onClick={() => open(next.id)}>
+            <Button size="lg" className="h-12 rounded-2xl border-b-4 border-brand-deep px-7 text-base" onClick={() => open(next.id)}>
               Continue: {next.id} {next.title}
-            </button>
-            <a className="link-button" href="#/progress">See progress</a>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl border-2">
+              <a href="#/progress">See progress</a>
+            </Button>
           </div>
         ) : (
           <p className="lead">You have finished every lesson that is available right now.</p>
@@ -62,21 +67,36 @@ export function Home() {
         </div>
 
         <aside className="side" aria-label="Your letters and practice">
-          <section className="card">
-            <h2>Letters in {profile.theirName}</h2>
-            <LiveCoverage name={profile.theirName} isLive={isPracticeable} />
-          </section>
-          <section className="card">
-            <h2>Practice</h2>
-            {weak.length === 0 && due === 0 ? (
-              <p className="muted">Nothing to review yet. Finish a lesson and it will show up here.</p>
-            ) : (
-              <>
-                {weak.length > 0 && <p>Needs practice: <strong>{weak.join(", ")}</strong></p>}
-                {due > 0 && <p>{due} {due === 1 ? "item is" : "items are"} due for review.</p>}
-              </>
-            )}
-          </section>
+          <Card className="rounded-3xl border-2 gap-3 py-5">
+            <CardHeader className="gap-0 px-5">
+              <CardTitle className="text-xl">Letters in {profile.theirName}</CardTitle>
+            </CardHeader>
+            <CardContent className="px-5">
+              <LiveCoverage name={profile.theirName} isLive={isPracticeable} />
+            </CardContent>
+          </Card>
+          <Card className="rounded-3xl border-2 gap-3 py-5">
+            <CardHeader className="gap-0 px-5">
+              <CardTitle className="text-xl">Practice</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 px-5">
+              {weak.length === 0 && due === 0 ? (
+                <p className="muted">Nothing to review yet. Finish a lesson and it will show up here.</p>
+              ) : (
+                <>
+                  {weak.length > 0 && (
+                    <p className="flex flex-wrap items-center gap-2">
+                      Needs practice:
+                      {weak.map((l) => (
+                        <StatusBadge key={l} kind="notyet">{l}</StatusBadge>
+                      ))}
+                    </p>
+                  )}
+                  {due > 0 && <p>{due} {due === 1 ? "item is" : "items are"} due for review.</p>}
+                </>
+              )}
+            </CardContent>
+          </Card>
           <p className="muted small">
             <a href="#/welcome">Change names or hand</a>
           </p>

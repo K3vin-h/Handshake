@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { StatusMessage } from "../components/StatusMessage";
 import { celebrate } from "../components/celebrate";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildCurriculum, flatLessons } from "../lib/curriculum";
 import { DEMO_PROFILE, loadProfile } from "../lib/profile";
 import { isUnlocked, loadProgress, nextLesson } from "../lib/progress";
@@ -43,8 +45,14 @@ export function Complete({ lessonId }: { lessonId: string }) {
         </header>
         <StatusMessage kind="info" message={`Finish ${lesson.title} to save its completion and earn XP.`} />
         <div className="row">
-          {isUnlocked(units, progress, lessonId) && <a className="link-button primary" href={`#/lesson/${lessonId}`}>Return to lesson</a>}
-          <a className="link-button" href="#/">Back to your path</a>
+          {isUnlocked(units, progress, lessonId) && (
+            <Button asChild size="lg" className="h-12 rounded-2xl border-b-4 border-brand-deep">
+              <a href={`#/lesson/${lessonId}`}>Return to lesson</a>
+            </Button>
+          )}
+          <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl border-2">
+            <a href="#/">Back to your path</a>
+          </Button>
         </div>
       </div>
     );
@@ -67,18 +75,26 @@ export function Complete({ lessonId }: { lessonId: string }) {
         <div><dt>Practice streak</dt><dd>{progress.streakDays} {progress.streakDays === 1 ? "day" : "days"}</dd></div>
       </dl>
 
-      <section className="card">
-        <h2>What next</h2>
-        <div className="row">
+      <Card className="rounded-3xl border-2">
+        <CardHeader>
+          <CardTitle className="text-xl">What next</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-2">
           {nextOpen ? (
-            <a className="link-button primary" href={`#/lesson/${next.id}`}>Continue: {next.id} {next.title}</a>
+            <Button asChild size="lg" className="h-12 rounded-2xl border-b-4 border-brand-deep">
+              <a href={`#/lesson/${next.id}`}>Continue: {next.id} {next.title}</a>
+            </Button>
           ) : (
             <p>You finished the current path. Greetings and conversations are coming later.</p>
           )}
-          <a className="link-button" href="#/">Back to your path</a>
-          <a className="link-button" href="#/progress">View progress</a>
-        </div>
-      </section>
+          <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl border-2">
+            <a href="#/">Back to your path</a>
+          </Button>
+          <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl border-2">
+            <a href="#/progress">View progress</a>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

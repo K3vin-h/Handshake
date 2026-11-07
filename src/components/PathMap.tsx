@@ -1,4 +1,7 @@
 import { useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import type { PathNodeState } from "./PathNode";
 
 // The curriculum as a winding path of glowing "platform" nodes, one section per unit.
@@ -57,7 +60,7 @@ export function UnitSection(props: { index: number; title: string; goal: string;
 
   return (
     <section className="unit" aria-labelledby={`unit-${index}-title`} ref={ref}>
-      <aside className="unit-card">
+      <Card className="unit-card gap-0 rounded-3xl border-2 p-6">
         <div className="unit-badge" aria-hidden="true">
           <span>{index}</span>
         </div>
@@ -68,11 +71,11 @@ export function UnitSection(props: { index: number; title: string; goal: string;
           <span aria-hidden="true"> · </span>
           <span>{xp} XP</span>
         </p>
-        <progress className="meter" value={done} max={lessons.length} aria-label={`Unit ${index} progress`} />
+        <Progress value={lessons.length ? (done / lessons.length) * 100 : 0} aria-label={`Unit ${index} progress`} />
         <p className="muted small">
           {done} of {lessons.length} done
         </p>
-      </aside>
+      </Card>
 
       <div className="unit-path">
         <p className="level-pill">
@@ -112,9 +115,9 @@ export function UnitSection(props: { index: number; title: string; goal: string;
                   <div className="start-card">
                     <h3>{l.title}</h3>
                     <p className="muted small">{l.summary}</p>
-                    <button type="button" className="start-button" onClick={() => onOpen(l.id)}>
+                    <Button size="lg" className="mt-3 h-12 w-full rounded-2xl border-b-4 border-brand-deep text-base" onClick={() => onOpen(l.id)}>
                       Start
-                    </button>
+                    </Button>
                   </div>
                 )}
 

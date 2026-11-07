@@ -1,7 +1,17 @@
+import { cn } from "@/lib/utils";
+
 export type StatusKind = "match" | "notyet" | "info" | "error";
 
 const LABEL: Record<StatusKind, string> = { match: "Matches the reference", notyet: "Not yet", info: "Note", error: "Error" };
 const ICON: Record<StatusKind, string> = { match: "✓", notyet: "!", info: "i", error: "✕" };
+// Token-backed Tailwind classes (see @theme inline in styles.css). Colour is never the only cue:
+// every kind also has an icon and a text label.
+const STYLE: Record<StatusKind, string> = {
+  match: "bg-match-bg text-match border-match",
+  notyet: "bg-notyet-bg text-notyet border-notyet",
+  info: "bg-reference-bg text-reference border-reference",
+  error: "bg-card text-notyet border-notyet border-4 border-double",
+};
 
 /**
  * The one place detection results and errors are announced. Every message is visual AND text:
@@ -23,14 +33,16 @@ export function StatusMessage(props: { kind: StatusKind; message?: string; urgen
   const { kind, message, urgent, label = LABEL[props.kind] } = props;
   return (
     <div
-      className={`status status-${kind}${message ? "" : " is-empty"}`}
+      className={cn("status", message ? cn("flex items-start gap-2 rounded-md border-2 px-4 py-3", STYLE[kind]) : "")}
       role={urgent ? "alert" : "status"}
       aria-live={urgent ? "assertive" : "polite"}
       aria-atomic="true"
     >
       {message ? (
         <>
-          <span className="status-icon" aria-hidden="true">{ICON[kind]}</span>
+          <span className="inline-grid size-[1.4em] flex-none place-items-center rounded-full border-2 border-current text-[0.85em] font-extrabold" aria-hidden="true">
+            {ICON[kind]}
+          </span>
           <span>
             {label !== false && <strong>{label}: </strong>}
             {message}
