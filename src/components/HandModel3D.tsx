@@ -1,5 +1,5 @@
-import { useMemo, useRef, type KeyboardEvent, type PointerEvent, type RefObject } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { useEffect, useMemo, useRef, type KeyboardEvent, type PointerEvent, type RefObject } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { ConvexGeometry } from "three/examples/jsm/geometries/ConvexGeometry.js";
 import type { Vec3 } from "../cv/pose3d";
@@ -95,6 +95,8 @@ function Palm({ pose }: { pose: Vec3[] }) {
     }
     return new ConvexGeometry(pts);
   }, [pose]);
+  // We pass this geometry in ourselves, so R3F will not free it: do it when the pose changes or the hand goes away.
+  useEffect(() => () => geometry.dispose(), [geometry]);
   return (
     <mesh geometry={geometry}>
       <meshStandardMaterial color={SKIN_SHADE} roughness={0.75} />
@@ -128,11 +130,17 @@ function Hand({ pose }: { pose: Vec3[] }) {
 /** Turns the hand toward a target angle (set by dragging / arrow keys on the large view), easing so it feels smooth. */
 function Spin({ target, children }: { target: RefObject<{ x: number; y: number }>; children: React.ReactNode }) {
   const group = useRef<THREE.Group>(null);
+  const invalidate = useThree((s) => s.invalidate);
+  // The canvas only draws on demand (frameloop="demand"), so keep asking for frames until the hand has reached its target.
   useFrame(() => {
     const g = group.current;
     if (!g || !target.current) return;
-    g.rotation.x += (target.current.x - g.rotation.x) * 0.25;
-    g.rotation.y += (target.current.y - g.rotation.y) * 0.25;
+    const dx = target.current.x - g.rotation.x;
+    const dy = target.current.y - g.rotation.y;
+    if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) return;
+    g.rotation.x += dx * 0.25;
+    g.rotation.y += dy * 0.25;
+    invalidate();
   });
   return <group ref={group}>{children}</group>;
 }
@@ -159,12 +167,24 @@ const aimAtHand = ({ camera }: { camera: THREE.Camera }) => camera.lookAt(0, 0, 
  * Props: pose = 21 points from meanPose3D (null → "no pose" message); letter = for labels; height = optional fixed height in px (default: follows the window height so the lesson fits on one screen)
  * (the two small views stack beside it, each half as tall).
  */
-export function HandModel3D({ pose, letter, height }: { pose: Vec3[] | null; letter: string; height?: number }) {
+export function HandModel3D({ pose: poseProp, letter, height }: { pose: Vec3[] | null; letter: string; height?: number }) {
+  // Callers rebuild the pose array on every render (the lesson page re-renders on every camera frame). Rebuilding the
+  // hand's geometry that often froze the camera, so keep the same array until the numbers actually change.
+  const poseKey = poseProp ? poseProp.map((p) => p.join(",")).join(";") : "";
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const pose = useMemo(() => poseProp, [poseKey]);
+  const wake = useRef<(() => void) | null>(null);
   const spin = useRef({ x: 0, y: 0 });
   const drag = useRef<{ x: number; y: number } | null>(null);
+  const turn = (dx: number, dy: number) => {
+    spin.current.x += dx;
+    spin.current.y += dy;
+    wake.current?.();
+  };
   const resetView = () => {
     spin.current.x = 0;
     spin.current.y = 0;
+    wake.current?.();
   };
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     drag.current = { x: e.clientX, y: e.clientY };
@@ -172,17 +192,16 @@ export function HandModel3D({ pose, letter, height }: { pose: Vec3[] | null; let
   };
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!drag.current) return;
-    spin.current.y += (e.clientX - drag.current.x) * 0.012;
-    spin.current.x += (e.clientY - drag.current.y) * 0.012;
+    turn((e.clientY - drag.current.y) * 0.012, (e.clientX - drag.current.x) * 0.012);
     drag.current = { x: e.clientX, y: e.clientY };
   };
   const endDrag = () => { drag.current = null; };
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const step = 0.3;
-    if (e.key === "ArrowLeft") spin.current.y -= step;
-    else if (e.key === "ArrowRight") spin.current.y += step;
-    else if (e.key === "ArrowUp") spin.current.x -= step;
-    else if (e.key === "ArrowDown") spin.current.x += step;
+    if (e.key === "ArrowLeft") turn(0, -step);
+    else if (e.key === "ArrowRight") turn(0, step);
+    else if (e.key === "ArrowUp") turn(-step, 0);
+    else if (e.key === "ArrowDown") turn(step, 0);
     else if (e.key === "Home" || e.key === "Escape") resetView();
     else return;
     e.preventDefault();
@@ -210,7 +229,7 @@ export function HandModel3D({ pose, letter, height }: { pose: Vec3[] | null; let
           onPointerCancel={endDrag}
           onKeyDown={onKeyDown}
         >
-          <Canvas camera={{ position: [0, 0, DIST], fov: 36 }} dpr={[1, 2]}>
+          <Canvas frameloop="demand" camera={{ position: [0, 0, DIST], fov: 36 }} dpr={[1, 1.5]} onCreated={({ invalidate }) => { wake.current = invalidate; }}>
             <Lights />
             <Spin target={spin}>
               <Hand pose={pose} />
@@ -220,7 +239,7 @@ export function HandModel3D({ pose, letter, height }: { pose: Vec3[] | null; let
         <div className="hand3d-col" style={height ? { height } : undefined}>
           <figure className="hand3d-small">
             <div role="img" aria-label={`Side view of ${letter}`}>
-              <Canvas camera={{ position: [DIST, 0, 0], fov: 36 }} dpr={[1, 2]} onCreated={aimAtHand}>
+              <Canvas frameloop="demand" camera={{ position: [DIST, 0, 0], fov: 36 }} dpr={[1, 1.5]} onCreated={aimAtHand}>
                 <Lights />
                 <Hand pose={pose} />
               </Canvas>
@@ -229,7 +248,7 @@ export function HandModel3D({ pose, letter, height }: { pose: Vec3[] | null; let
           </figure>
           <figure className="hand3d-small">
             <div role="img" aria-label={`Top view of ${letter}`}>
-              <Canvas camera={{ position: [0, DIST, 0], up: [0, 0, -1], fov: 36 }} dpr={[1, 2]} onCreated={aimAtHand}>
+              <Canvas frameloop="demand" camera={{ position: [0, DIST, 0], up: [0, 0, -1], fov: 36 }} dpr={[1, 1.5]} onCreated={aimAtHand}>
                 <Lights />
                 <Hand pose={pose} />
               </Canvas>
