@@ -126,7 +126,7 @@ export function AuthCard({ mode, onDone, headingLevel = 1 }: { mode: "signup" | 
         </button>
         {signup && (
           <p className="muted small auth-legal">
-            By creating an account you agree to how we handle your data (see <a href="#/settings">Privacy in Settings</a>).
+            Your names and progress are saved to our server under your account. You can delete your account any time in Settings.
           </p>
         )}
         <p className="muted small auth-switch">
