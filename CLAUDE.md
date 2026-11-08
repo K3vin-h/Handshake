@@ -127,7 +127,7 @@ POST /api/words { knownLetters: string[], weakLetters: string[] }
 - Whole signs are "assisted": handshape + body zone + movement. Two-handed/facial signs are self-checked.
   Sign descriptions are simplified: verify against a Deaf-led source (Lifeprint) before the demo.
 - Record templates for every handshape `requiredHandshapes()` lists, including "5" (open hand).
-- Drop: Auth0. Stretch: everything marked stretch, rigged 3D hand.
+- Drop: Auth0 (still dropped: accounts use Google sign-in directly, see `docs/superpowers/specs/2026-11-07-accounts-spec.md`). Stretch: everything marked stretch, rigged 3D hand.
 
 ## 3D hand (lesson reference)
 - `src/components/HandModel3D.tsx`: React Three Fiber + drei OrbitControls (drag to spin, auto-rotate).
@@ -182,7 +182,7 @@ Problem Research · Technical Implementation · Design (UI/UX, accessibility) ·
 | n8n | Built behind the consent form and env vars (lesson-complete message to the person you learn for + weekly recap). Only demoed if the core works at H12. | Sponsor plan T3, T11 |
 
 ## Privacy rules
-- Learner profile, names and mistake history stay in the browser (localStorage). Two opt-in exceptions, both off unless env vars are set:
+- Guests keep everything (profile, names, mistake history) in the browser (localStorage). Signed-in users' profile and progress are saved to our server under their account and deleted with it (account deletion). Gemini still receives letters and error codes only, never names or video. Attempt rows in Tiger Data stay anonymous. Two opt-in exceptions, both off unless env vars are set:
   - Tiger Data receives per-attempt rows: letter or sign id, pass/fail, error codes, an anonymous random id. Never names or emails.
   - n8n receives first names and emails ONLY after the user ticks the consent checkbox on #/stats, and can be stopped there. Names and emails never go to Gemini, Maritime or Tiger Data.
   - The Devpost must say both, plus the known risk: anyone holding a learner id could trigger emails to that learner's saved contact.

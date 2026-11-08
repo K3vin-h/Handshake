@@ -112,7 +112,7 @@ together in one transaction.
 
 Routes: `/api/auth/*` (config, signup, login, logout, Google, reset) and
 `/api/me` (profile and state). Env: `GOOGLE_CLIENT_ID` (public),
-`RESEND_API_KEY` and `RESEND_FROM` (server-only; reset email is off without
-both), `APP_ORIGIN`. To disable accounts, unset `DATABASE_URL`: every account
+`RESEND_API_KEY` and `RESEND_FROM` (server-only), `APP_ORIGIN` (reset email is
+off without all three; `APP_ORIGIN` is used only to build the reset link). To disable accounts, unset `DATABASE_URL`: every account
 route then answers 503 `accounts_unavailable` and `/api/auth/config` reports
 `accounts: false`.

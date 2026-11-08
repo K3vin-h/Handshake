@@ -93,7 +93,7 @@ All errors are `{ "error": "<code>" }`, matching the existing routes. Auth route
 
 ## Privacy and honesty (must change with this feature)
 - `CLAUDE.md` privacy rules say the profile, names and mistake history stay in the browser. New text: **guests:** unchanged. **Signed-in users:** their profile and progress are stored on our server, tied to their account, and deleted when they delete the account. Gemini still receives only letters and error codes, never names. Attempt rows in Tiger Data stay anonymous.
-- Onboarding's footer ("Your names never leave this browser. Only lists of letters may be sent.") becomes accurate for both cases: shown as is for guests, and "Signed in: your names and progress are saved to your account." when signed in.
+- Onboarding's footer ("Your names never leave this browser. Only lists of letters may be sent.") becomes accurate for both cases: shown as is for guests, and "You're signed in: your names and progress are saved to your account." when signed in.
 - `docs/superpowers/specs/2026-11-07-sponsor-tracks-spec.md` lines saying "no auth or accounts" get a pointer to this spec. "Best Use of Auth0" stays out: we use Google sign-in directly.
 - The Devpost must say: accounts store email, a password hash or Google id, names and progress; no email verification.
 
