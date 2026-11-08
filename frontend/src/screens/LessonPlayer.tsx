@@ -5,7 +5,7 @@ import { buildCurriculum, flatLessons, type Step } from "../lib/curriculum";
 import { completeLesson, dueItems, isUnlocked, loadProgress, recordAttempt, type Progress } from "../lib/progress";
 import { reportAttempt, reportLessonComplete } from "../lib/track";
 import { loadMistakes, mistakeCount, recordMistake } from "../lib/mistakes";
-import { DEMO_PROFILE, loadProfile } from "../lib/profile";
+import { requireProfile } from "../lib/requireProfile";
 import { SEND_SNAPSHOT, getCoachTip, getHowTo } from "../lib/api";
 import { LessonView } from "../components/LessonView";
 import { SceneView } from "../components/SceneView";
@@ -67,7 +67,7 @@ export function LessonPlayer({ lessonId }: { lessonId: string }) {
   return <Player key={lessonId} lessonId={lessonId} />;
 }
 function Player({ lessonId }: { lessonId: string }) {
-  const profile = loadProfile() ?? DEMO_PROFILE;
+  const profile = requireProfile();
   const units = useMemo(() => buildCurriculum(profile).filter((u) => ["u1", "u2", "u3", "u4"].includes(u.id)), []); // eslint-disable-line react-hooks/exhaustive-deps
   const lesson = useMemo(() => flatLessons(units).find((l) => l.id === lessonId), [units, lessonId]);
   const progress = useRef(loadProgress()); // a ref, not state: recordAttempt mutates, and StrictMode would double-apply updaters
@@ -77,9 +77,25 @@ function Player({ lessonId }: { lessonId: string }) {
   const lessonLetters = useMemo(() => [...new Set(items.flatMap((x) => (x.kind === "check" ? [x.letter] : [])))], [items]);
 
   const finishing = useRef(false);
+  // A skipped step is passed without a match. The lesson can then be walked to the end, but it is NOT completed:
+  // no XP, no unlock. Otherwise Skip would be a way round the pass rule (mastery needs real matches).
+  const skipped = useRef(false);
+  const [incomplete, setIncomplete] = useState(false);
+  function skip() {
+    skipped.current = true;
+    next();
+  }
+  function startAgain() {
+    skipped.current = false;
+    finishing.current = false;
+    setIncomplete(false);
+    setTurn(0);
+    setI(0);
+  }
   function next() {
     if (finishing.current) return;
     if (i + 1 < items.length) return setI(i + 1);
+    if (skipped.current) return setIncomplete(true);
     finishing.current = true;
     if (!progress.current.completed.includes(lesson!.id)) {
       progress.current = completeLesson(progress.current, lesson!.id, lesson!.xp);
@@ -91,6 +107,14 @@ function Player({ lessonId }: { lessonId: string }) {
   if (!lesson) return <div className="page"><p>Lesson not found. <a href="#/">Back to your path</a></p></div>;
   // Same baseline: no skipping ahead by URL. "Skip" inside a lesson passes an item without counting it as a match.
   if (!isUnlocked(units, progress.current, lesson.id)) return <div className="page"><p>Locked: finish the lessons before it first. <a href="#/">Back to your path</a></p></div>;
+  if (incomplete)
+    return (
+      <div className="page">
+        <h1>Lesson not finished yet</h1>
+        <p role="status">You skipped some steps, so this lesson is not complete and no XP was added. Go through it again and match each sign to finish it.</p>
+        <p><button onClick={startAgain}>Start this lesson again</button> <a href="#/">Back to your path</a></p>
+      </div>
+    );
   const item = items[i];
   if (!item) return <div className="page"><p>Nothing to practise here yet.</p><button onClick={next}>Continue</button></div>;
   const stepLabel = `Step ${i + 1} of ${items.length}`;
@@ -101,13 +125,13 @@ function Player({ lessonId }: { lessonId: string }) {
     const tokens = s.kind === "sign" ? [s.sign] : s.tokens;
     const title = s.kind === "sign" ? `Sign "${SIGNS[s.sign]?.english ?? s.sign}"` : s.english;
     return (
-      <TokenRunner tokens={tokens} leftHanded={profile.leftHanded}
+      <TokenRunner tokens={tokens} leftHanded={profile.leftHanded} onEmpty={next}
         onDone={() => { progress.current = recordAttempt(progress.current, tokens.join(" "), true); celebrate(); next(); }}
         render={(r) => (
           <LessonView title={title} target={tokens.join(" ")} reference={null} showReference={false} progress={0}
             camera={r.camera} status={r.prompt} landmarkTip="" coachTip="" coachCached={false} sideBySide={false}
             stepLabel={`${stepLabel} · part ${r.index + 1} of ${r.units.length}`} lessonProgress={i / items.length}
-            actionLabel="Skip" onAction={next} onSelfCheck={r.selfCheck} />
+            actionLabel="Skip" onAction={skip} onSelfCheck={r.selfCheck} />
         )} />
     );
   }
@@ -123,7 +147,8 @@ function Player({ lessonId }: { lessonId: string }) {
           setTurn(0);
           next();
         }}
-        render={(r) => <SceneView turns={turns} turnIndex={turn} tokenIndex={r.token} camera={r.camera} prompt={r.prompt} onSelfCheck={r.selfCheck} />} />
+        onEmpty={() => { if (turn + 1 < turns.length) setTurn(turn + 1); else { setTurn(0); next(); } }}
+        render={(r) => <SceneView title={lesson.title} turns={turns} turnIndex={turn} tokenIndex={r.token} camera={r.camera} prompt={r.prompt} onSelfCheck={r.selfCheck} onSkip={skip} />} />
     );
   }
   // ONE camera at a time: LetterItem stays mounted across consecutive letter items (no key), so the camera never restarts.
@@ -132,7 +157,7 @@ function Player({ lessonId }: { lessonId: string }) {
   if (item.kind === "identify")
     return <IdentifyItem key={i} item={item} leftHanded={profile.leftHanded} stepLabel={stepLabel} onNext={next}
       onMiss={() => { if (!item.again) setItems((xs) => [...xs, { ...item, again: true }]); }} />;
-  return <LetterItem index={i} item={item} lessonLetters={lessonLetters} leftHanded={profile.leftHanded} stepLabel={stepLabel} lessonProgress={i / items.length} stepSize={1 / items.length} progress={progress} onNext={next} />;
+  return <LetterItem index={i} item={item} lessonLetters={lessonLetters} leftHanded={profile.leftHanded} stepLabel={stepLabel} lessonProgress={i / items.length} stepSize={1 / items.length} progress={progress} onNext={next} onSkip={skip} />;
 }
 
 type LetterItemProps = {
@@ -145,9 +170,10 @@ type LetterItemProps = {
   stepSize: number; // one step's share of the top bar, added once this step matches so the last step can fill the bar
   progress: { current: Progress };
   onNext: () => void;
+  onSkip: () => void;
 };
 
-function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonProgress, stepSize, progress, onNext }: LetterItemProps) {
+function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonProgress, stepSize, progress, onNext, onSkip }: LetterItemProps) {
   const [landmarkTip, setLandmarkTip] = useState("");
   const [coach, setCoach] = useState({ tip: "", cached: false });
   const [sideBySide, setSideBySide] = useState(false);
@@ -175,7 +201,16 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
   const [hintStage, setHintStage] = useState(0);
   const [rep, setRep] = useState(0); // matches so far in this step
   const relax = useRef(false); // after a rep the hand must leave the sign (or drop out) before the next one counts
-  useEffect(() => { check.reset(); setResult(""); setRep(0); setHintStage(0); relax.current = false; }, [index]);
+  useEffect(() => {
+    check.reset();
+    setResult("");
+    // Moving to the next rep/step: clear the last one's message so "Matches our recording: X" is not shown (or announced)
+    // again before the learner has signed anything.
+    setStatus("");
+    setRep(0);
+    setHintStage(0);
+    relax.current = false;
+  }, [index]);
 
   function retry() {
     queue.reset();
@@ -208,6 +243,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     },
     onMiss: (feedback) => {
       if (item.kind !== "check") return;
+      if (relax.current) return; // between reps the hand is resting in frame on purpose: that is not a miss
       // A miss shows the tip and keeps the same rep going. It does not send the learner back to rep 1 (that looped for
       // anyone the model misses often). Mastery still needs 3 in a row: recordAttempt resets the streak on a miss.
       progress.current = recordAttempt(progress.current, target, false);
@@ -264,6 +300,8 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
       )}
     </>
   );
+  // This component re-renders on every camera frame; the pose only changes with the letter, templates or hand.
+  const pose = useMemo(() => meanPose3D(target, check.templates, leftHanded), [target, check.templates, leftHanded]);
   const hidden = recall && hintStage < 2;
   // Placeholder keeps the reference slot visible so the learner knows the hand is hidden on purpose, and how to get it.
   const reference = hidden ? (
@@ -272,7 +310,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     </div>
   ) : (
     <Suspense fallback={<div className="hand3d empty">Loading 3D hand…</div>}>
-      <HandModel3D pose={meanPose3D(target, check.templates, leftHanded)} letter={target} />
+      <HandModel3D pose={pose} letter={target} />
     </Suspense>
   );
   const common = { target, reference, camera, landmarkTip, coachTip: coach.tip, coachCached: coach.cached, sideBySide, stepLabel, lessonProgress: barProgress, howTo: recall && hintStage < 2 ? undefined : howTo };
@@ -289,7 +327,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
       showReference={item.showReference || sideBySide || recall} progress={shownProgress}
       status={status || (recall ? `From memory: sign ${target}. The reference is hidden on purpose so you practise recalling it.` : `Hold the sign for ${target}${reps > 1 ? ` (${rep} of ${reps})` : ""}`)} feedback={result || undefined}
       actionLabel="Continue" actionDisabled={result !== "match"} onAction={onNext}
-      onRetry={result === "match" ? retry : undefined} onSkip={result === "match" ? undefined : onNext} />
+      onRetry={result === "match" ? retry : undefined} onSkip={result === "match" ? undefined : onSkip} />
   );
 }
 

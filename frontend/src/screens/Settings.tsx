@@ -1,12 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ReduceMotionSetting } from "../components/motion/MotionProvider";
-import { DEMO_PROFILE, loadProfile } from "../lib/profile";
+import { requireProfile } from "../lib/requireProfile";
 
 // Settings: names and hand (edited on the welcome screen), motion, and the privacy note.
 // Reads the profile from localStorage only. Nothing here calls /api.
 
 export function Settings() {
-  const profile = loadProfile() ?? DEMO_PROFILE;
+  const profile = requireProfile();
   return (
     <div className="page">
       <header className="hero">
