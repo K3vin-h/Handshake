@@ -261,6 +261,7 @@ button:hover:not(:disabled), .link-button:hover { transform: translateY(-1px); b
 .map-link { position: absolute; bottom: 4px; left: 50%; height: 28px; border-left: 3px dotted var(--border-strong); transform: translateX(calc(var(--link-shift, 0px) * var(--wiggle, 1) - 1.5px)); }
 /* Narrow screens: smaller zig-zag so nodes and the start card stay on screen. --wiggle scales the nodes AND the dotted links together. */
 @media (max-width: 520px) { .map { --wiggle: 0.35; } .map-label { min-width: 0; } }
+@media (max-width: 360px) { .map { --wiggle: 0.2; } } /* very small phones: tighter zig-zag */
 .map-row.map-done .map-link { border-left-color: var(--brand-2); }
 .map-label { display: flex; flex-direction: column; min-width: 130px; max-width: 200px; }
 .map-label strong { font-size: 1rem; }
