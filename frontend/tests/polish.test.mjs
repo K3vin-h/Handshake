@@ -70,3 +70,17 @@ test("lesson notice: heading, status message, one primary action", () =>
     assert.equal((html.match(/notice-primary/g) ?? []).length, 1);
     assert.match(html, /href="#\/">Back to your path/);
   }));
+
+test("lesson headlines are calm: no exclamation marks for any lesson", () =>
+  withApp(async (load) => {
+    const { lessonHeadline } = await load("/src/components/lessonHeadline.ts");
+    const { buildCurriculum } = await load("/src/lib/curriculum.ts");
+    const units = buildCurriculum({ userName: "Ryan", theirName: "Lily" });
+    const lessons = units.flatMap((u) => u.lessons);
+    assert.ok(lessons.length > 5);
+    for (const l of lessons) {
+      const h = lessonHeadline(l, "Lily");
+      assert.ok(typeof h === "string" && h.length > 0, l.id);
+      assert.doesNotMatch(h, /!/, `${l.id}: ${h}`);
+    }
+  }));

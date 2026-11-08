@@ -49,7 +49,7 @@ function PathPageInner({ profile }: { profile: Profile }) {
   const open = (id: string) => (location.hash = `#/lesson/${id}`);
   // Banner headline: one hand-written line per lesson (see lessonHeadline). No AI, no promises about outcomes.
   const them = profile.theirName;
-  const headline = next ? lessonHeadline(next, them) : "You've finished every available lesson!";
+  const headline = next ? lessonHeadline(next, them) : "You've finished every available lesson";
   // Small letters + live coverage under each lesson block (replaces the old side panels).
   const lessonExtras = (l: { title: string; teaches?: string[] }): Pick<MapLesson, "letters" | "note"> => {
     const letters = (l.teaches ?? []).filter((x) => /^[A-Z]$/.test(x)).map((x) => ({ letter: x, status: letterStatus(x), due: dueSet.has(x) }));
