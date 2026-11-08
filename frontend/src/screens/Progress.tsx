@@ -5,6 +5,7 @@ import { requireProfile } from "../lib/requireProfile";
 import { isUnlocked, loadProgress, nextLesson } from "../lib/progress";
 import { ALPHABET, alphabetStates, type LetterState } from "./alphabetState";
 import { loadMistakes } from "../lib/mistakes";
+import { isPracticeable } from "../cv";
 import { almostThere, boxCounts, fingerBars, kindCounts, letterBars, masteryCounts, reviewPlan, strongAndWeak, topMistake } from "./progressStats";
 
 // Progress journal, spreads 1 (Overview) and 2 (How my tries went). Every number comes from localStorage via the
@@ -66,6 +67,32 @@ export function ProgressScreen() {
   const plan = reviewPlan(items, Date.now());
   const boxes = boxCounts(items);
   const maxBox = Math.max(1, ...boxes);
+  const statusOf = (l: string) => {
+    const it = items[l];
+    if (!isPracticeable(l)) return "Reference only";
+    if (!it) return "Not started";
+    return it.mastered ? "Mastered ✓" : `Practising: ${Math.min(it.streak, 3)} of 3 in a row`;
+  };
+  const tableRows = (letters: string[]) => (
+    <table className="jr-table">
+      <thead>
+        <tr><th scope="col">Letter</th><th scope="col">Status</th><th scope="col">Tries</th><th scope="col">Matched the reference</th></tr>
+      </thead>
+      <tbody>
+        {letters.map((l) => {
+          const it = items[l];
+          return (
+            <tr key={l}>
+              <th scope="row">{l}</th>
+              <td>{statusOf(l)}</td>
+              <td>{it ? it.attempts : 0}</td>
+              <td>{it && it.attempts > 0 ? `${Math.max(0, it.attempts - it.misses)} of ${it.attempts}` : "–"}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
   const coming: [string, string[]][] = [["Tomorrow", plan.tomorrow], ["In 3 days", plan.threeDays], ["In a week", plan.week]];
 
   return (
@@ -237,6 +264,16 @@ export function ProgressScreen() {
             ))}
           </ol>
           <p className="jr-note">A letter moves up a box each time it matches the reference, and drops back to today on a miss.</p>
+        </Page>
+      </Spread>
+
+      <Spread>
+        <Page side="left" label="Every letter" title="The full table" number={9}>
+          {tableRows(ALPHABET.slice(0, 13))}
+        </Page>
+        <Page side="right" label="Every letter, continued" number={10}>
+          {tableRows(ALPHABET.slice(13))}
+          <p className="jr-note">Mastered means matching the reference 3 times in a row. Reference-only letters have no pass or fail.</p>
         </Page>
       </Spread>
     </div>

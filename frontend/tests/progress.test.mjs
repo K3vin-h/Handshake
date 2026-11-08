@@ -115,3 +115,41 @@ test("Progress journal spreads 3 and 4 (my hands, review plan)", async () => {
     await vite.close();
   }
 });
+
+test("Progress journal spread 5 (the full table)", async () => {
+  const vite = await createServer({ server: { middlewareMode: true }, appType: "custom" });
+  const saved = new Map();
+  saved.set("handshake.profile.v1", JSON.stringify({ userName: "Ryan", theirName: "Lily", leftHanded: false }));
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: { getItem: (k) => saved.get(k) ?? null, setItem: (k, v) => saved.set(k, v) } });
+  try {
+    const { ProgressScreen } = await vite.ssrLoadModule("/src/screens/Progress.tsx");
+    const render = () => renderToStaticMarkup(createElement(ProgressScreen));
+    const text = (h) => h.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    saved.set("handshake.progress.v1", JSON.stringify({ xp: 0, streakDays: 0, lastActiveDay: null, completed: [], items: {
+      L: { attempts: 5, misses: 1, mastered: true, streak: 3, box: 1, due: 0 },
+      B: { attempts: 3, misses: 1, mastered: false, streak: 2, box: 0, due: 0 },
+    } }));
+    const html = render();
+    const t = text(html);
+    assert.equal((html.match(/<table/g) ?? []).length, 2);
+    assert.equal((html.match(/<th scope="row"/g) ?? []).length, 26);
+    for (const h of ["Letter", "Status", "Tries", "Matched the reference"]) assert.equal((html.match(new RegExp(`<th scope="col">${h}</th>`, "g")) ?? []).length, 2, h);
+    assert.match(html, /The full table/);
+    const row = (l) => text(html.match(new RegExp(`<tr[^>]*><th scope="row"[^>]*>${l}</th>.*?</tr>`))[0]);
+    assert.match(row("J"), /Reference only/);
+    assert.match(row("Z"), /Reference only/);
+    assert.match(row("Q"), /Not started/);
+    assert.match(row("L"), /Mastered ✓/);
+    assert.match(row("L"), /4 of 5/);
+    assert.match(row("B"), /Practising: 2 of 3 in a row/);
+    assert.match(row("B"), /2 of 3/);
+    assert.match(row("Q"), /–/);
+    assert.match(t, /Mastered means matching the reference 3 times in a row\. Reference-only letters have no pass or fail\./);
+    assert.doesNotMatch(html, /<details/);
+    assert.doesNotMatch(html, /NaN/);
+  } finally {
+    if (previous) Object.defineProperty(globalThis, "localStorage", previous); else delete globalThis.localStorage;
+    await vite.close();
+  }
+});
