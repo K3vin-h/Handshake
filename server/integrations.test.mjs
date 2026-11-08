@@ -54,6 +54,28 @@ test("assembled API rate-limits malformed JSON before Gemini's global parser", a
   } finally { await s.close(); }
 });
 
+test("account routes: 503 without a database, config reports accounts with one", async () => {
+  const off = await serve((app) => { registerIntegrations(app, {}); });
+  try {
+    assert.deepEqual((await off.get("/api/auth/config")).body, { accounts: false, googleClientId: null, resetEmail: false });
+    const signup = await off.post("/api/auth/signup", { email: "a@b.co", password: "correct horse 9" });
+    assert.equal(signup.status, 503);
+    assert.deepEqual(signup.body, { error: "accounts_unavailable" });
+    const me = await off.get("/api/me");
+    assert.equal(me.status, 503);
+    assert.deepEqual(me.body, { error: "accounts_unavailable" });
+  } finally { await off.close(); }
+  let integrations;
+  const on = await serve((app) => {
+    integrations = registerIntegrations(app, { DATABASE_URL: "postgres://unused:unused@127.0.0.1:1/db", GOOGLE_CLIENT_ID: "gid" });
+  });
+  try {
+    const cfg = (await on.get("/api/auth/config")).body;
+    assert.equal(cfg.accounts, true);
+    assert.equal(cfg.googleClientId, "gid");
+  } finally { await on.close(); await integrations.db.close(); }
+});
+
 test("disabled sponsor endpoints retain local planning and reject missing consent", async () => {
   const s = await serve(app => registerIntegrations(app, {}));
   const id = randomUUID();

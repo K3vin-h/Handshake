@@ -100,3 +100,19 @@ they do not prove SQL execution on TimescaleDB. Run both database commands
 against a real Tiger Cloud service before claiming the sponsor integration is
 verified. Then play a live-graded letter lesson and confirm the same learner's
 stats change. Live grading still requires the separate human letter gate.
+
+## Accounts
+
+Optional email/password and Google sign-in, stored in the same database.
+`server/schema.accounts.sql` adds four tables: `users` (email, password hash,
+Google id), `sessions` (hashed session token, expiry), `password_resets`
+(hashed one-time token, expiry) and `user_state` (one JSON blob of progress per
+user). `npm run db:migrate` applies `schema.sql` and `schema.accounts.sql`
+together in one transaction.
+
+Routes: `/api/auth/*` (config, signup, login, logout, Google, reset) and
+`/api/me` (profile and state). Env: `GOOGLE_CLIENT_ID` (public),
+`RESEND_API_KEY` and `RESEND_FROM` (server-only; reset email is off without
+both), `APP_ORIGIN`. To disable accounts, unset `DATABASE_URL`: every account
+route then answers 503 `accounts_unavailable` and `/api/auth/config` reports
+`accounts: false`.
