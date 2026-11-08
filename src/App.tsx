@@ -4,6 +4,7 @@ import { RecordPage } from "./screens/RecordPage";
 import { CurriculumPreview } from "./screens/CurriculumPreview";
 import { ComponentGallery } from "./screens/ComponentGallery";
 import { StatsPage } from "./screens/StatsPage";
+import { CameraDemo } from "./screens/CameraDemo";
 import { Home } from "./screens/Home";
 import { Onboarding } from "./screens/Onboarding";
 import { LessonPlayer } from "./screens/LessonPlayer";
@@ -30,6 +31,7 @@ function screen(hash: string): ReactElement {
   if (name === "complete") return <Complete lessonId={param} />;
   if (name === "progress") return <ProgressScreen />;
   if (name === "stats") return <StatsPage />;
+  if (name === "camera-demo") return <CameraDemo />;
   return <Home />;
 }
 
@@ -40,6 +42,7 @@ const TITLES: Record<string, string> = {
   complete: "Lesson complete",
   progress: "Progress",
   stats: "Stats",
+  "camera-demo": "Camera demo",
   demo: "Demo",
   record: "Record",
   curriculum: "Curriculum",
