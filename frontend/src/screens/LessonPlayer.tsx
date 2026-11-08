@@ -37,7 +37,8 @@ const shuffle = <T,>(xs: T[]): T[] => {
 /**
  * `names` = the learner's and their person's names (letters only, upper case). Repeats are trimmed, not removed:
  * a word is spelled once per lesson, the review step skips letters this lesson just asked, and a name that already
- * has its own lesson is not used again as a drill word. Practice, mix and look-alike drills still repeat on purpose.
+ * has its own lesson is not used again as a drill word. A lesson no longer ends with a review round (the Alphabet
+ * checkpoint, which is only review, keeps it). Practice, mix and look-alike drills still repeat on purpose.
  */
 export function expand(steps: Step[], _progress: Progress, names: string[] = []): Item[] {
   const out: Item[] = [];
@@ -63,6 +64,7 @@ export function expand(steps: Step[], _progress: Progress, names: string[] = [])
         ? { kind: "check", letter: l, showReference: s.showReference, word: { letters, index } }
         : { kind: "learn", letter: l, referenceOnly: true }));
     } else if (s.kind === "contrast" || s.kind === "review") {
+      if (s.kind === "review" && steps.length > 1) continue; // the end-of-lesson "everything again with the reference" round repeated what practice, mix and the drills just did; only the Alphabet checkpoint is all review
       const letters = s.kind === "contrast" ? s.letters : dueItems(_progress).filter((l) => /^[A-Z]$/.test(l) && !asked.has(l));
       const graded = s.kind === "review" || letters.every(isPracticeable);
       for (const letter of letters) {
