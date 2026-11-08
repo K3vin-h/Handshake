@@ -29,14 +29,15 @@ export function Home() {
     return isUnlocked(units, progress, id) ? "available" : "locked";
   };
   const open = (id: string) => (location.hash = `#/lesson/${id}`);
-  const themKey = profile.theirName.toUpperCase().replace(/[^A-Z]/g, "");
-  const spellThem = units.flatMap((u) => u.lessons).find((l) => l.title.toUpperCase() === `SPELL ${themKey}`);
+  // Their name is the one "Spell ..." lesson in Unit 2. Found by position, not by comparing titles: the curriculum cleans
+  // the name itself (accents, hyphens), so a title match broke for names like "Mary-Ann" or "José".
+  const spellThem = units.find((u) => u.id === "u2")?.lessons.find((l) => /^Spell /i.test(l.title));
   const spellOpen = spellThem ? isUnlocked(units, progress, spellThem.id) : false;
   // Banner headline: a plain statement of what the learner is doing now. No promises about outcomes.
   const them = profile.theirName;
   const headline = !next
     ? "You've finished every available lesson!"
-    : next.title.toUpperCase() === `SPELL ${them.toUpperCase().replace(/[^A-Z]/g, "")}`
+    : next.id === spellThem?.id
       ? `Now for ${them}'s name!`
       : next.id.startsWith("1.")
         ? "You're learning your name!"
