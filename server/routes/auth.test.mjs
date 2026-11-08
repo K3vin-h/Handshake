@@ -12,11 +12,12 @@ const hex = (b) => Buffer.from(b).toString("hex");
 
 // In-memory stand-in for server/db.mjs with the same method contracts.
 function fakeDb() {
-  const users = new Map(), sessions = new Map(), resets = new Map();
+  const users = new Map(), sessions = new Map(), resets = new Map(), states = new Map();
   let next = 1;
   const byEmail = (e) => [...users.values()].find((u) => u.email.toLowerCase() === String(e).toLowerCase()) ?? null;
   return {
-    users, sessions, resets,
+    users, sessions, resets, states,
+    async deleteState(userId) { states.delete(userId); },
     async createUser({ email, passwordHash = null, googleSub = null, verified = false }) {
       if (byEmail(email) || (googleSub && [...users.values()].some((u) => u.google_sub === googleSub))) return null;
       const u = { id: next++, email, password_hash: passwordHash, google_sub: googleSub, email_verified_at: verified ? new Date() : null };
@@ -54,6 +55,7 @@ async function withApp(deps, fn) {
     register(app, {
       db: fakeDb(),
       verifyGoogle: async (credential) => GOOGLE[credential] ?? Promise.reject(new Error("bad token")),
+      isBreached: async () => false,
       sendResetEmail: async (m) => { sent.push(m); },
       googleClientId: "client-id",
       appOrigin: APP,
@@ -389,6 +391,65 @@ test("reset: weak password is 400 weak_password and does not use up the token", 
     const r = await s.post("/api/auth/reset", { token, password: "short" });
     assert.deepEqual([r.status, r.body], [400, { error: "weak_password" }]);
     assert.equal((await s.post("/api/auth/reset", { token, password: "a-brand-new-password" })).status, 204);
+  });
+});
+
+// breached / obvious passwords
+test("signup: breached password is 400 breached_password and creates no user", async () => {
+  const db = fakeDb();
+  await withApp({ db, isBreached: async () => true }, async (s) => {
+    const r = await s.post("/api/auth/signup", { email: "a@example.com", password: PW });
+    assert.deepEqual([r.status, r.body], [400, { error: "breached_password" }]);
+    assert.equal(db.users.size, 0);
+  });
+});
+
+test("signup: obvious passwords are 400 weak_password, without asking the breach API", async () => {
+  const db = fakeDb();
+  let asked = 0;
+  await withApp({ db, isBreached: async () => { asked++; return false; } }, async (s) => {
+    const r = await s.post("/api/auth/signup", { email: "marathon@example.com", password: "my-MARATHON-2024" });
+    assert.deepEqual([r.status, r.body], [400, { error: "weak_password" }]);
+    assert.equal((await s.post("/api/auth/signup", { email: "b@example.com", password: "handshake-rocks" })).status, 400);
+    assert.equal(db.users.size, 0);
+    assert.equal(asked, 0);
+  });
+});
+
+test("signup: succeeds when the breach check fails open", async () => {
+  await withApp({ isBreached: async () => false }, async (s) => {
+    assert.equal((await s.post("/api/auth/signup", { email: "a@example.com", password: PW })).status, 201);
+  });
+});
+
+test("reset: breached or obvious password is 400 and does not use up the token", async () => {
+  const db = fakeDb();
+  let breached = true;
+  await addUser(db, { email: "a@example.com" });
+  await withApp({ db, isBreached: async () => breached }, async (s) => {
+    const token = await resetToken(s);
+    const r = await s.post("/api/auth/reset", { token, password: PW });
+    assert.deepEqual([r.status, r.body], [400, { error: "breached_password" }]);
+    assert.equal([...db.resets.values()][0].used, false);
+    assert.deepEqual((await s.post("/api/auth/reset", { token, password: "handshake-pass-1" })).body, { error: "weak_password" });
+    assert.equal([...db.resets.values()][0].used, false);
+    breached = false;
+    assert.equal((await s.post("/api/auth/reset", { token, password: "a-brand-new-password" })).status, 204);
+  });
+});
+
+// squatter's saved state
+test("google linking: unverified account's saved state is deleted; verified account keeps its state", async () => {
+  const db = fakeDb();
+  const squatter = await addUser(db, { email: "owner@example.com", verified: false });
+  db.states.set(squatter.id, { profile: { you: "Evil" } });
+  const real = await addUser(db, { email: "new@gmail.com", verified: true });
+  db.states.set(real.id, { profile: { you: "Real" } });
+  await withApp({ db }, async (s) => {
+    assert.equal((await s.post("/api/auth/google", { credential: "g-squat" })).status, 200);
+    assert.equal(db.states.has(squatter.id), false);
+    assert.equal((await s.post("/api/auth/google", { credential: "g-new" })).status, 200);
+    assert.deepEqual(db.states.get(real.id), { profile: { you: "Real" } });
   });
 });
 

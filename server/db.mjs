@@ -67,6 +67,9 @@ export function createDb(url) {
     async deleteSession(tokenHash) {
       await pool.query("DELETE FROM sessions WHERE token_hash = $1", [tokenHash]);
     },
+    async deleteState(userId) {
+      await pool.query("DELETE FROM user_state WHERE user_id = $1", [userId]);
+    },
     async deleteUserSessions(userId) {
       await pool.query("DELETE FROM sessions WHERE user_id = $1", [userId]);
     },

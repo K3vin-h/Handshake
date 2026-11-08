@@ -2,6 +2,7 @@
 const MESSAGES: Record<string, string> = {
   email_taken: "That email already has an account. Log in instead.",
   weak_password: "Use at least 10 characters.",
+  breached_password: "That password appears in known data breaches. Choose a different one.",
   invalid_credentials: "Wrong email or password.",
   rate_limited: "Too many tries. Wait a few minutes.",
   http_429: "Too many tries. Wait a few minutes.",
@@ -14,4 +15,4 @@ export const authMessage = (code: string, source?: "google") =>
   source === "google" && code === "invalid_token" ? "Google sign-in didn't work. Try again." : MESSAGES[code] ?? "Something went wrong. Try again.";
 /** Which field an error belongs to (focus + aria-describedby); "form" = shown under the form. */
 export const authErrorField = (code: string): "email" | "password" | "form" =>
-  code === "email_taken" ? "email" : code === "weak_password" || code === "invalid_credentials" ? "password" : "form";
+  code === "email_taken" ? "email" : code === "weak_password" || code === "breached_password" || code === "invalid_credentials" ? "password" : "form";

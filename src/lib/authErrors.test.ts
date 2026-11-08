@@ -10,6 +10,8 @@ test("maps known codes verbatim and falls back", () => {
   assert.equal(authMessage("invalid_token"), "This link has expired. Ask for a new one.");
   assert.equal(authMessage("invalid_token", "google"), "Google sign-in didn't work. Try again.");
   assert.equal(authMessage("network", "google"), "Can't reach the server. Try again.");
+  assert.equal(authMessage("breached_password"), "That password appears in known data breaches. Choose a different one.");
+  assert.equal(authErrorField("breached_password"), "password");
   assert.equal(authErrorField("email_taken"), "email");
   assert.equal(authErrorField("invalid_credentials"), "password");
   assert.equal(authErrorField("network"), "form");

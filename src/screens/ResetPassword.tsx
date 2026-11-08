@@ -29,7 +29,7 @@ export function ResetPassword() {
     const r = await resetPassword(token, password);
     setBusy(false);
     if (r.ok) return setDone(true);
-    if (r.error === "weak_password") {
+    if (r.error === "weak_password" || r.error === "breached_password") {
       setFieldErr(authMessage(r.error));
       return ref.current?.focus();
     }

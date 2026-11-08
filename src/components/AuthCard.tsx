@@ -103,7 +103,7 @@ export function AuthCard({ mode, onDone, headingLevel = 1 }: { mode: "signup" | 
             label="Password"
             type={show ? "text" : "password"}
             autoComplete={signup ? "new-password" : "current-password"}
-            description={signup ? "At least 10 characters." : undefined}
+            description={signup ? "At least 10 characters. Avoid passwords you use elsewhere." : undefined}
             value={password}
             error={errs.password}
             onChange={(e) => { setPassword(e.target.value); setErrs({}); }}

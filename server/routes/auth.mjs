@@ -2,6 +2,8 @@ import express from "express";
 import { rateLimit } from "../limit.mjs";
 import { isEmail } from "../validate.mjs";
 import { hashPassword, verifyPassword, DUMMY_HASH, MIN_PASSWORD, MAX_PASSWORD } from "../password.mjs";
+import { isBreached as realIsBreached } from "../pwned.mjs";
+import { tooObvious } from "../passwordContext.mjs";
 import { newToken, hashToken, cookieHeader, clearCookie, readCookie, COOKIE, sameOrigin, SESSION_DAYS } from "../session.mjs";
 
 const DAY = 86_400_000;
@@ -10,7 +12,7 @@ const norm = (e) => String(e ?? "").trim().toLowerCase();
 const strong = (p) => typeof p === "string" && p.length >= MIN_PASSWORD && p.length <= MAX_PASSWORD;
 const publicUser = (u) => ({ email: u.email, hasPassword: !!u.password_hash, google: !!u.google_sub });
 
-export function register(app, { db, verifyGoogle, sendResetEmail, googleClientId = null, appOrigin = null, secure = false, now = Date.now }) {
+export function register(app, { db, verifyGoogle, isBreached = realIsBreached, sendResetEmail, googleClientId = null, appOrigin = null, secure = false, now = Date.now }) {
   const json = express.json({ limit: "20kb" });
   const needDb = (_req, res, next) => (db ? next() : res.status(503).json({ error: "accounts_unavailable" }));
   const resetEnabled = !!(db && appOrigin && sendResetEmail);
@@ -28,7 +30,8 @@ export function register(app, { db, verifyGoogle, sendResetEmail, googleClientId
   app.post("/api/auth/signup", sameOrigin, rateLimit({ windowMs: 3_600_000, max: 10 }), json, needDb, async (req, res) => {
     const { email, password } = req.body ?? {};
     if (!isEmail(email)) return bad(res);
-    if (!strong(password)) return bad(res, "weak_password");
+    if (!strong(password) || tooObvious(password, email)) return bad(res, "weak_password");
+    if (await isBreached(password)) return bad(res, "breached_password");
     try {
       const user = await db.createUser({ email: norm(email), passwordHash: await hashPassword(password) });
       if (!user) return res.status(409).json({ error: "email_taken" });
@@ -69,7 +72,8 @@ export function register(app, { db, verifyGoogle, sendResetEmail, googleClientId
           // Linking rule: Google verified this address. If the password account never verified it, drop its
           // password and end its live sessions first, so a squatter who registered the address cannot keep access.
           const clearPassword = !existing.email_verified_at;
-          if (clearPassword) await db.deleteUserSessions(existing.id);
+          // Also drop the squatter's saved names/progress so they can never sync into the owner's profile.
+          if (clearPassword) { await db.deleteState(existing.id); await db.deleteUserSessions(existing.id); }
           user = await db.linkGoogle(existing.id, g.sub, { clearPassword });
         } else {
           user = await db.createUser({ email, googleSub: g.sub, verified: true });
@@ -105,7 +109,10 @@ export function register(app, { db, verifyGoogle, sendResetEmail, googleClientId
   app.post("/api/auth/reset", sameOrigin, rateLimit({ windowMs: 600_000, max: 20 }), json, needDb, async (req, res) => {
     const { token, password } = req.body ?? {};
     if (typeof token !== "string" || token.length > 100) return bad(res, "invalid_token");
-    if (!strong(password)) return bad(res, "weak_password");
+    // Validate before consumeReset so a rejected password does not burn the single-use token.
+    // No email here (and none looked up), so only the 'handshake' and trivial-run checks apply.
+    if (!strong(password) || tooObvious(password)) return bad(res, "weak_password");
+    if (await isBreached(password)) return bad(res, "breached_password");
     try {
       const userId = await db.consumeReset(hashToken(token), new Date(now()));
       if (!userId) return bad(res, "invalid_token");

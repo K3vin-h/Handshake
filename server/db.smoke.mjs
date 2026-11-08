@@ -55,6 +55,8 @@ if (!process.env.DATABASE_URL) {
 
       // Google linking: clearPassword drops the hash, a second link on a linked account is refused.
       const sub = "smoke-sub-" + id;
+      await db.deleteState(user.id);
+      assert.equal(await db.getState(user.id), null, "deleteState removes the saved state");
       const linked = await db.linkGoogle(user.id, sub, { clearPassword: true });
       assert.equal(linked.google_sub, sub);
       assert.equal(linked.password_hash, null);
