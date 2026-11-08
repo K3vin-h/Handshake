@@ -88,7 +88,6 @@ export function Complete({ lessonId: routeParam }: { lessonId: string }) {
     <>
       <StatusMessage kind="match" label="Lesson complete" message={`You finished ${lesson.title} and earned ${lesson.xp} XP. Your total is ${progress.xp} XP.`} />
       {unitDone && unit && <StatusMessage kind="match" label="Unit complete" message={`You finished every lesson in ${unit.title}.`} />}
-      <RewardLine reward={reward} />
     </>
   );
   const stats = (
@@ -113,7 +112,7 @@ export function Complete({ lessonId: routeParam }: { lessonId: string }) {
   const whatNext = (
     <Card className="rounded-3xl border-2">
       <CardHeader><CardTitle className="text-xl">What next</CardTitle></CardHeader>
-      <CardContent className="flex flex-wrap items-center gap-2">{continueBtn}{others}</CardContent>
+      <CardContent className="flex flex-wrap items-center gap-2">{continueBtn}{others}<RewardLine reward={reward} /></CardContent>
     </Card>
   );
   const hero = (
