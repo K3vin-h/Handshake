@@ -371,7 +371,7 @@ function IdentifyItem({ item, leftHanded, stepLabel, onNext, onMiss }: { item: E
       </Suspense>
       <div className="choices big-choices" role="group" aria-label="Answer choices">
         {item.options.map((l) => (
-          <button key={l} type="button" className="secondary" disabled={done || picked.includes(l)} onClick={() => pick(l)}>
+          <button key={l} type="button" className={`secondary ${done && l === item.letter ? "answer-right" : picked.includes(l) ? "answer-wrong" : ""}`} disabled={done || picked.includes(l)} onClick={() => pick(l)}>
             {l}{picked.includes(l) && l !== item.letter ? " (not this one)" : ""}{done && l === item.letter ? " ✓" : ""}
           </button>
         ))}

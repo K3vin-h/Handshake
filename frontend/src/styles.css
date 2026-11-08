@@ -759,3 +759,7 @@ html { accent-color: var(--brand); scrollbar-color: #b9d6ea transparent; }
   .account-chip > button { max-width: 140px; }
   .account-menu { min-width: 100%; box-sizing: border-box; }
 }
+
+/* "Which letter is this?" answers: pastel green when right, pastel red when wrong (text still says ✓ / "not this one"). */
+button.answer-right, button.answer-right:disabled { background: var(--match-bg); border-color: var(--match); color: #0b2f1e; opacity: 1; }
+button.answer-wrong, button.answer-wrong:disabled { background: #fde8e8; border-color: #b4464f; color: #5c1a20; opacity: 1; }
