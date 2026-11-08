@@ -8,6 +8,7 @@ import { loadMistakes, mistakeCount, recordMistake } from "../lib/mistakes";
 import { DEMO_PROFILE, loadProfile } from "../lib/profile";
 import { SEND_SNAPSHOT, getCoachTip, getHowTo } from "../lib/api";
 import { LessonView } from "../components/LessonView";
+import { SceneView } from "../components/SceneView";
 import { Camera } from "../components/Camera";
 import { createCoachQueue } from "../lib/coachQueue";
 import type { FingerFeedback } from "../cv/types";
@@ -55,11 +56,12 @@ export function LessonPlayer({ lessonId }: { lessonId: string }) {
 }
 function Player({ lessonId }: { lessonId: string }) {
   const profile = loadProfile() ?? DEMO_PROFILE;
-  const units = useMemo(() => buildCurriculum(profile).filter((u) => ["u1", "u2", "u3"].includes(u.id)), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const units = useMemo(() => buildCurriculum(profile).filter((u) => ["u1", "u2", "u3", "u4"].includes(u.id)), []); // eslint-disable-line react-hooks/exhaustive-deps
   const lesson = useMemo(() => flatLessons(units).find((l) => l.id === lessonId), [units, lessonId]);
   const progress = useRef(loadProgress()); // a ref, not state: recordAttempt mutates, and StrictMode would double-apply updaters
   const items = useMemo(() => (lesson ? expand(lesson.steps, progress.current) : []), [lesson]);
   const [i, setI] = useState(0);
+  const [turn, setTurn] = useState(0); // which exchange of a conversation scene (hooks stay above the early returns)
   const lessonLetters = useMemo(() => [...new Set(items.flatMap((x) => (x.kind === "check" ? [x.letter] : [])))], [items]);
 
   const finishing = useRef(false);
@@ -95,6 +97,21 @@ function Player({ lessonId }: { lessonId: string }) {
             stepLabel={`${stepLabel} · part ${r.index + 1} of ${r.units.length}`} lessonProgress={i / items.length}
             actionLabel="Skip" onAction={next} onSelfCheck={r.selfCheck} />
         )} />
+    );
+  }
+  // Conversation scene: their line, then your reply as signs, turn by turn, on one camera.
+  if (item.kind === "other" && item.step.kind === "scene") {
+    const turns = item.step.turns.map((t) => ({ them: { gloss: t.them.tokens.join(" "), english: t.them.english }, you: t.you }));
+    return (
+      <TokenRunner tokens={turns[turn].you.tokens} leftHanded={profile.leftHanded}
+        onDone={() => {
+          if (turn + 1 < turns.length) return setTurn(turn + 1);
+          progress.current = recordAttempt(progress.current, `scene:${lesson.id}`, true);
+          celebrate();
+          setTurn(0);
+          next();
+        }}
+        render={(r) => <SceneView turns={turns} turnIndex={turn} tokenIndex={r.token} camera={r.camera} prompt={r.prompt} onSelfCheck={r.selfCheck} />} />
     );
   }
   // ONE camera at a time: LetterItem stays mounted across consecutive letter items (no key), so the camera never restarts.
