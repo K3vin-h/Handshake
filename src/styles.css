@@ -673,3 +673,24 @@ html { accent-color: var(--brand); scrollbar-color: #b9d6ea transparent; }
   .home-hero .hero-cta { transition: transform 160ms ease, box-shadow 160ms ease; }
   .home-hero .hero-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(29, 68, 104, 0.35); }
 }
+
+/* Accounts: sign-up / log-in card, divider, header chip (existing tokens only) */
+.auth-wrap { max-width: 420px; margin: 0 auto; }
+.auth-card { max-width: 420px; margin: 0 auto var(--space-4); padding: clamp(20px, 4vw, 32px); background: var(--card); border: 2px solid var(--border); border-bottom-width: 4px; border-radius: var(--radius-lg); box-shadow: 0 8px 24px rgba(42, 80, 112, 0.08); display: flex; flex-direction: column; gap: var(--space-3); }
+.auth-card h1 { margin: 0; font-size: 1.5rem; }
+.auth-card .cta { width: 100%; }
+.auth-card a, .auth-skip a { color: var(--brand-text); font-weight: 700; text-decoration: underline; }
+.auth-card a:focus-visible, .auth-skip a:focus-visible, a.account-chip:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.auth-skip { text-align: center; margin: 0 0 var(--space-4); }
+.google-btn { display: flex; justify-content: center; min-height: 44px; }
+.auth-divider { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--muted); font-weight: 700; }
+.auth-divider::before, .auth-divider::after { content: ""; flex: 1; border-top: 2px solid var(--border); }
+.auth-pw { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+.auth-pw .halo-field { width: 100%; margin-bottom: 0; }
+.auth-toggle { padding: 6px 12px; font-size: 14px; }
+.auth-switch { margin: 0; text-align: center; }
+.account-chip { position: relative; display: inline-block; color: var(--brand-text); font-weight: 700; }
+.account-chip > button { max-width: 180px; padding: 6px 12px; font-size: 14px; }
+.account-email { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; min-width: 160px; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2); background: var(--card); border: 2px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-md); }
+.account-menu a { color: var(--brand-text); padding: 6px 8px; font-weight: 700; }
