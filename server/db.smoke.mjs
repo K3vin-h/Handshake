@@ -52,11 +52,23 @@ if (!process.env.DATABASE_URL) {
       await db.setPassword(user.id, "y");
       await db.deleteSession(tok);
       assert.equal(await db.sessionUser(tok, now), null);
+
+      // Google linking: clearPassword drops the hash, a second link on a linked account is refused.
+      const sub = "smoke-sub-" + id;
+      const linked = await db.linkGoogle(user.id, sub, { clearPassword: true });
+      assert.equal(linked.google_sub, sub);
+      assert.equal(linked.password_hash, null);
+      assert.equal((await db.findUserByGoogleSub(sub)).id, user.id);
+      assert.equal(await db.linkGoogle(user.id, sub + "-2"), null);
+      const tok2 = randomBytes(32);
+      await db.createSession(tok2, user.id, future);
+      await db.deleteUserSessions(user.id);
+      assert.equal(await db.sessionUser(tok2, now), null);
     } finally { await db.deleteUser(user.id); }
     assert.equal(await db.findUserByEmail(email), null);
     console.log("db smoke ok");
-  } catch {
-    console.error("Database smoke test failed. Check service access, migration and aggregate results.");
+  } catch (e) {
+    console.error("Database smoke test failed:", e?.message ?? e);
     process.exitCode = 1;
   } finally { await db.close(); }
 }
