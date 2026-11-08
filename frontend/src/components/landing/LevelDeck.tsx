@@ -11,6 +11,8 @@ export type DeckLesson = {
   summary: string;
   xp: number;
   state: LessonState;
+  /** 0..1 share of steps matched when the lesson was walked to the end with skips. Not "done". */
+  partial?: number;
   letters: { letter: string; status: MarkState; due: boolean }[];
 };
 export type UnitState = "done" | "current" | "ready" | "locked";
@@ -30,6 +32,7 @@ export type DeckUnit = {
 
 const UNIT_STATE_TEXT: Record<UnitState, string> = { done: "Done", current: "You are here", ready: "Ready", locked: "Locked" };
 const LESSON_STATE_TEXT: Record<LessonState, string> = { locked: "Locked", available: "Ready", current: "Up next", done: "Done" };
+const pctText = (share: number) => `Partly done · ${Math.round(share * 100)}%`;
 const GAP = 20;
 const DRAG_BUFFER = 56;
 const VELOCITY = 450;
@@ -213,6 +216,12 @@ function UnitSheet(props: { unit: DeckUnit; onClose(): void; onLesson(id: string
                       {l.title}
                     </strong>
                     <span className="lp-lesson-sum">{l.summary}</span>
+                    {l.partial !== undefined && l.state !== "done" && (
+                      <span className="lp-partial">
+                        <span className="lp-partial-bar" aria-hidden="true"><i style={{ width: `${Math.round(l.partial * 100)}%` }} /></span>
+                        {pctText(l.partial)}: redo the skipped steps to finish
+                      </span>
+                    )}
                     {l.letters.length > 0 && (
                       <span className="lp-lesson-letters">
                         {l.letters.map((m) => (

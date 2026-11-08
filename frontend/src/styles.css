@@ -763,3 +763,10 @@ html { accent-color: var(--brand); scrollbar-color: #b9d6ea transparent; }
 /* "Which letter is this?" answers: pastel green when right, pastel red when wrong (text still says ✓ / "not this one"). */
 button.answer-right, button.answer-right:disabled { background: var(--match-bg); border-color: var(--match); color: #0b2f1e; opacity: 1; }
 button.answer-wrong, button.answer-wrong:disabled { background: #fde8e8; border-color: #b4464f; color: #5c1a20; opacity: 1; }
+
+/* Partly done: a lesson walked to the end with skipped steps. Text always says so; the fill is only a second cue. */
+.lp-partial { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.lp-partial-bar { display: block; height: 8px; border-radius: 99px; background: var(--raised); border: 1px solid var(--border-strong); overflow: hidden; }
+.lp-partial-bar i { display: block; height: 100%; background: var(--match); }
+.map-partial .map-node::before { content: ""; position: absolute; inset: -7px; border-radius: 50%; background: conic-gradient(var(--match) var(--fill), var(--border) 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px)); }
+.map-partial-text { color: var(--muted); }
