@@ -4,7 +4,7 @@ import { CountUp } from "./motion/CountUp";
  * Streak and XP as one chip. The numbers are text, so nothing depends on icon or colour.
  *
  * Props
- * - streakDays: consecutive days practised (from loadProgress().streakDays).
+ * - streakDays: consecutive days practiced (from loadProgress().streakDays).
  * - xp: total XP (from loadProgress().xp).
  */
 export function StreakXpChip(props: { streakDays: number; xp: number }) {

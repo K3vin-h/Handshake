@@ -7,7 +7,9 @@ import { loadProfile, type Profile } from "./profile";
 export function requireProfile(): Profile {
   const p = loadProfile();
   if (!p) {
-    if (typeof location !== "undefined") location.hash = "#/welcome";
+    // Not during render (a render must not navigate): do it right after. App already sends a profile-less visitor to the
+    // welcome steps, so this is only a safety net.
+    if (typeof location !== "undefined") queueMicrotask(() => { location.hash = "#/welcome"; });
     return { userName: "", theirName: "", leftHanded: false };
   }
   return p;

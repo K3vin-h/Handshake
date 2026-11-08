@@ -14,9 +14,9 @@ import { dueItems, isUnlocked, loadProgress, nextLesson } from "../lib/progress"
 // Units 1-4 are active (demo lessons only). Reads the profile and progress from localStorage only.
 
 const ART: Record<string, { art: (p: { me: string }) => string[]; kind: "tiles" | "bubbles" }> = {
-  u1: { art: ({ me }) => [...me.toUpperCase()].filter((c) => /[A-Z]/.test(c)).slice(0, 5), kind: "tiles" },
+  u1: { art: ({ me }) => [...me.toUpperCase()].filter((c) => /[A-Z]/.test(c)).slice(0, 12), kind: "tiles" },
   u2: { art: () => ["A", "B", "C", "D", "E"], kind: "tiles" },
-  u3: { art: () => ["HELLO", "BYE"], kind: "bubbles" },
+  u3: { art: () => ["HELLO", "NICE TO MEET YOU"], kind: "bubbles" },
   u4: { art: () => ["HELLO", "MY NAME…"], kind: "bubbles" },
 };
 
@@ -38,13 +38,14 @@ function HomeInner({ profile }: { profile: Profile }) {
   const letterStatus = (l: string): MarkState => {
     if (!isPracticeable(l)) return "reference-only";
     const it = progress.items[l];
-    return it?.mastered ? "mastered" : it && it.attempts > 0 ? "practising" : "not-started";
+    return it?.mastered ? "mastered" : it && it.attempts > 0 ? "practicing" : "not-started";
   };
   const stateOf = (id: string): LessonState => {
     if (progress.completed.includes(id)) return "done";
     if (next?.id === id) return "current";
     return isUnlocked(units, progress, id) ? "available" : "locked";
   };
+  const partialOf = (id: string) => (progress.completed.includes(id) ? undefined : progress.partial?.[id]);
   const open = (id: string) => (location.hash = `#/lesson/${id}`);
 
   // Only demo lessons are shown (stretch lessons stay out of the path, as before).
@@ -61,6 +62,7 @@ function HomeInner({ profile }: { profile: Profile }) {
           summary: c && c.total > 0 ? `${l.summary} ${spell!.toUpperCase()}: ${c.liveCount} of ${c.total} letters have a camera check.` : l.summary,
           xp: l.xp,
           state: stateOf(l.id),
+          partial: partialOf(l.id),
           letters,
         };
       });

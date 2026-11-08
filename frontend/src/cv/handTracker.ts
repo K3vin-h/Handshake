@@ -39,5 +39,8 @@ export function detectHand(lm: HandLandmarker, video: HTMLVideoElement | HTMLCan
   if (i < 0) return null;
   const label = result.handedness[i]?.[0]?.categoryName === "Left" ? "Left" : "Right";
   // worldLandmarks = true 3D positions in metres (origin near the hand's centre): better depth for the 3D viewer.
-  return { landmarks: result.landmarks[i], worldLandmarks: result.worldLandmarks?.[i], handedness: label };
+  const j = result.landmarks.length > 1 ? (i === 0 ? 1 : 0) : -1;
+  const other: HandFrame | undefined =
+    j >= 0 ? { landmarks: result.landmarks[j], worldLandmarks: result.worldLandmarks?.[j], handedness: result.handedness[j]?.[0]?.categoryName === "Left" ? "Left" : "Right" } : undefined;
+  return { landmarks: result.landmarks[i], worldLandmarks: result.worldLandmarks?.[i], handedness: label, other };
 }

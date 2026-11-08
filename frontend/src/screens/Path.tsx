@@ -29,7 +29,7 @@ function PathPageInner({ profile }: { profile: Profile }) {
   const letterStatus = (l: string): MarkState => {
     if (!isPracticeable(l)) return "reference-only";
     const it = progress.items[l];
-    return it?.mastered ? "mastered" : it && it.attempts > 0 ? "practising" : "not-started";
+    return it?.mastered ? "mastered" : it && it.attempts > 0 ? "practicing" : "not-started";
   };
   const dueSet = new Set(due);
 
@@ -116,7 +116,7 @@ function PathPageInner({ profile }: { profile: Profile }) {
       </ul>
 
       <ul className="status-legend" aria-label="What the shapes mean">
-        {(["mastered", "practising", "not-started", "reference-only"] as MarkState[]).map((m) => (
+        {(["mastered", "practicing", "not-started", "reference-only"] as MarkState[]).map((m) => (
           <li key={m}><StatusMark state={m} size={14} /> {MARK_LABEL[m]}</li>
         ))}
       </ul>
@@ -129,7 +129,7 @@ function PathPageInner({ profile }: { profile: Profile }) {
               index={i + 1}
               title={u.title}
               goal={u.goal}
-              lessons={u.lessons.filter((l) => l.scope === "demo").map((l) => ({ id: l.id, title: l.title, summary: l.summary, xp: l.xp, state: stateOf(l.id), ...lessonExtras(l) }))}
+              lessons={u.lessons.filter((l) => l.scope === "demo").map((l) => ({ id: l.id, title: l.title, summary: l.summary, xp: l.xp, state: stateOf(l.id), partial: progress.completed.includes(l.id) ? undefined : progress.partial?.[l.id], ...lessonExtras(l) }))}
               onOpen={open}
               showStart={false}
             />

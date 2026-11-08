@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { SIGNS, SignChecker, isPracticeable, useLetterCheck, zoneOf } from "../cv";
+import { SIGNS, SequenceChecker, SignChecker, getSignTemplate, isPracticeable, useLetterCheck, zoneOf, type SignStage } from "../cv";
 import { Camera } from "../components/Camera";
+import { SignGuide } from "./SignGuide";
 
 /** Cut rule (H14): false → every sign is self-checked with "I signed it". */
 export const SIGNS_AUTO = true;
@@ -14,7 +15,7 @@ export const unitsOf = (tokens: string[]): RunUnit[] =>
     t.startsWith("fs:") ? [...t.slice(3)].filter(isPracticeable).map((letter) => ({ kind: "letter", letter, token })) : [{ kind: "sign", id: t, token }],
   );
 
-type RenderArgs = { camera: ReactNode; prompt: string; index: number; token: number; units: RunUnit[]; selfCheck?: () => void };
+type RenderArgs = { camera: ReactNode; prompt: string; index: number; token: number; units: RunUnit[]; guide: ReactNode; selfCheck?: () => void };
 
 /**
  * Walks a list of tokens (signs and fingerspelled words) one part at a time on ONE camera.
@@ -28,23 +29,32 @@ export function TokenRunner(props: {
   tokens: string[];
   leftHanded: boolean;
   onDone: () => void;
-  /** Called by "Continue" when NOTHING in these tokens can be camera-checked (e.g. a name of only J and Z). Not a pass: no attempt is recorded. */
-  onEmpty?: () => void;
+  /** Called by "Continue" when NOTHING in these tokens can be camera-checked (e.g. a name of only J and Z). Required, so a
+   *  caller must decide what that means; it must NOT count as a pass (the player treats it as a skip). */
+  onEmpty: () => void;
   render: (a: RenderArgs) => ReactNode;
 }) {
   const tokensKey = props.tokens.join(" ");
   const units = useMemo(() => unitsOf(props.tokens), [tokensKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Moving letters the camera cannot check, each named once ("JJ" says "J"). Computed once per step, not on every render.
+  const movers = useMemo(() => [...new Set(unchecked(props.tokens))], [tokensKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const [k, setK] = useState(0);
   const [msg, setMsg] = useState("");
   const [zone, setZone] = useState("");
+  const [stage, setStage] = useState<SignStage>("handshape");
   useEffect(() => setK(0), [tokensKey]); // the same runner (and camera) is reused for the next step
   const u = units[k];
   const def = u?.kind === "sign" ? SIGNS[u.id] : undefined;
-  const auto = u?.kind === "letter" || (SIGNS_AUTO && def?.grading === "assisted");
-  const checker = useMemo(() => (def ? new SignChecker(def) : null), [def]);
+  // A sign with recorded takes (#/record-signs) is checked against them; otherwise the handshape + place + movement rules.
+  const tpl = useMemo(() => (def ? getSignTemplate(def.id) : null), [def]);
+  const auto = u?.kind === "letter" || !!tpl || (SIGNS_AUTO && def?.grading === "assisted");
+  const checker = useMemo(() => (def && !tpl ? new SignChecker(def) : null), [def, tpl]);
+  const seqChecker = useMemo(() => (tpl ? new SequenceChecker(tpl) : null), [tpl]);
   const advance = () => {
     setMsg("");
-    checker?.reset(); // the same sign can come up again (e.g. YOU in consecutive scene turns)
+    setStage("handshape");
+    checker?.reset();
+    seqChecker?.reset(); // the same sign can come up again (e.g. YOU in consecutive scene turns)
     if (k + 1 < units.length) setK(k + 1);
     else {
       setK(0);
@@ -56,24 +66,31 @@ export function TokenRunner(props: {
     leftHanded: props.leftHanded,
     enabled: !!u && auto,
     onMatch: () => u?.kind === "letter" && advance(),
-    onFrame: (hand, pred, now) => {
+    onFrame: (hand, pred, now, face) => {
+      // Recorded takes (#/record-signs): matched as a whole, so there are no separate handshape / place / movement stages.
+      if (seqChecker && auto) {
+        const r = seqChecker.update(hand, now);
+        setMsg(r.message);
+        if (r.done) advance();
+        return;
+      }
       if (!checker || !auto) return;
-      if (hand) setZone(zoneOf(hand));
-      const r = checker.update(hand, pred, now);
+      if (hand) setZone(`${zoneOf(hand, face)}${face ? " (face found)" : " (no face, fixed zones)"}`);
+      const r = checker.update(hand, pred, now, face);
       setMsg(r.message);
+      setStage(r.stage);
       if (r.stage === "done") advance();
     },
   });
 
   if (!u) {
     // Nothing to check here. Never a blank page: say why and give a way on (it is not counted as a pass).
-    const letters = unchecked(props.tokens);
     return (
       <div className="page">
         <p role="status">
-          {letters.length ? `${[...new Set(letters)].join(" and ")} move${letters.length === 1 ? "s" : ""}, so the camera can't check ${letters.length === 1 ? "it" : "them"}. Practise by watching and copying.` : "There is nothing for the camera to check in this step."}
+          {movers.length ? `${movers.join(" and ")} move${movers.length === 1 ? "s" : ""}, so the camera can't check ${movers.length === 1 ? "it" : "them"}. Practice by watching and copying.` : "There is nothing for the camera to check in this step."}
         </p>
-        <button type="button" onClick={props.onEmpty ?? props.onDone}>Continue</button>
+        <button type="button" onClick={props.onEmpty}>Continue</button>
       </div>
     );
   }
@@ -83,12 +100,14 @@ export function TokenRunner(props: {
     <>
       <Camera {...check.cam} progress={check.progress} />
       {import.meta.env.DEV && <p className="muted">debug: zone {zone || "–"} · seeing {check.prediction?.letter ?? "–"}</p>}
-      {unchecked(props.tokens).length > 0 && (
+      {movers.length > 0 && (
         <p className="muted">
-          Not checked by the camera: {[...new Set(unchecked(props.tokens))].join(", ")} (moving letters). Sign {unchecked(props.tokens).length === 1 ? "it" : "them"} yourself.
+          Not checked by the camera: {movers.join(", ")} (moving letters). Sign {movers.length === 1 ? "it" : "them"} yourself.
         </p>
       )}
     </>
   );
-  return <>{props.render({ camera, prompt, index: k, token: u.token, units, selfCheck: auto ? undefined : advance })}</>;
+  // Whole signs get a picture guide (handshape + place + movement); fingerspelled letters already have the 3D hand.
+  const guide = def ? <SignGuide def={def} templates={check.templates} leftHanded={props.leftHanded} stage={auto && !tpl ? stage : undefined} /> : null;
+  return <>{props.render({ camera, prompt, index: k, token: u.token, units, guide, selfCheck: auto ? undefined : advance })}</>;
 }

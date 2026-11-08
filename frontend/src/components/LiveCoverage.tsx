@@ -23,7 +23,7 @@ export function coverage(name: string, isLive: (letter: string) => boolean) {
  * Props
  * - name: the name as entered (any case). Nothing is sent anywhere; this is pure display.
  * - isLive: (letter) => boolean. Pass `isPracticeable` from "src/cv" in screens; pass a fake in demos.
- * - stateOf: optional (letter) => "mastered" | "practising" | "not-started" for live letters (e.g. from progress).
+ * - stateOf: optional (letter) => "mastered" | "practicing" | "not-started" for live letters (e.g. from progress).
  *   Default is "not-started". Letters that are not live are always "reference-only".
  */
 export function LiveCoverage(props: { name: string; isLive: (letter: string) => boolean; stateOf?: (letter: string) => Exclude<LetterStatus, "reference-only"> }) {
