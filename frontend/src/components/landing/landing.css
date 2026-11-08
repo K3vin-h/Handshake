@@ -45,7 +45,7 @@
 
 /* ---------- Progress ---------- */
 .lp { --lv1: #3a6a8f; --lv2: #b4466c; --lv3: #7a62b8; --lv4: #1d3a55; }
-.lp-prog { flex: 1; display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-5); background: rgba(255, 255, 255, 0.92); border: 2px solid var(--border); border-bottom-width: 5px; border-radius: 28px; box-shadow: var(--shadow-md); }
+.lp-prog { flex: 1; display: flex; flex-direction: column; gap: var(--space-5); }
 .lp-prog-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-5); align-items: center; }
 
 .lp-rings { position: relative; width: 232px; height: 232px; }
@@ -164,7 +164,6 @@
   .lp-tiles { justify-content: flex-start; }
 }
 @media (max-width: 600px) {
-  .lp-prog { padding: var(--space-4); }
   .lp-prog-top { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   .lp-prog-side { width: 100%; }
   .lp-card { min-height: 420px; padding: var(--space-4); }
@@ -182,7 +181,7 @@
 /* ---------- Progress + Levels side by side ---------- */
 .lp-duo { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: var(--space-5); margin-top: clamp(40px, 7vw, 72px); align-items: stretch; }
 .lp-duo-col { display: flex; flex-direction: column; min-width: 0; }
-.lp-trail-card { flex: 1; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); background: rgba(255, 255, 255, 0.92); border: 2px solid var(--border); border-bottom-width: 5px; border-radius: 28px; box-shadow: var(--shadow-md); }
+.lp-trail-card { flex: 1; display: flex; flex-direction: column; gap: var(--space-3); }
 .lp-trail-unit { margin: 0; font-weight: 800; color: var(--on-panel-light); }
 .lp-trail { list-style: none; margin: 0; padding: var(--space-2) 0; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .lp-orb { translate: var(--o, 0) 0; }
@@ -205,3 +204,14 @@
 @keyframes lp-float { 50% { translate: 0 -9px; } }
 @media (prefers-reduced-motion: reduce) { .lp-tile:hover { animation: none; } }
 [data-reduce-motion] .lp-tile:hover { animation: none; }
+
+/* ---------- Reveal cards (Progress, Levels) ---------- */
+/* The fades and slides are driven by motion in RevealCard.tsx; this is only layout and the frosted surface. */
+.lp-reveal { position: relative; display: flex; flex-direction: column; min-width: 0; border-radius: 32px; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 18px 44px rgba(42, 80, 112, 0.14); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.lp-reveal-face { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: var(--space-6); pointer-events: none; }
+.lp-reveal-title { font-size: clamp(3.2rem, 7vw, 5.6rem); font-weight: 800; line-height: 0.95; letter-spacing: -0.045em; color: var(--text); }
+.lp-reveal-summary { font-size: 1.1rem; font-weight: 700; color: #3b4855; }
+.lp-reveal-cue { margin-top: var(--space-3); font-size: 14px; font-weight: 700; color: var(--brand-text); }
+.lp-reveal-body { position: relative; flex: 1; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-5); }
+.lp-reveal-head { margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; }
+@media (hover: none) { .lp-reveal-cue { display: none; } }

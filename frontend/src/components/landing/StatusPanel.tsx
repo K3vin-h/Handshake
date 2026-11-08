@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { CountUp } from "../motion/CountUp";
 import { useReduceMotion } from "../motion/MotionProvider";
+import { RevealCard } from "./RevealCard";
 import "./landing.css";
 
 export type ProgressLevel = { number: number; title: string; done: number; total: number };
@@ -40,12 +41,7 @@ export function StatusPanel(props: {
   const spring = reduce ? { duration: 0 } : { type: "spring" as const, stiffness: 55, damping: 18 };
 
   return (
-    <section className="lp-duo-col" aria-labelledby="lp-progress-title">
-      <div className="lp-section-head">
-        <h2 id="lp-progress-title">Your progress</h2>
-        <p className="muted">Saved in this browser only.</p>
-      </div>
-
+    <RevealCard className="lp-duo-col" title="Progress" summary={`${pct}% done · ${done} of ${total} lessons`}>
       <div className="lp-prog">
         <div className="lp-prog-top">
           <div className="lp-rings" aria-hidden="true">
@@ -165,6 +161,6 @@ export function StatusPanel(props: {
           </div>
         </div>
       </div>
-    </section>
+    </RevealCard>
   );
 }

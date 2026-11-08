@@ -1,4 +1,5 @@
 import type { LessonState } from "./LevelDeck";
+import { RevealCard } from "./RevealCard";
 import "./landing.css";
 
 /**
@@ -10,11 +11,7 @@ export function LevelsCard(props: { unitNumber: number; unitTitle: string; lesso
   const shown = lessons.slice(0, 5);
   const OFFSET = [0, 34, 56, 34, 0];
   return (
-    <section className="lp-duo-col lp-levels-card" aria-labelledby="lp-levelscard-title">
-      <div className="lp-section-head">
-        <h2 id="lp-levelscard-title">Levels</h2>
-        <p className="muted">Your trail, one circle per lesson.</p>
-      </div>
+    <RevealCard className="lp-duo-col lp-levels-card" title="Levels" summary={`Level ${unitNumber}: ${unitTitle}`}>
       <div className="lp-trail-card">
         <p className="lp-trail-unit">
           Level {unitNumber}: {unitTitle}
@@ -33,6 +30,6 @@ export function LevelsCard(props: { unitNumber: number; unitTitle: string; lesso
           Open the level path
         </button>
       </div>
-    </section>
+    </RevealCard>
   );
 }
