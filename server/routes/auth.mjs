@@ -65,7 +65,10 @@ export function register(app, { db, verifyGoogle, sendResetEmail, googleClientId
         if (existing) {
           // Linking rule: Google verified this address. If the password account never verified it, drop its
           // password so a squatter who registered the address first cannot keep access.
-          user = await db.linkGoogle(existing.id, g.sub, { clearPassword: !existing.email_verified_at });
+          const clearPassword = !existing.email_verified_at;
+          user = await db.linkGoogle(existing.id, g.sub, { clearPassword });
+          // ...and end the squatter's live sessions, or a cookie would keep access for up to 30 days.
+          if (user && clearPassword) await db.deleteUserSessions(existing.id);
         } else {
           user = await db.createUser({ email, googleSub: g.sub, verified: true });
           isNew = true;

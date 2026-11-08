@@ -244,6 +244,34 @@ test("google linking: verified password account is linked and keeps its password
   });
 });
 
+test("google linking: an unverified account's existing sessions are revoked; the owner's new session lives", async () => {
+  const db = fakeDb();
+  const squatter = await addUser(db, { email: "owner@example.com", verified: false });
+  await withApp({ db }, async (s) => {
+    const squat = await s.post("/api/auth/login", { email: "owner@example.com", password: PW });
+    const squatKey = hex(hashToken(tokenOf(squat)));
+    assert.ok(db.sessions.has(squatKey));
+    const owner = await s.post("/api/auth/google", { credential: "g-squat" });
+    assert.equal(owner.status, 200);
+    assert.ok(!db.sessions.has(squatKey), "squatter's session no longer resolves");
+    const ownerSession = db.sessions.get(hex(hashToken(tokenOf(owner))));
+    assert.equal(ownerSession?.userId, squatter.id);
+    assert.equal(db.sessions.size, 1);
+  });
+});
+
+test("google linking: a verified account's existing sessions are kept", async () => {
+  const db = fakeDb();
+  await addUser(db, { email: "owner@example.com", verified: true });
+  await withApp({ db }, async (s) => {
+    const before = await s.post("/api/auth/login", { email: "owner@example.com", password: PW });
+    const key = hex(hashToken(tokenOf(before)));
+    assert.equal((await s.post("/api/auth/google", { credential: "g-squat" })).status, 200);
+    assert.ok(db.sessions.has(key));
+    assert.equal(db.sessions.size, 2);
+  });
+});
+
 // forgot
 test("forgot: 202 with identical bodies with and without an account; one email only for the account", async () => {
   const db = fakeDb();
