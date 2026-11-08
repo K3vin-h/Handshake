@@ -15,9 +15,7 @@ if (!process.env.DATABASE_URL) {
   try {
     await client.connect();
     await client.query("BEGIN");
-    for (const f of ["./schema.sql", "./schema.accounts.sql"]) {
-      await client.query(await readFile(new URL(f, import.meta.url), "utf8"));
-    }
+    await client.query(await readFile(new URL("./schema.sql", import.meta.url), "utf8"));
     await client.query("COMMIT");
     console.log("schema applied");
   } catch {
