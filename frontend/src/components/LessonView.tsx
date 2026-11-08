@@ -50,6 +50,7 @@ export function LessonView(p: LessonViewProps) {
       {p.lessonProgress !== undefined && (
         <progress className="lesson-progress" value={p.lessonProgress} max={1} aria-label={p.stepLabel} />
       )}
+      <a className="lesson-exit" href="#/path">Back to your path</a>
       <header className="lesson-head">
         <p className="eyebrow">{p.stepLabel}</p>
         <h1>{p.title}</h1>

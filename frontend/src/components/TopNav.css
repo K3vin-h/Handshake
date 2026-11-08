@@ -1,0 +1,15 @@
+nav.top-nav { position: sticky; top: 0; z-index: 10; display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-5); background: rgba(255,255,255,.72); backdrop-filter: saturate(180%) blur(20px); /* glass-ok: the one nav */ border-bottom: 1px solid rgba(30,50,70,.08); }
+.nav-left, .nav-right { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.nav-right { justify-content: flex-end; flex-wrap: wrap; }
+.nav-center { display: flex; justify-content: center; }
+.nav-links { display: inline-flex; gap: 2px; padding: 4px; border-radius: var(--radius-pill); background: var(--raised); }
+.nav-links a { position: relative; isolation: isolate; display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-pill); color: var(--muted); font-weight: 700; text-decoration: none; transition: color var(--dur-press) var(--ease-out); }
+.nav-links a[aria-current="page"] { color: var(--text); }
+.nav-pill { position: absolute; inset: 0; z-index: -1; border-radius: var(--radius-pill); background: #fff; box-shadow: 0 1px 2px rgba(30,50,70,.10), 0 4px 12px rgba(30,50,70,.06); border: 1px solid transparent; }
+.nav-right > a, .brand { display: inline-flex; align-items: center; min-height: 44px; color: var(--muted); font-weight: 700; text-decoration: none; transition: color var(--dur-press) var(--ease-out), background-color var(--dur-press) var(--ease-out); }
+.nav-right > a { padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); }
+.nav-right > a[aria-current="page"] { color: var(--text); background: var(--raised); }
+.brand { color: var(--text); font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; }
+@media (hover: hover) and (pointer: fine) { .nav-links a:hover, .nav-right > a:hover { color: var(--text); } }
+@media (max-width: 1100px) { nav.top-nav { grid-template-columns: 1fr auto; grid-template-areas: "l r" "c c"; } .nav-left { grid-area: l; } .nav-right { grid-area: r; } .nav-center { grid-area: c; } }
+@media (max-width: 600px) { nav.top-nav { position: static; padding: var(--space-2) var(--space-3); } }

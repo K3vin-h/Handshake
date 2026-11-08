@@ -158,29 +158,7 @@ main:focus, main:focus-visible, h1:focus, h1:focus-visible { outline: none; box-
 .skip-link:focus { top: var(--space-2); }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
-/* ---- Navigation ---- */
-nav { position: sticky; top: 0; z-index: 10; display: flex; gap: var(--space-2); align-items: center; padding: var(--space-3) var(--space-5); background: rgba(255, 255, 255, 0.82); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
-nav a { color: var(--muted); text-decoration: none; padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); font-weight: 700; transition: background var(--motion-fast) ease, color var(--motion-fast) ease; }
-nav a:hover { color: var(--text); background: var(--raised); }
-nav a[aria-current="page"] { color: var(--text); background: var(--raised); box-shadow: inset 0 -3px 0 var(--brand-text); }
-nav a.brand { color: var(--text); font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; margin-right: var(--space-3); padding-left: 0; }
-nav a.brand:hover { background: transparent; }
-/* Three zones. Equal side columns keep the streak and XP chip exactly in the middle. */
-nav.top-nav { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--space-3); }
-nav.top-nav .nav-left, nav.top-nav .nav-right { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; min-width: 0; }
-nav.top-nav .nav-right { justify-content: flex-end; gap: var(--space-2); }
-nav.top-nav .nav-center { display: flex; justify-content: center; align-items: center; gap: var(--space-3); }
-@media (max-width: 820px) { nav.top-nav { grid-template-columns: 1fr; } nav.top-nav .nav-center { justify-content: flex-start; } nav.top-nav .nav-right { justify-content: flex-start; } }
-.nav-chips { margin-left: auto; }
-/* Phones: the nav wraps instead of widening the page, and scrolls away so it doesn't eat the screen. */
-nav { flex-wrap: wrap; }
-@media (max-width: 600px) {
-  nav { position: static; padding: var(--space-2) var(--space-3); gap: var(--space-1); }
-  nav a { padding: var(--space-2) var(--space-3); }
-}
-
-.page { max-width: 1120px; margin: var(--space-5) auto; padding: 0 var(--space-4); animation: page-in var(--motion-base) ease-out; }
-@keyframes page-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.page { max-width: 1120px; margin: var(--space-5) auto; padding: 0 var(--space-4); }
 
 .muted { color: var(--muted); }
 .small { font-size: 14px; }
@@ -385,6 +363,8 @@ thead th { font-size: 13px; color: var(--muted); }
 .stats dd { margin: 0; font-size: 1.7rem; font-weight: 800; }
 
 /* ---- Lesson screen ---- */
+.lesson-exit { display: inline-flex; align-items: center; min-height: 44px; margin-bottom: var(--space-2); color: var(--muted); font-weight: 700; text-decoration: none; }
+@media (hover: hover) and (pointer: fine) { .lesson-exit:hover { color: var(--text); } }
 .lesson-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); margin-bottom: var(--space-3); }
 .lesson-head h1 { margin: 0; font-size: clamp(1.5rem, 4vw, 2.2rem); }
 .word-tiles { list-style: none; display: flex; flex-wrap: wrap; gap: var(--space-2); padding: 0; margin: 0 0 var(--space-4); }
