@@ -14,6 +14,7 @@ function Progress({
         "relative h-3 w-full overflow-hidden rounded-full bg-reference-bg",
         className
       )}
+      value={value}
       {...props}
     >
       <ProgressPrimitive.Indicator

@@ -7,6 +7,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 test("Complete reads saved completion and never awards XP on navigation or reload", async () => {
   const vite = await createServer({ server: { middlewareMode: true }, appType: "custom" });
   const saved = new Map();
+  // A saved onboarding profile (test data): there is no built-in default name any more.
+  saved.set("handshake.profile.v1", JSON.stringify({ userName: "Ryan", theirName: "Lily", leftHanded: false }));
   const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   Object.defineProperty(globalThis, "localStorage", { configurable: true, value: { getItem: (key) => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value) } });
   try {
@@ -41,7 +43,7 @@ test("Complete reads saved completion and never awards XP on navigation or reloa
     const { Complete } = await vite.ssrLoadModule("/src/screens/Complete.tsx");
     const render = (lessonId) => renderToStaticMarkup(createElement(Complete, { lessonId }));
     assert.match(render("1.1"), /Keep practising/);
-    assert.equal(saved.size, 0);
+    assert.deepEqual([...saved.keys()], ["handshake.profile.v1"]); // rendering wrote nothing but the profile this test seeded
     const progress = { xp: 40, streakDays: 1, lastActiveDay: null, completed: ["1.1"], items: {} };
     saved.set("handshake.progress.v1", JSON.stringify(progress));
     const completed = render("1.1");

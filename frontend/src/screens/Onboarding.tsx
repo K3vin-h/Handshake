@@ -5,7 +5,7 @@ import { LetterBadge } from "../components/LetterBadge";
 import { LockedUnit } from "../components/LockedUnit";
 import { coverage } from "../components/LiveCoverage";
 import { buildCurriculum, type Personalization } from "../lib/curriculum";
-import { DEMO_PROFILE, loadProfile, refreshPracticeWords, saveProfile } from "../lib/profile";
+import { loadProfile, refreshPracticeWords, saveProfile } from "../lib/profile";
 import { AuthCard } from "../components/AuthCard";
 import { cleanName } from "../lib/nameRule";
 import { getAuthConfig, getUser, subscribe, type User } from "../lib/auth";
@@ -19,7 +19,8 @@ import { getAuthConfig, getUser, subscribe, type User } from "../lib/auth";
 const PATH_STEPS = 4;
 
 // Onboarding is often shown AT "#/" (no profile yet). Setting the same hash fires no hashchange, so the router would never re-render.
-const goHome = () => (location.hash === "#/" ? dispatchEvent(new HashChangeEvent("hashchange")) : (location.hash = "#/"));
+// App compares the new hash with its state, so an identical hash is skipped. "#/home" is a different value that renders Home.
+const goHome = () => { location.hash = "#/home"; };
 
 /**
  * Privacy line. ONE constant, chosen by whether "Build my path" currently calls the server.
@@ -27,7 +28,7 @@ const goHome = () => (location.hash === "#/" ? dispatchEvent(new HashChangeEvent
  */
 const PATH_CALLS_SERVER = true;
 const PRIVACY = PATH_CALLS_SERVER
-  ? "Your names never leave this browser. Only lists of letters may be sent."
+  ? "Your names stay in this browser. Letter lists and measured feedback are sent for coaching and practice words."
   : "Your names stay in this browser. Nothing is sent to a server.";
 const PRIVACY_SIGNED_IN = "You're signed in: your names and progress are saved to your account.";
 
@@ -66,7 +67,7 @@ function CoverageRow({ name }: { name: string }) {
   return (
     <div className="coverage-row">
       <p>
-        <strong>{signedLetters(name).join("")}: {c.liveCount} of {c.total} live</strong>
+        <strong>{signedLetters(name).join("")}: {c.liveCount} of {c.total} have a camera check (not gate-tested)</strong>
         {c.liveCount < c.total && <span className="muted"> · dashed tiles are reference only (no pass or fail)</span>}
       </p>
       <div className="tile-row">
@@ -325,13 +326,6 @@ export function Onboarding() {
         </div>
 
         <p className="muted small privacy">{privacy}</p>
-        {dev && (
-          <p>
-            <button type="button" className="secondary" onClick={() => { saveProfile(DEMO_PROFILE); goHome(); void refreshPracticeWords().catch(() => {}); }}>
-              Use demo profile (Ryan → Lily)
-            </button>
-          </p>
-        )}
       </form>
     </div>
   );

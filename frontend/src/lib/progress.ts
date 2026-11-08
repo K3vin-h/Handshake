@@ -1,4 +1,5 @@
 import { flatLessons, type Unit } from "./curriculum";
+import { liveStreak, touchStreak } from "./streak";
 
 // Learner progress in localStorage: XP, daily streak, per-item mastery, spaced review.
 // Item ids: a letter ("A"), a sign ("HELLO"), or a word ("fs:LILY").
@@ -20,11 +21,11 @@ export type Progress = {
 };
 
 const empty = (): Progress => ({ xp: 0, streakDays: 0, lastActiveDay: null, completed: [], items: {} });
-const today = (now = Date.now()) => new Date(now).toISOString().slice(0, 10);
-
 export function loadProgress(): Progress {
   try {
-    return { ...empty(), ...JSON.parse(localStorage.getItem(KEY) ?? "{}") };
+    const p: Progress = { ...empty(), ...JSON.parse(localStorage.getItem(KEY) ?? "{}") };
+    p.streakDays = liveStreak(p.streakDays, p.lastActiveDay); // a lapsed streak reads 0, not an old number
+    return p;
   } catch {
     return empty();
   }
@@ -54,7 +55,7 @@ export function recordAttempt(p: Progress, itemId: string, correct: boolean, now
   }
   it.due = now + BOX_DAYS[it.box] * DAY;
   const next = { ...p, items: { ...p.items, [itemId]: it } };
-  touchStreak(next, now);
+  Object.assign(next, touchStreak(next.streakDays, next.lastActiveDay, now));
   saveProgress(next);
   return next;
 }
@@ -69,14 +70,6 @@ export function completeLesson(p: Progress, lessonId: string, xp: number): Progr
   const next = { ...p, xp: p.xp + xp, completed: p.completed.includes(lessonId) ? p.completed : [...p.completed, lessonId] };
   saveProgress(next);
   return next;
-}
-
-function touchStreak(p: Progress, now: number) {
-  const t = today(now);
-  if (p.lastActiveDay === t) return;
-  const yesterday = today(now - DAY);
-  p.streakDays = p.lastActiveDay === yesterday ? p.streakDays + 1 : 1;
-  p.lastActiveDay = t;
 }
 
 /** Items due for review (weakest first). Used by "review" steps and the Daily review card. */

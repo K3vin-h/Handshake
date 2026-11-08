@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ReduceMotionSetting } from "../components/motion/MotionProvider";
-import { DEMO_PROFILE, loadProfile } from "../lib/profile";
+import { requireProfile } from "../lib/requireProfile";
 import { useEffect, useState } from "react";
 import { HaloField } from "../components/HaloField";
 import { StatusMessage } from "../components/StatusMessage";
@@ -71,7 +71,7 @@ function AccountSettings({ user }: { user: User | null }) {
 // Reads the profile from localStorage. Only the Account section (signed in) calls /api (log out, delete).
 
 export function Settings() {
-  const profile = loadProfile() ?? DEMO_PROFILE;
+  const profile = requireProfile();
   const [user, setUser] = useState<User | null>(getUser());
   useEffect(() => subscribe(setUser), []);
   return (

@@ -6,11 +6,13 @@ import { ComponentGallery } from "./screens/ComponentGallery";
 import { StatsPage } from "./screens/StatsPage";
 import { CameraDemo } from "./screens/CameraDemo";
 import { Home } from "./screens/Home";
+import { PathPage } from "./screens/Path";
 import { Onboarding } from "./screens/Onboarding";
 import { LessonPlayer } from "./screens/LessonPlayer";
 import { Complete } from "./screens/Complete";
 import { ProgressScreen } from "./screens/Progress";
 import { LessonPreview } from "./screens/LessonPreview";
+import { Settings } from "./screens/Settings";
 import { loadProfile } from "./lib/profile";
 import { loadProgress } from "./lib/progress";
 import { ReduceMotionToggle } from "./components/motion/MotionProvider";
@@ -21,7 +23,6 @@ import { SignUp } from "./screens/SignUp";
 import { Login } from "./screens/Login";
 import { ForgotPassword } from "./screens/ForgotPassword";
 import { ResetPassword } from "./screens/ResetPassword";
-import { Settings } from "./screens/Settings";
 
 // Hash router: "#/lesson/1.1" → name "lesson", param "1.1".
 // Dev tools (record, curriculum, demo) work without a profile; everything else needs onboarding first.
@@ -41,18 +42,21 @@ function screen(hash: string): ReactElement {
   if (name === "lesson") return <LessonPlayer key={param} lessonId={param} />;
   if (name === "complete") return <Complete lessonId={param} />;
   if (name === "progress") return <ProgressScreen />;
+  if (name === "settings") return <Settings />;
+  if (name === "path") return <PathPage />;
   if (name === "stats") return <StatsPage />;
   if (name === "camera-demo") return <CameraDemo />;
-  if (name === "settings") return <Settings />;
   return <Home />;
 }
 
 const TITLES: Record<string, string> = {
+  home: "Home",
   path: "Your path",
   welcome: "Welcome",
   lesson: "Lesson",
   complete: "Lesson complete",
   progress: "Progress",
+  settings: "Settings",
   stats: "Stats",
   "camera-demo": "Camera demo",
   demo: "Demo",
@@ -64,14 +68,15 @@ const TITLES: Record<string, string> = {
   login: "Log in",
   forgot: "Forgot password",
   reset: "Reset password",
-  settings: "Settings",
 };
 
 // Player-facing nav is deliberately small: Home (the main page that leads everywhere) and Progress.
 // Dev tools live in a "Dev tools" menu that only exists in `npm run dev`; their routes keep working in every build.
 const NAV: [string, string][] = [
   ["#/", "Home"],
+  ["#/path", "Levels"],
   ["#/progress", "Progress"],
+  ["#/settings", "Settings"],
 ];
 const DEV_NAV: [string, string][] = [
   ["#/demo", "Demo"],
@@ -93,7 +98,7 @@ export default function App() {
   // Route change: update the tab title and move focus to <main> so keyboard and screen-reader users land on the new page.
   const first = useRef(true);
   useEffect(() => {
-    const name = hash.split("/")[1] || "path";
+    const name = hash.split("/")[1] || "home";
     document.title = `${TITLES[name] ?? "Handshake"} · Handshake`;
     if (first.current) first.current = false;
     else {
