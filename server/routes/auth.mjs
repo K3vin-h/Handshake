@@ -62,13 +62,15 @@ export function register(app, { db, verifyGoogle, sendResetEmail, googleClientId
       let isNew = false;
       if (!user) {
         const existing = await db.findUserByEmail(email);
-        if (existing) {
+        if (existing?.google_sub) {
+          // Already tied to a different Google identity: match by sub only, never by email alone.
+          return res.status(401).json({ error: "invalid_token" });
+        } else if (existing) {
           // Linking rule: Google verified this address. If the password account never verified it, drop its
-          // password so a squatter who registered the address first cannot keep access.
+          // password and end its live sessions first, so a squatter who registered the address cannot keep access.
           const clearPassword = !existing.email_verified_at;
+          if (clearPassword) await db.deleteUserSessions(existing.id);
           user = await db.linkGoogle(existing.id, g.sub, { clearPassword });
-          // ...and end the squatter's live sessions, or a cookie would keep access for up to 30 days.
-          if (user && clearPassword) await db.deleteUserSessions(existing.id);
         } else {
           user = await db.createUser({ email, googleSub: g.sub, verified: true });
           isNew = true;

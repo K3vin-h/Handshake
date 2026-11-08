@@ -30,7 +30,11 @@ export async function serve(setup) {
           let text = "";
           res.setEncoding("utf8");
           res.on("data", (c) => (text += c));
-          res.on("end", () => resolve({ status: res.statusCode, body: text ? JSON.parse(text) : null, headers: res.headers }));
+          res.on("end", () => {
+            let body = null;
+            try { body = text ? JSON.parse(text) : null; } catch { body = text; }
+            resolve({ status: res.statusCode, body, headers: res.headers });
+          });
         });
         req.on("error", reject);
         req.end(data);

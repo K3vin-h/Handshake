@@ -49,7 +49,7 @@ export function createDb(url) {
       const r = await pool.query(
         `UPDATE users SET google_sub = $2, email_verified_at = now(),
            password_hash = CASE WHEN $3::boolean THEN NULL ELSE password_hash END
-         WHERE id = $1 RETURNING *`, [userId, sub, clearPassword]);
+         WHERE id = $1 AND google_sub IS NULL RETURNING *`, [userId, sub, clearPassword]);
       return r.rows[0] ?? null;
     },
     async setPassword(userId, hash) {

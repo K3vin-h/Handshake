@@ -27,7 +27,7 @@ function fakeDb() {
     async findUserByGoogleSub(sub) { const u = [...users.values()].find((x) => x.google_sub === sub); return u ? { ...u } : null; },
     async linkGoogle(id, sub, { clearPassword = false } = {}) {
       const u = users.get(id);
-      if (!u) return null;
+      if (!u || u.google_sub) return null; // mirrors db.mjs: AND google_sub IS NULL
       Object.assign(u, { google_sub: sub, email_verified_at: new Date(), ...(clearPassword ? { password_hash: null } : {}) });
       return { ...u };
     },
@@ -269,6 +269,18 @@ test("google linking: a verified account's existing sessions are kept", async ()
     assert.equal((await s.post("/api/auth/google", { credential: "g-squat" })).status, 200);
     assert.ok(db.sessions.has(key));
     assert.equal(db.sessions.size, 2);
+  });
+});
+
+test("google linking: an email match already tied to another Google id is 401 and is not relinked", async () => {
+  const db = fakeDb();
+  const existing = await addUser(db, { email: "owner@example.com", googleSub: "other", verified: true });
+  await withApp({ db }, async (s) => {
+    const r = await s.post("/api/auth/google", { credential: "g-squat" }); // sub-squat, same email
+    assert.deepEqual([r.status, r.body], [401, { error: "invalid_token" }]);
+    assert.equal(cookieOf(r), undefined);
+    assert.equal(db.users.get(existing.id).google_sub, "other");
+    assert.equal(db.sessions.size, 0);
   });
 });
 
