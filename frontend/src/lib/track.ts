@@ -1,0 +1,38 @@
+import { apiUrl } from "./apiBase.ts";
+import { learnerId } from "./learner.ts";
+
+type Send = (url: string, body: unknown) => Promise<unknown>;
+const ITEM_RE = /^[A-Z][A-Z0-9_-]{0,19}$/;
+const defaultSend: Send = (url, body) => fetch(apiUrl(url), {
+  method: "POST", headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body), keepalive: true, signal: AbortSignal.timeout(8000),
+});
+
+/** Optional telemetry. Local progress is saved first and never waits for the network. */
+export function reportAttempt(item: string, correct: boolean, codes: string[] = [], send: Send = defaultSend, id?: string) {
+  if (!ITEM_RE.test(item)) return; // fs:* word ids may contain names.
+  try {
+    void send("/api/attempts", {
+      learnerId: id ?? learnerId(), attempts: [{ item, correct, codes, ts: Date.now() }],
+    }).catch(() => { /* expected offline/disabled failure; never interrupt signing */ });
+  } catch { /* storage, crypto or network setup may be unavailable */ }
+}
+
+const NOTIFY_KEY = "handshake.notify.v1";
+export function isNotifyOn(): boolean {
+  try { return localStorage.getItem(NOTIFY_KEY) === "1"; } catch { return false; }
+}
+export function setNotifyOn(on: boolean) {
+  try {
+    if (on) localStorage.setItem(NOTIFY_KEY, "1");
+    else localStorage.removeItem(NOTIFY_KEY);
+  } catch { /* reporting defaults off if storage is unavailable */ }
+}
+export function reportLessonComplete(lessonId: string, xp: number,
+  send: Send = defaultSend, id?: string, on = isNotifyOn()) {
+  if (!on) return;
+  try {
+    void send("/api/lesson-complete", { learnerId: id ?? learnerId(), lessonId, xp })
+      .catch(() => { /* notifications never interrupt local progress */ });
+  } catch { /* storage or network unavailable */ }
+}

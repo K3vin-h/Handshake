@@ -8,34 +8,76 @@ and Gemini coaches mistakes and personalizes the path. Spec, roadmap and plans: 
 "MediaPipe measures your hands, Gemini coaches you." Gemini never judges signs.
 
 ## Prizes we're targeting
-Beginner Overall (auto), Best Problem-Solution Fit, Community Impact, Best Design (needs Figma link),
-Most Accessible Design (needs Figma + accessibility notes), Best Use of Gemini API.
-Sponsor/MLH: Tiger Data, Vultr, GoDaddy Registry domain, Databricks, Maritime, n8n, Entire. Spec:
+Beginner Overall (auto), Best Problem-Solution Fit, Community Impact, Best Design,
+Most Accessible Design (both: [NEEDS: confirm with organizers whether these prizes are still eligible without a Figma file]), Best Use of Gemini API.
+Sponsor/MLH: Tiger Data, Vultr (+ Vercel frontend), Databricks, Maritime, n8n, Entire. Spec:
 docs/superpowers/specs/2026-11-07-sponsor-tracks-spec.md. Plan: docs/superpowers/plans/2026-11-07-sponsor-tracks.md.
 
 ## Stack
 - React 19 + TypeScript + Vite (frontend), plain CSS for now → Tailwind/shadcn later
 - @mediapipe/tasks-vision Hand Landmarker (pretrained, runs in browser)
-- Recognition: trained MLP (scikit-learn → `public/model/model.json`, run with TensorFlow.js) when present,
+- Recognition: trained MLP (scikit-learn → `frontend/public/model/model.json`, run with TensorFlow.js) when present,
   else k-nearest-neighbours over recorded templates. See `training/README.md`.
 - Accuracy helpers: One Euro filter (landmark smoothing), majority vote over 10 frames, lesson-restricted
   candidates + look-alikes, brightness check with OpenCV.js CLAHE in dark rooms, camera auto exposure/white balance
-- Express server (`server/index.mjs`) proxies Gemini via @google/genai. API key lives in `.env` only.
-- Optional, env-gated server pieces: `server/precache.json` (cached coach/word replies, labelled "cached"; mock
+- Express API (`backend/index.mjs`) proxies Gemini via @google/genai. API key lives in the repo-root `.env` only (the backend reads it). The API no longer serves the frontend (`SERVE_STATIC` is removed).
+- Optional, env-gated server pieces: `backend/precache.json` (cached coach/word replies, labelled "cached"; mock
   until a live run), Maritime planner agent in `agent/` behind `/api/plan` with a local fallback, n8n
-  notifications (`server/routes/notify.mjs`, `n8n/README.md`; consent first, double opt-in for the contact is
-  specified but not built), `#/stats` page, Vultr/Caddy deploy in `deploy/`.
-- Run everything: `npm run dev` → web on :5173, API on :8787 (Vite proxies /api)
+  notifications (`backend/routes/notify.mjs`, `n8n/README.md`; consent first, double opt-in for the contact is
+  specified but not built), `#/stats` page, Vultr API-only Caddy + systemd deploy in `backend/deploy/`.
+- Run everything: `npm run dev` (repo root) → web on :5173, API on :8787 (Vite proxies `/api` to http://localhost:8787). `npm run build` builds the frontend; `npm test` runs frontend + backend + agent + deploy tests; `npm run test:n8n` runs the n8n tests.
+- The browser calls the Vultr HTTPS API **directly** (no Vercel rewrite: behind a rewrite every visitor would share Vercel's IP at the API, collapsing per-IP rate limits into one bucket). The frontend build reads `VITE_API_BASE_URL` (e.g. `https://203-0-113-10.sslip.io`, set in the Vercel project's Environment Variables); when unset it uses relative `/api/*` (local dev, where Vite proxies `/api`). `VITE_API_BASE_URL` is public (browser-visible), never a secret. The API enables CORS only for origins listed in env `ALLOWED_ORIGIN` (comma-separated exact origins, e.g. the production Vercel URL; unset = no CORS headers; methods GET/POST/OPTIONS, header Content-Type). Status: implemented in code, not yet verified against a live deployment.
+
+## Architecture (target layout; the folder move is being implemented, see `docs/superpowers/plans/2026-11-07-vercel-vultr-architecture.md`)
+| Service | Purpose |
+|---|---|
+| Vercel | Frontend and public website (React/Vite static build) |
+| Vultr | Backend API (Express) |
+| Tiger Data Cloud | Database (TimescaleDB `attempts` hypertable) |
+| n8n Cloud | Email automation (webhooks + workflows) |
+| Maritime | AI agent hosting (the /plan planner in `agent/`) |
+| Gemini | AI model (coach, words, planner) |
+| Gmail | SMTP for n8n emails and testing (dedicated Gmail account + app password, configured as an SMTP credential inside n8n Cloud; never in this repo) |
+
+GoDaddy is not used. Figma is not used.
+
+```
+Handshake/
+├── frontend/            → Vercel (Vercel project Root Directory = frontend)
+│   ├── src/             (cv/ lib/ components/ screens/ App.tsx main.tsx styles.css)
+│   ├── public/          (model/model.json when trained)
+│   ├── tests/           (React SSR tests: complete.test.mjs, profile.test.mjs)
+│   ├── index.html, vite.config.ts, tsconfig.json, components.json
+│   └── package.json     (frontend-only dependencies)
+├── backend/             → Vultr VM (Express API; talks to Tiger Data Cloud)
+│   ├── index.mjs app.mjs gemini.mjs db.mjs integrations.mjs limit.mjs validate.mjs precache.mjs precache.json migrate.mjs
+│   ├── routes/          (attempts, notify, plan)
+│   ├── schema.sql, DATABASE.md, README.md
+│   ├── deploy/          (setup.sh, preflight.sh, tests/, README.md; Caddy + systemd, API only)
+│   └── package.json
+├── agent/               → Maritime (planner agent, own Dockerfile + package.json)
+├── n8n/                 → n8n Cloud (workflow exports, SQL, tests)
+├── training/            → offline ML (Python, Databricks); writes frontend/public/model/model.json
+├── docs/                (superpowers/specs, plans, evidence, notes, test-log, devpost)
+├── hackathon-kit/       (untouched)
+├── .env.example         (one file, sectioned by service; copied to ./.env at the repo root; the backend reads it)
+└── package.json         (root convenience scripts only: dev, build, test)
+```
+Hosting notes:
+- The Vultr API host has no purchased domain: use any hostname that resolves to the VM IP with automatic HTTPS from Caddy, e.g. a free `<ip-with-dashes>.sslip.io` name. [NEEDS: verify Let's Encrypt works for the chosen hostname]
+- Rate limiting is per client IP; browsers call the API directly, so the production proxy chain is Caddy → Express and the Express `trust proxy` hop count is 1 (env `TRUST_PROXY_HOPS=1`). [NEEDS: verify with a real request that req.ip is the visitor's IP]
+- New backend env: `HOST` (bind address; `127.0.0.1` on the VM behind Caddy), `TRUST_PROXY_HOPS` (1 in production) and `ALLOWED_ORIGIN` (CORS allow-list; the Vercel URL). Frontend env: `VITE_API_BASE_URL` (public). n8n Cloud and Maritime hold their own secrets.
+- `backend/schema.sql` uses TimescaleDB `create_hypertable`, so the database is a Tiger Data Cloud service (TimescaleDB), reached from the Vultr API through `DATABASE_URL` with `sslmode=require`.
 
 ## Ownership (only edit your own files; ask before touching others)
 | Group | Owner | Owns | Delivers |
 |---|---|---|---|
-| 1 · CV + integration | Ryan | `src/cv/`, `src/lib/mistakes.ts`, `RecordPage`, `LessonDemo`, `LessonPlayer`, `TokenRunner`, `training/`, `docs/test-log.md` | Reliable letters + signs, `useLetterCheck`, error codes, mistake memory, left-hand mode, H10 integration |
-| 2 · Design + frontend | Teammate A | Figma, `src/components/`, `src/screens/` (Home, Progress, Complete, LessonPreview), `styles.css`, `App.tsx` routes | 5 polished screens, XP/streak/confetti, reference images, scene chat UI, accessibility |
-| 3 · Gemini + backend + pitch | Teammate B | `server/`, `src/lib/api.ts`, `src/lib/profile.ts`, `src/lib/curriculum.ts`, `Onboarding.tsx`, `docs/notes.md` | 2 endpoints (coach, words), onboarding, practice order, adaptive coach, cache, interviews, Devpost, slides, video |
+| 1 · CV + integration | Ryan | `frontend/src/cv/`, `frontend/src/lib/mistakes.ts`, `RecordPage`, `LessonDemo`, `LessonPlayer`, `TokenRunner`, `training/`, `docs/test-log.md` | Reliable letters + signs, `useLetterCheck`, error codes, mistake memory, left-hand mode, H10 integration |
+| 2 · Design + frontend | Teammate A | `frontend/src/components/`, `frontend/src/screens/` (Home, Progress, Complete, LessonPreview), `styles.css`, `App.tsx` routes | 5 polished screens, XP/streak/confetti, reference images, scene chat UI, accessibility |
+| 3 · Gemini + backend + pitch | Teammate B | `backend/`, `frontend/src/lib/api.ts`, `frontend/src/lib/profile.ts`, `frontend/src/lib/curriculum.ts`, `Onboarding.tsx`, `docs/notes.md` | 2 endpoints (coach, words), onboarding, practice order, adaptive coach, cache, interviews, Devpost, slides, video |
 
 `progress.ts` is shared: Group 2 reads it; nobody changes its exports without telling the team. `docs/notes.md` is owned by Group 3 but append-only for everyone (Groups 1 and 2 log decisions and sources there).
-Seams: Group 2 builds `LessonView` and `SceneView` (presentational, in `src/components/`); Group 1 wires them inside `LessonPlayer`. The starter plan adds every route and an empty stub for every new file at H0.5, so nobody edits `App.tsx` for routing afterwards.
+Seams: Group 2 builds `LessonView` and `SceneView` (presentational, in `frontend/src/components/`); Group 1 wires them inside `LessonPlayer`. The starter plan adds every route and an empty stub for every new file at H0.5, so nobody edits `App.tsx` for routing afterwards.
 
 ## Rules (binding)
 - getHandFeedback (landmarks) is the truth; Gemini only rewords it. Landmark tip first, Gemini tip after.
@@ -49,7 +91,7 @@ Seams: Group 2 builds `LessonView` and `SceneView` (presentational, in `src/comp
 ## Interfaces (do NOT change without telling the team; source: spec §4)
 Starter interfaces (useHandTracking, Recognizer, VoteBuffer, HoldConfirm, buildCurriculum, progress.ts, SignChecker) are unchanged. Additions:
 
-### CV → frontend (`src/cv`, owner Group 1)
+### CV → frontend (`frontend/src/cv`, owner Group 1)
 ```ts
 type FingerFeedback = { finger: string; issue: string; code: ErrorCode };
 type ErrorCode = `${"thumb"|"index"|"middle"|"ring"|"pinky"}:${"curl"|"direction"|"placement"}`;
@@ -71,12 +113,12 @@ type LessonViewProps = { title; target; word?: { letters: string[]; index: numbe
   actionLabel /* "Skip" | "Continue" */; onAction(); onSelfCheck?() };
 type SceneViewProps = { turns: { them: { gloss; english }; you: { tokens: string[]; english } }[];
   turnIndex; tokenIndex; camera: ReactNode; prompt; onSelfCheck?() };
-celebrate(): void   // src/components/celebrate.ts: confetti (skipped under reduced motion) + short sound
+celebrate(): void   // frontend/src/components/celebrate.ts: confetti (skipped under reduced motion) + short sound
 ```
 Presentational only. Before H10, Group 2 drives them from `#/lesson-preview` with `useFakeCheck`: the D key counts as a detection and M as a miss.
 `SEND_SNAPSHOT` (in `api.ts`, owner Group 3) stays `false` unless the H4 snapshot test passes.
 
-### Mistake memory (`src/lib/mistakes.ts`, owner Group 1; no imports so `node --test` runs it)
+### Mistake memory (`frontend/src/lib/mistakes.ts`, owner Group 1; no imports so `node --test` runs it)
 ```ts
 recordMistake(m: Mistakes, letter: string, code: ErrorCode, now?) → Mistakes   // count + lastAt
 mistakeCount(m, letter, code) → number
@@ -84,7 +126,7 @@ weakFingers(m, limit?) → { finger, count }[]
 loadMistakes() / saveMistakes(m)   // localStorage "handshake.mistakes.v1"
 ```
 
-### Profile (`src/lib/profile.ts`, owner Group 3)
+### Profile (`frontend/src/lib/profile.ts`, owner Group 3)
 ```ts
 type Profile = Personalization & { leftHanded: boolean };   // Personalization.relationship is optional (default pack)
 const WELCOME: string;   // uses {you}/{them}; fillNames(WELCOME, profile)
@@ -106,12 +148,12 @@ POST /api/words { knownLetters: string[], weakLetters: string[] }
 2. MediaPipe gives 21 landmarks/frame → One Euro filter smooths them.
 3. `extractFeatures` (88 numbers): normalized coords + finger curl + direction + fingertip distances.
    MUST stay identical to `training/features.py` — run `python training/test_parity.py` after any change.
-4. `Recognizer`: trained MLP if `public/model/model.json` exists, else kNN; only lesson letters + look-alikes.
+4. `Recognizer`: trained MLP if `frontend/public/model/model.json` exists, else kNN; only lesson letters + look-alikes.
 5. `VoteBuffer` (majority of 10 frames) → `HoldConfirm` (~0.8 s) → one detection.
 6. Feedback for the coach: per-finger curl/direction vs the letter's mean template.
-7. Data: `#/record` exports per person → `src/cv/templates.json` (kNN) and `training/data/recorded/` (training).
+7. Data: `#/record` exports per person → `frontend/src/cv/templates.json` (kNN) and `training/data/recorded/` (training).
 
-## Curriculum (src/lib/curriculum.ts — preview at #/curriculum)
+## Curriculum (frontend/src/lib/curriculum.ts — preview at #/curriculum)
 - Unit 1 Introduce yourself: letters of YOUR name → spell it → checkpoint.
 - Unit 2 Alphabet by handshape family, identical for every learner (same ids and order; Unit 1 letters are
   simply practised again): 2.1 B C O · 2.2 D I L Y · 2.3 V W F · 2.4 A · 2.5 "Spell <their name>" (fixed slot
@@ -130,15 +172,15 @@ POST /api/words { knownLetters: string[], weakLetters: string[] }
 - Drop: Auth0. Stretch: everything marked stretch, rigged 3D hand.
 
 ## 3D hand (lesson reference)
-- `src/components/HandModel3D.tsx`: React Three Fiber + drei OrbitControls (drag to spin, auto-rotate).
-- Pose = average of recorded MediaPipe **world landmarks** for the letter (`meanPose3D` in `src/cv/pose3d.ts`),
+- `frontend/src/components/HandModel3D.tsx`: React Three Fiber + drei OrbitControls (drag to spin, auto-rotate).
+- Pose = average of recorded MediaPipe **world landmarks** for the letter (`meanPose3D` in `frontend/src/cv/pose3d.ts`),
   so it shows real signing. Templates recorded before this change have no `world` data: re-record.
 - MVP renders a skeleton (spheres + capsules). Upgrade: rigged glTF hand (three.js WebXR generic hand or a
   CC-licensed Sketchfab hand) posed from the same 21 points, via Kalidokit or `quaternion.setFromUnitVectors`
   per bone. Keep the skeleton as fallback; lazy-loaded so it never slows the first page.
 
 ## Checkpoints
-0.5h interfaces+repo · 3h Figma done, skeleton on webcam, Gemini test reply · 6–8h letters recognized,
+0.5h interfaces+repo · 3h design tokens + skeleton on webcam, Gemini test reply · 6–8h letters recognized,
 screens on fake data · 10h full integration · 16h FEATURE FREEZE · 20h Devpost + backup video · 22–24h rehearse.
 
 ## Rules for Claude sessions
@@ -171,11 +213,11 @@ Problem Research · Technical Implementation · Design (UI/UX, accessibility) ·
 |---|---|---|
 | Best Problem-Solution Fit (beginner only) | Problem statement with a real quote (docs/notes.md) or an honest "[NEEDS]"; each core feature tied to one stated pain | Teammate B |
 | Community Impact | Impact statement: who exactly, what changes, honest limits | Teammate B |
-| Most Accessible Design (beginner only) | Figma link + accessibility considerations that match what the app actually does | Teammate A |
-| Best Design | Real Figma file matching the final app (the layouts canvas is not Figma); 1 font, 2 colours, 3 status colours | Teammate A |
+| Most Accessible Design (beginner only) | Real app screenshots + accessibility considerations that match what the app actually does. [NEEDS: confirm with organizers whether this prize is still eligible without a Figma file] | Teammate A |
+| Best Design | Real app screenshots of the final app; 1 font, 2 colours, 3 status colours. [NEEDS: confirm with organizers whether this prize is still eligible without a Figma file] | Teammate A |
 | Best Use of Gemini API | 3 endpoints with responseSchema; Gemini rewords feedback, never grades signs; explained on Devpost | Teammate B |
-| Best Use of Tiger Data | `attempts` hypertable + the #/stats chart; empty state when no DB; schema.sql in the repo | Sponsor plan T2, T7 |
-| Best Use of Vultr + Best Domain (GoDaddy Registry) | Live HTTPS URL on a Vultr VM at an eligible domain; the camera works on a phone | Sponsor plan T9 |
+| Best Use of Tiger Data | `attempts` hypertable + the #/stats chart; empty state when no DB; schema.sql in the repo. | Sponsor plan T2, T7 |
+| Best Use of Vultr (frontend on Vercel) | Live HTTPS API on a Vultr VM; the camera works on a phone via the Vercel URL | Sponsor plan T9 |
 | Best Use of Databricks | MLflow runs comparing 3 network sizes on the recognizer data + report.txt; exported model.json | Sponsor plan T10 |
 | Best Agent on Maritime | Practice-planner agent deployed on Maritime, demo clip, local fallback when it is down | Sponsor plan T8 |
 | Best Use of Entire | Repo + sessions on Entire, one screenshot each of Sessions, Graph, Brain | Sponsor plan T12 |
@@ -184,7 +226,7 @@ Problem Research · Technical Implementation · Design (UI/UX, accessibility) ·
 ## Privacy rules
 - Learner profile, names and mistake history stay in the browser (localStorage). Two opt-in exceptions, both off unless env vars are set:
   - Tiger Data receives per-attempt rows: letter or sign id, pass/fail, error codes, an anonymous random id. Never names or emails.
-  - n8n receives first names and emails ONLY after the user ticks the consent checkbox on #/stats, and can be stopped there. Names and emails never go to Gemini, Maritime or Tiger Data.
+  - n8n receives email addresses only (names are not sent), and only after the user ticks the consent checkbox on #/stats, and can be stopped there. Names and emails never go to Gemini, Maritime or Tiger Data.
   - The Devpost must say both, plus the known risk: anyone holding a learner id could trigger emails to that learner's saved contact.
 - Gemini receives letters and error codes only. Never names, never video.
 - A webcam snapshot goes to Gemini ONLY if it passed the H4 test (names the intended letter in 8/10, contradicts the landmarks at most 1/10). If kept, the Devpost says a photo is sent to Google's API.
@@ -209,7 +251,7 @@ Problem Research · Technical Implementation · Design (UI/UX, accessibility) ·
 - Never say "works". End every task with: Tested (what you ran, what you saw) / Not tested.
 
 ## Working rules
-- Stay in your own folders; a file outside your area is a question for the owner. Exception: the sponsor-tracks plan edits server/, src/lib/api.ts, src/App.tsx and training/train.py by agreement; tell the owner before you merge those.
+- Stay in your own folders; a file outside your area is a question for the owner. Exception: the sponsor-tracks plan edits backend/, frontend/src/lib/api.ts, frontend/src/App.tsx and training/train.py by agreement; tell the owner before you merge those.
 - Commit after each working step. Never merge or push to main unless asked; whoever merges runs the app first.
 - Do not change the interfaces in this file without telling the team.
 - The Gemini key lives only in .env (gitignored), never in frontend code or the repo.

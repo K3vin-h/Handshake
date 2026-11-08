@@ -25,4 +25,4 @@ from sweep import run_sweep
 result = run_sweep(data_dir)
 print(f"Best evaluation accuracy: {result['accuracy']:.3f}")
 print(f"Model: {result['out']}\nReport: {result['report']}")
-print("Download model.json from the volume to public/model/model.json only after reviewing the report.")
+print("Download model.json from the volume to frontend/public/model/model.json only after reviewing the report.")

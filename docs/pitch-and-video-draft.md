@@ -32,7 +32,7 @@ Speaker: “No letters are currently enabled in PRACTICEABLE. Live grading needs
 ## 6. What comes next
 Validate letters with a person who did not record the templates and with ASL-NOW hands. Interview learners and signers. Refine the design with their feedback.
 
-[NEEDS: actual team names, final Figma link, verified public app URL, and any measured results.]
+[NEEDS: actual team names, verified public app URL, and any measured results.]
 
 # Backup video — recording script
 
