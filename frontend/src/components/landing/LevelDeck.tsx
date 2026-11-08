@@ -266,9 +266,7 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
     return () => ro.disconnect();
   }, []);
 
-  // Wider cards on wide screens: the active card drifts across the deck (see restOf), which eats into how far the track
-  // moves per step, and a wider card gives that distance back without a gap between cards.
-  const width = Math.max(240, Math.min(vw > 700 ? 470 : 360, vw - 64));
+  const width = Math.max(240, Math.min(360, vw - 64));
   const gap = GAP;
   const slot = width + gap;
   const pad = (vw - width) / 2;
@@ -279,10 +277,9 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
   // feels the same at every level. After level 4 the right side is empty, as before. On a phone the cards are nearly as
   // wide as the screen, so `lead` is just the small side margin there.
   const lead = Math.min(pad, 16);
-  // The active card drifts from the left edge (level 1) to the right edge (last level), evenly, so neither end has a wide
-  // empty gutter and every step moves the track the same amount.
-  const maxOff = Math.max(0, vw - 12 - width - lead);
-  const restOf = (i: number) => -i * slot + (units.length > 1 ? (i / (units.length - 1)) * maxOff : 0);
+  // The active card always sits at the left edge, so every step moves the track exactly one card. After the last level the
+  // right side is empty.
+  const restOf = (i: number) => -i * slot;
 
   const goTo = useCallback(
     (i: number, instant = false) => {
@@ -291,14 +288,14 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
       if (instant || reduce) x.set(restOf(n));
       else animate(x, restOf(n), { type: "spring", stiffness: 330, damping: 32 });
     },
-    [reduce, slot, units.length, x, maxOff],
+    [reduce, slot, units.length, x],
   );
 
   // Re-centre when the card size changes (resize, first measure).
   useLayoutEffect(() => {
     x.set(restOf(index));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slot, maxOff]);
+  }, [slot]);
 
   const onDragEnd = (_: unknown, info: PanInfo) => {
     const { offset, velocity } = info;
