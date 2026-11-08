@@ -106,3 +106,15 @@ test("account POST behind the Vercel rewrite: X-Forwarded-Host counts only with 
   assert.equal(await logout({ TRUST_PROXY_HOPS: "1" }), 204);
   assert.equal(await logout({}), 403);
 });
+
+test("session cookie is Secure with COOKIE_SECURE=1 or NODE_ENV=production, unless COOKIE_SECURE=0", async () => {
+  const cookie = async (env) => {
+    const s = await serve((app) => registerIntegrations(app, env));
+    try { return (await s.request("POST", "/api/auth/logout")).headers["set-cookie"].join(";"); } finally { await s.close(); }
+  };
+  assert.match(await cookie({ COOKIE_SECURE: "1" }), /; Secure/);
+  assert.match(await cookie({ NODE_ENV: "production" }), /; Secure/);
+  assert.doesNotMatch(await cookie({ NODE_ENV: "production", COOKIE_SECURE: "0" }), /Secure/);
+  assert.doesNotMatch(await cookie({}), /Secure/);
+  assert.doesNotMatch(await cookie({ SERVE_STATIC: "1" }), /Secure/);
+});

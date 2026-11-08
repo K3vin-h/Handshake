@@ -18,7 +18,8 @@ export function registerIntegrations(app, env = process.env) {
     app.set("trust proxy", hops);
   }
   registerAttempts(app, { db });
-  const secure = env.SERVE_STATIC === "1";
+  // Session cookie Secure: COOKIE_SECURE=1, or NODE_ENV=production (set by the systemd unit) unless COOKIE_SECURE=0.
+  const secure = env.COOKIE_SECURE === "1" || (env.NODE_ENV === "production" && env.COOKIE_SECURE !== "0");
   const mail = env.RESEND_API_KEY && env.RESEND_FROM
     ? (msg) => sendResetEmail(msg, { apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM }) : null;
   registerAuth(app, { db, verifyGoogle: verifyGoogleCredential, sendResetEmail: mail,
