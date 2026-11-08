@@ -23,6 +23,9 @@ export const SEND_SNAPSHOT = false;
 export const getCoachTip = (target: string, feedback: FingerFeedback[], repeat: number, snapshot?: string) =>
   post<{ tip: string } & Cached>("/api/coach", { target, feedback, repeat, ...(SEND_SNAPSHOT && snapshot ? { snapshot } : {}) });
 
+/** How to form a letter, from Gemini's general ASL knowledge. text is "" when Gemini is unsure or unavailable. */
+export const getHowTo = (target: string) => post<{ text: string } & Cached>("/api/explain", { target });
+
 export const getPracticeWords = (knownLetters: string[], weakLetters: string[]) =>
   post<{ words: string[] } & Cached>("/api/words", { knownLetters, weakLetters });
 

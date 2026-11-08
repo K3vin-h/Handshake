@@ -5,7 +5,7 @@ import { completeLesson, dueItems, isUnlocked, loadProgress, recordAttempt, type
 import { reportAttempt, reportLessonComplete } from "../lib/track";
 import { loadMistakes, mistakeCount, recordMistake } from "../lib/mistakes";
 import { DEMO_PROFILE, loadProfile } from "../lib/profile";
-import { SEND_SNAPSHOT, getCoachTip } from "../lib/api";
+import { SEND_SNAPSHOT, getCoachTip, getHowTo } from "../lib/api";
 import { LessonView } from "../components/LessonView";
 import { Camera } from "../components/Camera";
 import { createCoachQueue } from "../lib/coachQueue";
@@ -170,6 +170,15 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     },
   });
 
+  // How to form the letter (Gemini, general ASL knowledge). Hidden until it arrives, and when Gemini is unsure or down.
+  const [howTo, setHowTo] = useState<{ text: string; cached: boolean } | undefined>();
+  useEffect(() => {
+    setHowTo(undefined);
+    let live = true;
+    getHowTo(target).then((r) => live && r.text && setHowTo({ text: r.text, cached: !!r.cached })).catch(() => {});
+    return () => { live = false; };
+  }, [target]);
+
   const camera = (
     <>
       <Camera {...check.cam} progress={check.progress} />
@@ -181,7 +190,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
       <HandModel3D pose={meanPose3D(target, check.templates, leftHanded)} letter={target} />
     </Suspense>
   );
-  const common = { target, reference, camera, landmarkTip, coachTip: coach.tip, coachCached: coach.cached, sideBySide, stepLabel, lessonProgress };
+  const common = { target, reference, camera, landmarkTip, coachTip: coach.tip, coachCached: coach.cached, sideBySide, stepLabel, lessonProgress, howTo };
 
   if (item.kind === "learn")
     return (
