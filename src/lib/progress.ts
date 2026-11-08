@@ -36,6 +36,7 @@ export function saveProgress(p: Progress) {
   } catch {
     /* storage unavailable: progress lasts for this session only */
   }
+  try { dispatchEvent(new Event("handshake:state")); } catch { /* not in a browser */ }
 }
 
 /** Call after every graded attempt. Returns the updated progress (also saved). */

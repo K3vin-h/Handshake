@@ -35,6 +35,7 @@ export function saveProfile(p: Profile) {
   } catch {
     /* session only */
   }
+  try { dispatchEvent(new Event("handshake:state")); } catch { /* not in a browser */ }
 }
 
 /** Fills {you}/{them} on the device. */
