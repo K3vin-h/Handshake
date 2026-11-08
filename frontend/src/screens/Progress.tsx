@@ -113,7 +113,7 @@ export function ProgressScreen() {
             aria-valuenow={lessonsDone}
             aria-valuetext={`${lessonsDone} of ${demo.length} lessons`}
           >
-            <span style={{ width: `${demo.length ? pct(lessonsDone, demo.length) : 0}%` }} />
+            <span style={{ "--p": demo.length ? lessonsDone / demo.length : 0 } as React.CSSProperties} />
           </div>
           <div className="jr-stamps">
             <Stamp value={progress.streakDays} label="day streak" />

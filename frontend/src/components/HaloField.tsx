@@ -25,10 +25,8 @@ export function HaloField(props: InputHTMLAttributes<HTMLInputElement> & { id: s
       <label htmlFor={id} className="halo-label">
         {label}
       </label>
-      <div className="halo-rim">
-        <div className="halo-shell">
-          <input id={id} ref={inputRef} aria-invalid={error ? true : undefined} aria-describedby={describedBy} {...input} />
-        </div>
+      <div className="halo-shell">
+        <input id={id} ref={inputRef} aria-invalid={error ? true : undefined} aria-describedby={describedBy} {...input} />
       </div>
       {description && (
         <p id={`${id}-desc`} className="halo-desc">

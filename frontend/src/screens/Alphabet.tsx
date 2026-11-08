@@ -42,7 +42,7 @@ export function Alphabet({ lessonId }: { lessonId?: string }) {
         <p className="eyebrow">Your alphabet</p>
         <h1 ref={heading} tabIndex={-1}>{doneCount} of 26 letters</h1>
         <div className="alpha-bar" role="progressbar" aria-label="Letters done" aria-valuemin={0} aria-valuemax={26} aria-valuenow={doneCount}>
-          <i style={{ width: `${(doneCount / 26) * 100}%` }} />
+          <i style={{ "--p": doneCount / 26 } as React.CSSProperties} />
         </div>
       </header>
 

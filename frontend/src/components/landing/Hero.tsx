@@ -56,7 +56,6 @@ export function Hero(props: { letters: HeroLetter[]; cta: { label: string; onCli
   const { userChoice } = useMotionSource();
   return (
     <section className="lp-hero" aria-labelledby="lp-title">
-      <div className="lp-aura" aria-hidden="true" />
       <div className="lp-hero-copy">
         <h1 id="lp-title" className="lp-title">
           <span>Say hello</span> <span>in Sign.</span>

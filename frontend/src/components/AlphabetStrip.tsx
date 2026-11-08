@@ -19,7 +19,7 @@ export function AlphabetStrip({ units, progress, lessonId }: { units: Unit[]; pr
         <a href="#/alphabet">Full view</a>
       </div>
       <div className="alpha-bar" role="progressbar" aria-label="Letters done" aria-valuemin={0} aria-valuemax={26} aria-valuenow={done}>
-        <i style={{ width: `${(done / 26) * 100}%` }} />
+        <i style={{ "--p": done / 26 } as React.CSSProperties} />
       </div>
       {fresh.length > 0 && <p role="status" className="alpha-fresh">New: {fresh.join(", ")}</p>}
       <ol className="alpha-grid" aria-label="Alphabet">

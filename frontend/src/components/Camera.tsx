@@ -18,7 +18,7 @@ export function Camera(props: {
     <div className="camera">
       <video ref={videoRef} playsInline muted aria-label="Your camera, mirrored" />
       <canvas ref={canvasRef} aria-hidden="true" />
-      {progress > 0 && <div className="hold-bar" aria-hidden="true" style={{ width: `${progress * 100}%` }} />}
+      {progress > 0 && <div className="hold-bar" aria-hidden="true" style={{ "--p": Math.min(1, progress) } as React.CSSProperties} />}
       {status === "off" && <div className="camera-msg" role="status">Camera is off. Turn it on to practice with live checking.</div>}
       <button type="button" className="camera-toggle secondary" aria-pressed={camOn} onClick={() => setCamOn(!camOn)}>
         {camOn ? "Turn camera off" : "Turn camera on"}
