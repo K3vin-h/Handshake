@@ -78,6 +78,7 @@ function DeckCard(props: {
   unit: DeckUnit;
   index: number;
   slot: number;
+  restX: number; // where the track sits when this card is the active one
   x: MotionValue<number>;
   active: boolean;
   flat: boolean;
@@ -85,8 +86,8 @@ function DeckCard(props: {
   onSelect(): void;
   onOpen(): void;
 }) {
-  const { unit, index, slot, x, active, flat, width, onSelect, onOpen } = props;
-  const d = useTransform(x, (v) => (v + index * slot) / slot); // 0 = centred, +1 = one card to the right
+  const { unit, index, slot, restX, x, active, flat, width, onSelect, onOpen } = props;
+  const d = useTransform(x, (v) => (v - restX) / slot); // 0 = centred, +1 = one card to the right
   const rotateY = useTransform(d, [-1, 0, 1], flat ? [0, 0, 0] : [32, 0, -32]);
   const scale = useTransform(d, [-1, 0, 1], flat ? [1, 1, 1] : [0.9, 1, 0.9]);
   const opacity = useTransform(d, [-2, -1, 0, 1, 2], [0.3, 0.78, 1, 0.78, 0.3]);
@@ -275,22 +276,26 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
   // feels the same at every level. After level 4 the right side is empty, as before. On a phone the cards are nearly as
   // wide as the screen, so `lead` is just the small side margin there.
   const lead = Math.min(pad, 16);
+  // The active card drifts from the left edge (level 1) to the right edge (last level), evenly, so neither end has a wide
+  // empty gutter and every step moves the track the same amount.
+  const maxOff = Math.max(0, vw - 12 - width - lead);
+  const restOf = (i: number) => -i * slot + (units.length > 1 ? (i / (units.length - 1)) * maxOff : 0);
 
   const goTo = useCallback(
     (i: number, instant = false) => {
       const n = Math.max(0, Math.min(units.length - 1, i));
       setIndex(n);
-      if (instant || reduce) x.set(-n * slot);
-      else animate(x, -n * slot, { type: "spring", stiffness: 330, damping: 32 });
+      if (instant || reduce) x.set(restOf(n));
+      else animate(x, restOf(n), { type: "spring", stiffness: 330, damping: 32 });
     },
-    [reduce, slot, units.length, x],
+    [reduce, slot, units.length, x, maxOff],
   );
 
   // Re-centre when the card size changes (resize, first measure).
   useLayoutEffect(() => {
-    x.set(-index * slot);
+    x.set(restOf(index));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slot]);
+  }, [slot, maxOff]);
 
   const onDragEnd = (_: unknown, info: PanInfo) => {
     const { offset, velocity } = info;
@@ -319,13 +324,13 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
             className="lp-track"
             style={{ x, paddingLeft: lead, gap: GAP }}
             drag="x"
-            dragConstraints={{ left: -(units.length - 1) * slot, right: 0 }}
+            dragConstraints={{ left: restOf(units.length - 1), right: restOf(0) }}
             dragElastic={reduce ? 0 : 0.14}
             dragMomentum={false}
             onDragEnd={onDragEnd}
           >
             {units.map((u, i) => (
-              <DeckCard key={u.id} unit={u} index={i} slot={slot} x={x} active={i === index} flat={reduce} width={width} onSelect={() => goTo(i)} onOpen={() => setOpen(u)} />
+              <DeckCard key={u.id} unit={u} index={i} slot={slot} restX={restOf(i)} x={x} active={i === index} flat={reduce} width={width} onSelect={() => goTo(i)} onOpen={() => setOpen(u)} />
             ))}
           </motion.ul>
         </div>
