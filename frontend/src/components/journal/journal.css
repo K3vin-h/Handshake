@@ -56,6 +56,13 @@
 .jr-next { margin-top: 24px; }
 .jr-stack { display: grid; gap: 14px; }
 .jr-stack-wide { gap: 24px; }
+.jr-note { margin-top: 24px; font-size: 18px; color: var(--muted, #56636f); }
+.jr-chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 12px; padding: 0; list-style: none; }
+.jr-boxes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 8px 0; padding: 0; list-style: none; }
+.jr-box { display: flex; flex-direction: column; align-items: center; gap: 6px; line-height: 1.2; text-align: center; }
+.jr-box-count { font: 14px/1.2 var(--font, sans-serif); color: var(--text, #1e2a36); min-height: 34px; }
+.jr-box-bar { display: flex; align-items: flex-end; width: 100%; max-width: 54px; height: 140px; border: 2px solid var(--jr-ink); border-radius: 4px 8px 6px 3px; background: rgba(255, 255, 255, 0.55); overflow: hidden; }
+.jr-box-bar i { display: block; width: 100%; background: repeating-linear-gradient(135deg, #6ebe96 0 5px, #8fd0ae 5px 10px); }
 
 @keyframes jr-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes jr-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }

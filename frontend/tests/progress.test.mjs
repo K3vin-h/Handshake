@@ -59,3 +59,59 @@ test("Progress journal spreads 1 and 2 render empty and filled states", async ()
     await vite.close();
   }
 });
+
+test("Progress journal spreads 3 and 4 (my hands, review plan)", async () => {
+  const vite = await createServer({ server: { middlewareMode: true }, appType: "custom" });
+  const saved = new Map();
+  saved.set("handshake.profile.v1", JSON.stringify({ userName: "Ryan", theirName: "Lily", leftHanded: false }));
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: { getItem: (k) => saved.get(k) ?? null, setItem: (k, v) => saved.set(k, v) } });
+  try {
+    const { ProgressScreen } = await vite.ssrLoadModule("/src/screens/Progress.tsx");
+    const render = () => renderToStaticMarkup(createElement(ProgressScreen));
+    const prog = (items) => saved.set("handshake.progress.v1", JSON.stringify({ xp: 0, streakDays: 0, lastActiveDay: null, completed: [], items }));
+    const text = (h) => h.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+    // no mistakes, nothing due
+    const empty = render();
+    assert.match(empty, /No finger differences recorded yet\. Practise a lesson and they will appear here\./);
+    assert.match(empty, /Nothing is due today\./);
+    assert.match(empty, /How often the camera measured each finger away from the reference\. Fewer is better\./);
+    assert.doesNotMatch(empty, /NaN/);
+
+    // mistakes
+    saved.set("handshake.mistakes.v1", JSON.stringify({ D: { "index:curl": { count: 4, lastAt: 1 } }, Y: { "index:curl": { count: 1, lastAt: 1 } } }));
+    const m = text(render());
+    assert.match(m, /index 5 differences/);
+    assert.match(m, /Most often: index finger curl on D and Y/);
+    assert.match(m, /curl[^a-z]+5/);
+    assert.doesNotMatch(m, /No finger differences recorded yet/);
+    assert.doesNotMatch(m, /NaN/);
+
+    // due today, singular
+    const item = (box, due) => ({ attempts: 3, misses: 0, mastered: false, streak: 2, box, due });
+    prog({ L: item(0, Date.now() - 1000) });
+    const due = render();
+    const dt = text(due);
+    assert.match(dt, /Due today/);
+    assert.match(dt, /1 letter is due for a quick review\./);
+    assert.match(due, /aria-label="L, due today"/);
+    assert.doesNotMatch(due, /NaN/);
+
+    // plural + coming up + box counts as text
+    const future = (d) => Date.now() + d * 86_400_000 + 3_600_000;
+    prog({ L: item(0, 0), B: item(0, 0), K: item(1, future(1)), V: item(2, future(3)), W: item(3, future(7)), A: item(4, future(10)) });
+    const t = text(render());
+    assert.match(t, /2 letters are due for a quick review\./);
+    assert.match(t, /Tomorrow K/);
+    assert.match(t, /In 3 days V/);
+    assert.match(t, /In a week W/);
+    assert.match(t, /2 letters today/);
+    assert.match(t, /1 letter 14 days/);
+    assert.match(t, /A letter moves up a box each time it matches the reference, and drops back to today on a miss\./);
+    assert.doesNotMatch(t, /NaN/);
+  } finally {
+    if (previous) Object.defineProperty(globalThis, "localStorage", previous); else delete globalThis.localStorage;
+    await vite.close();
+  }
+});

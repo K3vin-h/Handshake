@@ -4,10 +4,17 @@ import { buildCurriculum, flatLessons } from "../lib/curriculum";
 import { requireProfile } from "../lib/requireProfile";
 import { isUnlocked, loadProgress, nextLesson } from "../lib/progress";
 import { ALPHABET, alphabetStates, type LetterState } from "./alphabetState";
-import { almostThere, letterBars, masteryCounts, strongAndWeak } from "./progressStats";
+import { loadMistakes } from "../lib/mistakes";
+import { almostThere, boxCounts, fingerBars, kindCounts, letterBars, masteryCounts, reviewPlan, strongAndWeak, topMistake } from "./progressStats";
 
 // Progress journal, spreads 1 (Overview) and 2 (How my tries went). Every number comes from localStorage via the
 // progress code: no server call. Wording rule: "matches the reference", never "correct".
+
+const FINGERS = ["thumb", "index", "middle", "ring", "pinky"];
+const KINDS = ["curl", "direction", "placement"] as const;
+const BOX_LABELS = ["today", "1 day", "3 days", "7 days", "14 days"];
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const list = (l: string[]) => (l.length > 1 ? `${l.slice(0, -1).join(", ")} and ${l[l.length - 1]}` : l[0]);
 
 const pct = (n: number, of: number) => Math.round((n / of) * 100);
 const LABEL: Record<LetterState, string> = { done: "matches the reference", open: "unlocked, not done yet", locked: "locked" };
@@ -48,6 +55,18 @@ export function ProgressScreen() {
   const { mastered, practising } = masteryCounts(items);
   const almost = almostThere(items);
   const maxCount = Math.max(1, mastered, practising);
+
+  const mistakes = loadMistakes();
+  const fingers = fingerBars(mistakes, FINGERS);
+  const kinds = kindCounts(mistakes);
+  const top = topMistake(mistakes);
+  const maxFinger = Math.max(1, ...fingers.map((f) => f.count));
+  const maxKind = Math.max(1, ...KINDS.map((k) => kinds[k]));
+  const noMistakes = fingers.every((f) => f.count === 0);
+  const plan = reviewPlan(items, Date.now());
+  const boxes = boxCounts(items);
+  const maxBox = Math.max(1, ...boxes);
+  const coming: [string, string[]][] = [["Tomorrow", plan.tomorrow], ["In 3 days", plan.threeDays], ["In a week", plan.week]];
 
   return (
     <div className="page progress-page reward-dawn">
@@ -150,6 +169,74 @@ export function ProgressScreen() {
               <Sticker>{almost.letter} is {almost.need === 1 ? "1 away" : `${almost.need} away`} from mastered</Sticker>
             )}
           </div>
+        </Page>
+      </Spread>
+
+      <Spread>
+        <Page side="left" label="My hands" title="Which finger needs love" number={5}>
+          {noMistakes ? (
+            <p className="muted">No finger differences recorded yet. Practise a lesson and they will appear here.</p>
+          ) : (
+            <div className="jr-stack">
+              {fingers.map((f) => (
+                <HandBar key={f.finger} label={f.finger} value={f.count} max={maxFinger} text={plural(f.count, "difference", "differences")} tone={f.count === maxFinger ? "warn" : "good"} />
+              ))}
+            </div>
+          )}
+          <p className="jr-note">How often the camera measured each finger away from the reference. Fewer is better.</p>
+        </Page>
+        <Page side="right" label="Kinds of difference" title="Curl, direction, placement" number={6}>
+          {noMistakes ? (
+            <p className="muted">Nothing to sort yet.</p>
+          ) : (
+            <div className="jr-stack jr-stack-wide">
+              <div className="jr-stack">
+                {KINDS.map((k) => (
+                  <HandBar key={k} label={k} value={kinds[k]} max={maxKind} text={plural(kinds[k], "difference", "differences")} />
+                ))}
+              </div>
+              {top && <Sticker>Most often: {top.finger} finger {top.kind} on {list(top.letters)}</Sticker>}
+            </div>
+          )}
+        </Page>
+      </Spread>
+
+      <Spread>
+        <Page side="left" label="Review" title="Due today" number={7}>
+          {plan.today.length ? (
+            <>
+              <ol className="jr-chips" aria-label="Letters due today">
+                {plan.today.map((l) => (
+                  <li key={l} className="alpha-box alpha-open" aria-label={`${l}, due today`}>
+                    <span aria-hidden="true">{l}</span>
+                  </li>
+                ))}
+              </ol>
+              <p>{plan.today.length === 1 ? "1 letter is due for a quick review." : `${plan.today.length} letters are due for a quick review.`}</p>
+            </>
+          ) : (
+            <p className="muted">Nothing is due today.</p>
+          )}
+          <section aria-labelledby="jr-coming">
+            <h3 id="jr-coming">Coming up</h3>
+            <ul className="plain-list jr-log">
+              {coming.map(([when, letters]) => (
+                <li key={when}><b>{when}</b>{" "}<Ink tone="plain">{letters.length ? letters.join(" ") : "—"}</Ink></li>
+              ))}
+            </ul>
+          </section>
+        </Page>
+        <Page side="right" label="The review boxes" title="The review boxes" number={8}>
+          <ol className="jr-boxes" aria-label="Letters in each review box">
+            {boxes.map((n, i) => (
+              <li key={i} className="jr-box">
+                <span className="jr-box-count">{plural(n, "letter", "letters")}</span>
+                <span className="jr-box-bar" aria-hidden="true"><i style={{ height: `${(n / maxBox) * 100}%` }} /></span>
+                <b>{BOX_LABELS[i]}</b>
+              </li>
+            ))}
+          </ol>
+          <p className="jr-note">A letter moves up a box each time it matches the reference, and drops back to today on a miss.</p>
         </Page>
       </Spread>
     </div>
