@@ -55,3 +55,18 @@ test("progress: detail spreads sit inside one closed disclosure", () =>
     assert.match(html.split("jr-more")[0], /Your alphabet/);
     assert.match(html.split("jr-more")[1], /Due today/);
   }));
+
+test("lesson notice: heading, status message, one primary action", () =>
+  withApp(async (load, render, h) => {
+    const { LessonNotice } = await load("/src/components/LessonNotice.tsx");
+    const html = render(h(LessonNotice, {
+      title: "Lesson not finished yet", message: "You skipped 1 step.",
+      primary: { label: "Redo the skipped step", onClick() {} },
+      secondary: { label: "Start the whole lesson over", onClick() {} },
+      links: [{ href: "#/", label: "Back to your path" }], footnote: "Stays partly filled.",
+    }));
+    assert.match(html, /<h1[^>]*tabindex="-1"[^>]*>Lesson not finished yet/);
+    assert.match(html, /role="status"[^>]*>You skipped 1 step\./);
+    assert.equal((html.match(/notice-primary/g) ?? []).length, 1);
+    assert.match(html, /href="#\/">Back to your path/);
+  }));
