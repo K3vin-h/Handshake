@@ -337,6 +337,30 @@ button.badge[aria-disabled="true"] { cursor: not-allowed; }
 .coach, .tip { border-left: 4px solid var(--brand-text); background: var(--tint); color: var(--text); padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); }
 .coach p { margin: 0 0 var(--space-2); }
 
+/* Coach card: frosted card, thin rim, two soft glows INSIDE it (river blue + sakura) that drift slowly. Our own CSS,
+   inspired by Cult UI's Halo Input. New coaching brightens the glow and the rim for a few seconds; a "New" label says it in text. */
+.coach-halo { position: relative; }
+.coach-halo .coach { position: relative; border: 1px solid rgba(47, 96, 136, 0.28); border-radius: 18px; background: rgba(255, 255, 255, 0.78); backdrop-filter: blur(10px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 24px rgba(30, 50, 70, 0.08); padding: var(--space-4); font-size: 1.05rem; transition: border-color 500ms ease, box-shadow 500ms ease; }
+.coach-halo .coach > :not(.coach-glow):not(.coach-new) { position: relative; z-index: 1; }
+.coach-halo .coach p:last-child { margin-bottom: 0; }
+.coach-halo:not(.is-active) .coach { padding: 0; border: 0; background: none; box-shadow: none; backdrop-filter: none; }
+.coach-halo:not(.is-active) .coach-glow { display: none; }
+.coach-glow { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; opacity: 0.85; transition: opacity 600ms ease; }
+/* Two soft circles, one blue and one sakura, each floating on its own path across the card. */
+.coach-glow::before, .coach-glow::after { content: ""; position: absolute; width: 75%; aspect-ratio: 1; bottom: -50%; border-radius: 50%; }
+.coach-glow::before { left: -18%; background: radial-gradient(circle, rgba(58, 106, 143, 0.6), transparent 66%); animation: coach-float-a 6s ease-in-out infinite alternate; }
+.coach-glow::after { right: -18%; background: radial-gradient(circle, rgba(229, 138, 168, 0.65), transparent 66%); animation: coach-float-b 7.5s ease-in-out infinite alternate; }
+@keyframes coach-float-a { from { transform: translate(0, 0) scale(1); } to { transform: translate(70%, -55%) scale(1.2); } }
+@keyframes coach-float-b { from { transform: translate(0, 0) scale(1.1); } to { transform: translate(-70%, -45%) scale(0.95); } }
+.coach-halo.is-fresh .coach { border-color: rgba(180, 70, 108, 0.55); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 28px rgba(180, 70, 108, 0.18); }
+.coach-halo.is-fresh .coach-glow { opacity: 1; }
+.coach-pill { display: inline-block; padding: 0 9px; border-radius: var(--radius-pill); background: rgba(47, 96, 136, 0.12); color: var(--brand-text); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; vertical-align: 1px; }
+.coach-pill-ai { background: rgba(180, 70, 108, 0.12); color: #962f55; }
+.coach-new { position: absolute; z-index: 2; top: -10px; right: 14px; padding: 1px 10px; border-radius: var(--radius-pill); background: var(--brand-2); color: #fff; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.coach-pop { animation: pop-in var(--motion-base) cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+@media (prefers-reduced-motion: reduce) { .coach-glow::before, .coach-glow::after, .coach-pop { animation: none !important; } }
+[data-reduce-motion] .coach-glow::before, [data-reduce-motion] .coach-glow::after, [data-reduce-motion] .coach-pop { animation: none !important; }
+
 .streak-chip { display: inline-flex; gap: var(--space-1); align-items: center; margin: 0; padding: 6px var(--space-4); border-radius: var(--radius-pill); background: var(--card); border: 2px solid var(--border-strong); color: var(--text); font-weight: 700; }
 
 .path-node { display: grid; grid-template-columns: auto 1fr; gap: 0 var(--space-3); text-align: left; width: 100%; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); border: 2px solid var(--border-strong); background: var(--card); color: var(--text); }
@@ -565,7 +589,7 @@ nav.shell-nav .shell-list a[aria-current="page"] { color: var(--brand-text); bac
 /* ---- Camera + dev screens (Ryan's classes; colours via tokens) ---- */
 .camera { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #000; border-radius: var(--radius-lg); overflow: hidden; }
 /* Keep the 4:3 camera inside the viewport height (nav + lesson header + tiles ≈ 380px). ponytail: fixed offset, measure the header if layouts change a lot. */
-.camera { max-width: max(280px, calc((100dvh - 380px) * 4 / 3)); margin-inline: auto; }
+.camera { max-width: max(280px, calc((100dvh - 420px) * 4 / 3)); margin-inline: auto; }
 .camera video, .camera canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .camera-msg { position: absolute; inset: 0; display: grid; place-items: center; padding: var(--space-4); text-align: center; color: #fff; }
 .camera-toggle { position: absolute; right: var(--space-2); bottom: var(--space-2); z-index: 2; min-height: 44px; padding: 6px 14px; font-size: 14px; }
@@ -574,9 +598,17 @@ nav.shell-nav .shell-list a[aria-current="page"] { color: var(--brand-text); bac
 .debug { margin-top: var(--space-4); padding: var(--space-3); border: 2px solid var(--border); border-radius: var(--radius-md); background: var(--card); }
 .debug label { display: flex; flex-direction: column; gap: var(--space-1); margin: var(--space-2) 0; font-size: 14px; }
 .debug label.check { flex-direction: row; align-items: center; }
-.hand3d { position: relative; width: 100%; box-sizing: border-box; border-radius: var(--radius-lg); background: var(--panel-light); overflow: hidden; touch-action: none; }
+.hand3d { position: relative; width: 100%; box-sizing: border-box; border-radius: var(--radius-lg); background: var(--panel-light); overflow: hidden; }
 .hand3d.empty { display: grid; place-items: center; padding: var(--space-4); text-align: center; color: var(--on-panel-light); min-height: 200px; }
-.hand3d-bar { position: absolute; left: var(--space-2); right: var(--space-2); bottom: var(--space-2); display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--on-panel-light); }
+.hand3d-views { position: relative; display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: var(--space-2); padding: var(--space-2) var(--space-2) 0; }
+.hand3d-main, .hand3d-small > div { position: relative; min-height: 0; min-width: 0; }
+.hand3d-main { cursor: grab; touch-action: none; }
+.hand3d-main:active { cursor: grabbing; }
+.hand3d-main > div, .hand3d-small > div > div { position: absolute !important; inset: 0; }
+.hand3d-col { height: clamp(150px, calc(100vh - 560px), 280px); display: grid; grid-template-rows: 1fr 1fr; gap: var(--space-2); }
+.hand3d-small { margin: 0; display: grid; grid-template-rows: 1fr auto; min-height: 0; text-align: center; font-size: 13px; color: var(--on-panel-light); }
+.hand3d-small figcaption { padding: 2px 0 var(--space-1); }
+.hand3d-bar { position: relative; display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); font-size: 13px; color: var(--on-panel-light); }
 .check { display: flex; gap: 6px; align-items: center; font-size: 14px; margin-top: var(--space-2); }
 
 /* Confetti (created by celebrate(); never created under reduced motion) */
@@ -627,6 +659,8 @@ nav.shell-nav .shell-list a[aria-current="page"] { color: var(--brand-text); bac
    shadcn parts carry data-slot and keep Tailwind's grid. New code should use .chip-row, not .grid. */
 .grid:not([data-slot]) { display: flex; flex-wrap: wrap; gap: 6px; }
 
+.hand3d-bar button { padding: 4px 10px; min-height: 32px; font-size: 13px; }
+
 /* Conversation scene (Ryan): chat bubbles + a row of sign chips. State is always written in text, not colour alone. */
 .scene-chat { list-style: none; margin: var(--space-3) 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
 .scene-pair { display: flex; flex-direction: column; gap: var(--space-1); }
@@ -672,4 +706,55 @@ html { accent-color: var(--brand); scrollbar-color: #b9d6ea transparent; }
 @media (prefers-reduced-motion: no-preference) {
   .home-hero .hero-cta { transition: transform 160ms ease, box-shadow 160ms ease; }
   .home-hero .hero-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(29, 68, 104, 0.35); }
+}
+
+/* ==== Accounts: sign-up / log-in / forgot / reset, onboarding save step, header chip ====
+   Duolingo-style single centred column. Existing tokens only (no new colours, fonts or shadows). */
+.auth-wrap { max-width: 420px; margin: clamp(var(--space-2), 5vh, var(--space-6)) auto 0; box-sizing: border-box; width: 100%; min-width: 0; }
+.auth-card { margin-bottom: var(--space-4); padding: clamp(20px, 5vw, 36px); background: var(--card); border: 2px solid var(--border); border-bottom-width: 4px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: var(--space-4); box-sizing: border-box; width: 100%; min-width: 0; }
+.auth-card > h1, .auth-card > h2 { margin: 0; text-align: center; font-size: clamp(1.5rem, 4vw, 1.85rem); font-weight: 800; letter-spacing: -0.02em; }
+.auth-lead { margin: calc(-1 * var(--space-2)) 0 0; text-align: center; }
+.auth-card .halo-field { margin-bottom: 0; }
+.auth-card .cta { width: 100%; box-sizing: border-box; padding: 0 var(--space-4); }
+.auth-card .cta:disabled, .auth-card .cta:disabled:hover { transform: none; box-shadow: none; }
+.auth-card a:not(.link-button), .auth-skip a { color: var(--brand-text); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+.auth-card a:focus-visible, .auth-skip a:focus-visible, a.account-chip:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+/* Google renders its own button; the container is full width and the button is centred in it. */
+.google-btn { display: flex; justify-content: center; width: 100%; min-height: 44px; max-width: 100%; overflow: hidden; }
+.auth-divider { display: flex; align-items: center; gap: var(--space-3); margin: 0; color: var(--muted); font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.auth-divider::before, .auth-divider::after { content: ""; flex: 1; border-top: 2px solid var(--border); }
+.auth-pw { display: flex; flex-direction: column; gap: var(--space-2); }
+.auth-pw .halo-field { width: 100%; }
+/* Show/hide on the left, "Forgot password?" pushed right; wraps (still right-aligned) on very small phones. */
+.auth-pw-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.auth-toggle { min-height: 40px; padding: 6px 12px; font-size: 14px; }
+.auth-card a.auth-forgot { margin-left: auto; padding: var(--space-2) 0; font-size: 14px; }
+.auth-legal { margin: calc(-1 * var(--space-2)) 0 0; text-align: center; }
+.auth-switch { margin: 0; padding-top: var(--space-4); border-top: 2px solid var(--border); text-align: center; }
+.auth-cta-link { display: flex; align-items: center; justify-content: center; min-height: 52px; box-sizing: border-box; width: 100%; font-size: 1.1rem; font-weight: 800; }
+.auth-cta-link:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+/* Quiet escape hatch under the card. */
+.auth-skip { text-align: center; margin: 0 0 var(--space-5); font-size: 14px; }
+.auth-skip a { color: var(--muted); font-weight: 600; }
+/* Busy: a small ring next to the button text; the text carries the meaning, the ring stops under reduced motion. */
+.auth-spinner { display: inline-block; flex: none; width: 0.9em; height: 0.9em; margin-right: var(--space-1); box-sizing: border-box; border: 3px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: auth-spin 800ms linear infinite; }
+@keyframes auth-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .auth-spinner { animation: none; } }
+[data-reduce-motion] .auth-spinner { animation: none; }
+/* Onboarding save step: AuthCard sits flat inside the onboarding card (no card in a card), left-aligned like the
+   other steps. Onboarding's own "Skip for now" button replaces AuthCard's skip link. */
+.onboard-save .auth-wrap { max-width: none; margin: var(--space-4) 0 0; }
+.onboard-save .auth-card { margin: 0; padding: 0; background: none; border: 0; border-radius: 0; box-shadow: none; }
+.onboard-save .auth-card > h2 { text-align: left; font-size: 1.15rem; }
+.onboard-save .auth-wrap > .auth-skip { display: none; }
+/* Header chip */
+.account-chip { position: relative; display: inline-block; color: var(--brand-text); font-weight: 700; }
+.account-chip > button { max-width: 180px; min-height: 40px; padding: 6px 12px; font-size: 14px; }
+.account-email { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; min-width: 160px; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2); background: var(--card); border: 2px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-md); }
+.account-menu a { color: var(--brand-text); padding: 6px 8px; font-weight: 700; }
+/* Phones: a narrower chip, and a menu as wide as the chip so it does not poke past the screen edge when the nav wraps. */
+@media (max-width: 600px) {
+  .account-chip > button { max-width: 140px; }
+  .account-menu { min-width: 100%; box-sizing: border-box; }
 }

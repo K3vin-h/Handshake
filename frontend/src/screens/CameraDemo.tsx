@@ -3,7 +3,7 @@ import { meanPose3D, useLetterCheck, type FingerFeedback } from "../cv";
 import { Camera } from "../components/Camera";
 import { LessonView } from "../components/LessonView";
 import { getCoachTip } from "../lib/api";
-import { DEMO_PROFILE, loadProfile } from "../lib/profile";
+import { requireProfile } from "../lib/requireProfile";
 
 // #/camera-demo: the real webcam + the coach side panel, on one letter at a time.
 // DEMO ONLY: nothing here is scored, counted towards mastery, or saved. It does not touch progress,
@@ -14,7 +14,7 @@ const LETTERS = ["L", "I", "Y", "A", "B", "C", "D", "E", "F", "G", "H", "K", "M"
 const INTRO = "Demo: show the letter to the camera. Nothing here is scored or saved.";
 
 export function CameraDemo() {
-  const profile = loadProfile() ?? DEMO_PROFILE;
+  const profile = requireProfile();
   const [target, setTarget] = useState(LETTERS[0]);
   const [status, setStatus] = useState(INTRO);
   const [landmarkTip, setLandmarkTip] = useState("");

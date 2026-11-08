@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LessonView } from "../components/LessonView";
 import { celebrate } from "../components/celebrate";
 
@@ -15,18 +15,23 @@ export function LessonPreview() {
   const [tip, setTip] = useState("");
   const [misses, setMisses] = useState(0);
   const target = WORD[index] ?? WORD[WORD.length - 1];
+  const advance = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(advance.current), []); // nothing fires after leaving the page
 
   function detect() {
+    if (advance.current) return; // already counting this detection: holding D must not queue more advances
     setProgress(1);
     setTip("");
     setStatus(`Matches the reference: ${target}`);
     celebrate();
-    setTimeout(() => {
+    advance.current = setTimeout(() => {
+      advance.current = undefined;
       setProgress(0);
       setIndex((i) => Math.min(i + 1, WORD.length - 1));
     }, 600);
   }
   function miss() {
+    if (advance.current) return; // a detection is being shown
     setMisses((m) => m + 1);
     setProgress(0.3);
     setStatus(`Not matching ${target} yet`);
@@ -36,6 +41,7 @@ export function LessonPreview() {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.target instanceof Element && e.target.closest("input, textarea, select")) return;
+      if (e.repeat) return; // holding a key counts once
       if (e.key.toLowerCase() === "d") detect();
       if (e.key.toLowerCase() === "m") miss();
     };

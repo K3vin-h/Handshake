@@ -38,7 +38,7 @@ Every track in the HackCamp list, with its status. "Opt in" means ticking it in 
 | Best Use of Entire                   | **New: U11**                   | Entire repo link; Sessions/Graph/Brain screenshots                                                               |
 | Best Project Built with Freebuff     | Out: no code                   | Opt in only if a teammate genuinely builds a piece with it, and write what it did                                |
 | Best Use of Lovable                  | Out                            | the frontend is hand-built, and claiming Lovable would be false                                                  |
-| Best Use of Auth0                    | Out                            | dropped in `CLAUDE.md`; identity is an anonymous UUID to keep PII out of the database                            |
+| Best Use of Auth0                    | Out                            | dropped in `CLAUDE.md`; identity is an anonymous UUID to keep PII out of the database (accounts: superseded by `2026-11-07-accounts-spec.md`; attempt identity stays the anonymous UUID) |
 | Best Use of Solana                   | Out                            | no fit with the product                                                                                          |
 | Best Use of DeepSpace                | Out                            | not researched; no known fit                                                                                     |
 | Best Hardware                        | Out                            | the webcam is not a hardware component                                                                           |
@@ -47,7 +47,7 @@ Out-of-scope rows can be pulled in later as their own spec. Don't claim a track 
 
 ## Non-goals
 
-- Auth or accounts. The identity is an anonymous UUID.
+- Auth or accounts. The identity is an anonymous UUID. (Accounts are superseded by `2026-11-07-accounts-spec.md`; attempt history identity stays the anonymous UUID, the accounts spec does not link attempts.)
 - Moving `/api/coach` into the agent (it's on the latency-critical demo path).
 - Continuous aggregates, retention policies and dashboards beyond one chart.
 - Storing emails or names in our own database.
@@ -163,7 +163,7 @@ Env (`.env.example`): `DATABASE_URL`, `N8N_SUBSCRIBE_URL`, `N8N_EVENT_URL`, `N8N
 
 ## Security
 
-There's no auth in this app, so the chain is: **rate-limit (first, so junk requests can't flood us) → validate → forward/write, with no ownership**.
+There's no auth on the attempts/stats endpoints (accounts live elsewhere, see `2026-11-07-accounts-spec.md`), so the chain is: **rate-limit (first, so junk requests can't flood us) → validate → forward/write, with no ownership**.
 
 - Anyone who knows a learner UUID can read that learner's stats. They're letter accuracies only, with no names or emails, and the UUID
 isn't guessable. This is accepted and stated on Devpost.
@@ -177,7 +177,7 @@ on the agent. `DATABASE_URL` uses `sslmode=require`. Everything lives in `.env` 
 - SQL is always parameterized (`pg` `$1` placeholders).
 - In production Express binds `HOST=127.0.0.1` and sets `trust proxy` to `TRUST_PROXY_HOPS=1` (Caddy only; browsers call the API directly), so the rate limit sees the visitor's IP [NEEDS: verify with a real request that req.ip is the visitor's IP] and
 forwarded headers can't be spoofed by direct requests. The Vultr firewall (ufw) allows only ports 22, 80 and 443.
-- Known risk (no auth, accepted for a hackathon, stated on Devpost): anyone holding a learner UUID could change that learner's
+- Known risk (no auth on the attempts/stats endpoints, accepted for a hackathon, stated on Devpost): anyone holding a learner UUID could change that learner's
 subscription or trigger completion emails. Mitigations: UUIDs never leave the learner's browser except to our server; email content is
 a fixed template (no names or user text are inserted; the lesson title is derived in n8n from `lessonId`); each learner stores one row in n8n (upsert); n8n sends at most
 1 completion email per learner per 10 min (best-effort: not atomic if two requests land at once) and 1 recap per week; and the IP rate limit applies.

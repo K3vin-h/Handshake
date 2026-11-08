@@ -28,7 +28,7 @@ Handshake/
 ├── docs/  hackathon-kit/ (untouched)  .env.example  package.json (root scripts: dev, build, test)
 ```
 
-Wiring: the browser calls the Vultr HTTPS API directly (the earlier Vercel `/api` rewrite was removed because every visitor would share Vercel's IP at the API, collapsing per-IP rate limits). The frontend build reads `VITE_API_BASE_URL` (public; set in Vercel Environment Variables); unset = relative `/api/*`. The API enables CORS only for origins in `ALLOWED_ORIGIN`. Local: Vite proxies `/api` to http://localhost:8787. The API host has no purchased domain; any hostname that resolves to the VM IP works with Caddy automatic HTTPS (e.g. `<ip-with-dashes>.sslip.io`).
+Wiring: the browser calls the Vultr HTTPS API directly (the earlier Vercel `/api` rewrite was removed because every visitor would share Vercel's IP at the API, collapsing per-IP rate limits). The frontend build reads `VITE_API_BASE_URL` (public; set in Vercel Environment Variables); unset = relative `/api/*`. The API enables CORS only for origins in `ALLOWED_ORIGIN`. Exception, accounts: `/api/auth/*` and `/api/me*` stay relative and go through a Vercel `/api` rewrite (`frontend/vercel.json`, restored 2026-11-07) so the session cookie and the Origin check see one origin. **Manual step:** replace `REPLACE_WITH_API_HOST` in `frontend/vercel.json` with the API hostname, otherwise accounts are unavailable in production. Accounts also need `TRUST_PROXY_HOPS=1` (Origin check reads X-Forwarded-Host only then), `COOKIE_SECURE=1` and `APP_ORIGIN=<Vercel URL>` on the VM; per-IP account limits then see Vercel's IP (see `backend/deploy/README.md`). Local: Vite proxies `/api` to http://localhost:8787. The API host has no purchased domain; any hostname that resolves to the VM IP works with Caddy automatic HTTPS (e.g. `<ip-with-dashes>.sslip.io`).
 
 Out of scope: any live deployment claim, changing privacy/honesty rules, prize evidence capture.
 
@@ -46,7 +46,7 @@ Files: move `src/ public/ index.html vite.config.ts tsconfig.json components.jso
 
 - [ ] dotenv path in `backend/` loads the repo-root `.env` (one `.env.example`, sectioned by service).
 - [ ] `SERVE_STATIC` removed; static serving removed from `backend/index.mjs`. New env: `HOST` (bind address; `127.0.0.1` on the VM behind Caddy) and `TRUST_PROXY_HOPS` (1 in production: Caddy only) and `ALLOWED_ORIGIN`. Frontend needs one public env var, `VITE_API_BASE_URL`.
-- [x] (done in code, unverified live) `frontend/vercel.json` removed; the frontend calls `VITE_API_BASE_URL` (relative `/api/*` when unset).
+- [x] (done in code, unverified live) `frontend/vercel.json` removed; the frontend calls `VITE_API_BASE_URL` (relative `/api/*` when unset). Later restored with only the `/api` rewrite for account calls (see Wiring).
 - [x] (done in code, unverified live) API CORS for origins listed in `ALLOWED_ORIGIN` (GET/POST/OPTIONS, header Content-Type; unset = no CORS headers).
 - [ ] `backend/deploy/setup.sh` is API-only (Caddy + systemd, no `dist/`).
 - [ ] Per-deployable `package.json` (`frontend/`, `backend/`, `agent/`, `n8n/`); root `package.json` only convenience scripts: `npm run dev` (web :5173 + API :8787), `npm run build` (frontend), `npm test` (frontend + backend + agent + deploy tests), `npm run test:n8n`.
