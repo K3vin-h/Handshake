@@ -18,7 +18,7 @@ const STATUSES: { kind: StatusKind; message: string }[] = [
   { kind: "info", message: "J and Z are reference only. Practise them from the picture and the steps." },
   { kind: "error", message: "the camera is blocked. Allow camera access in your browser settings." },
 ];
-const LETTER_STATES: LetterStatus[] = ["live", "reference-only", "locked", "mastered"];
+const LETTER_STATES: LetterStatus[] = ["mastered", "practising", "not-started", "reference-only"];
 
 export function ComponentGallery() {
   const [progress, setProgress] = useState(0.6);
@@ -36,13 +36,13 @@ export function ComponentGallery() {
       <h2>LetterBadge</h2>
       <div className="chip-row">
         {LETTER_STATES.map((st) => (
-          <LetterBadge key={st} letter={st === "live" ? "A" : st === "reference-only" ? "J" : st === "locked" ? "Z" : "L"} status={st} />
+          <LetterBadge key={st} letter={st === "mastered" ? "L" : st === "practising" ? "I" : st === "not-started" ? "A" : "J"} status={st} />
         ))}
       </div>
       <p className="muted">Selectable (buttons): {picked} selected. Locked letters stay focusable but do nothing.</p>
       <div className="chip-row">
         {["A", "B", "J", "Z"].map((l) => (
-          <LetterBadge key={l} letter={l} status={l === "Z" ? "locked" : isPracticeable(l) ? "live" : "reference-only"} selected={picked === l} onSelect={setPicked} />
+          <LetterBadge key={l} letter={l} status={isPracticeable(l) ? "not-started" : "reference-only"} selected={picked === l} onSelect={setPicked} />
         ))}
       </div>
 

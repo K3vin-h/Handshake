@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, Ref } from "react";
+import type { InputHTMLAttributes, ReactNode, Ref } from "react";
 
 /**
  * A labelled text field in a frosted shell with a soft animated rim (our own CSS, inspired by the look of
@@ -8,8 +8,8 @@ import type { InputHTMLAttributes, Ref } from "react";
  * - id: required, links the label, hint and error to the input.
  * - label: visible label text.
  * - description: optional hint under the field (linked with aria-describedby).
- * - error: optional error text. Shown as "Error: ..." with an icon, sets aria-invalid, and gets its own
- *   border style, so it never depends on colour alone. Announce the error summary with <StatusMessage>.
+ * - error: optional error text. Shown next to the field with an icon and a visually hidden "Error:" prefix (read by
+ *   screen readers), sets aria-invalid, and gets its own border style, so it never depends on colour alone. Announce the error summary with <StatusMessage>.
  * - inputRef: ref to the <input>, e.g. to move focus to the first invalid field.
  * - ...rest: any normal <input> prop (value, onChange, maxLength, autoComplete...).
  *
@@ -17,7 +17,7 @@ import type { InputHTMLAttributes, Ref } from "react";
  * "Reduce motion" switch (data-reduce-motion). The field border itself is a solid 3:1 line, and focus adds
  * an outline, so the rim is decoration only.
  */
-export function HaloField(props: InputHTMLAttributes<HTMLInputElement> & { id: string; label: string; description?: string; error?: string; inputRef?: Ref<HTMLInputElement> }) {
+export function HaloField(props: InputHTMLAttributes<HTMLInputElement> & { id: string; label: string; description?: ReactNode; error?: string; inputRef?: Ref<HTMLInputElement> }) {
   const { id, label, description, error, inputRef, ...input } = props;
   const describedBy = [description ? `${id}-desc` : "", error ? `${id}-err` : ""].filter(Boolean).join(" ") || undefined;
   return (
@@ -38,7 +38,8 @@ export function HaloField(props: InputHTMLAttributes<HTMLInputElement> & { id: s
       {error && (
         <p id={`${id}-err`} className="halo-error">
           <span aria-hidden="true">✕ </span>
-          <strong>Error:</strong> {error}
+          <span className="sr-only">Error: </span>
+          {error}
         </p>
       )}
     </div>

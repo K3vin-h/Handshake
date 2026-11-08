@@ -31,21 +31,68 @@ function beep() {
   }
 }
 
-export function celebrate() {
+export type CelebrateKind = "match" | "lesson" | "unit";
+
+const SHAPES = ["square", "circle", "ribbon"] as const;
+
+/**
+ * Short celebration. Always plays the beep; confetti only when motion is allowed.
+ * - "match" (default, one letter): a light rain, like before.
+ * - "lesson": two cannons from the bottom corners.
+ * - "unit": a bigger double burst, then a second wave. Used when the last lesson of a unit is finished.
+ * No library: pieces are plain elements animated with the Web Animations API and removed when done.
+ * Callers must also show text (see <StatusMessage>); the confetti is never the only cue.
+ */
+export function celebrate(kind: CelebrateKind = "match") {
   beep();
   if (reducedMotion() || typeof document === "undefined") return;
   const layer = document.createElement("div");
   layer.className = "confetti-layer";
   layer.setAttribute("aria-hidden", "true");
-  for (let i = 0; i < 36; i++) {
-    const bit = document.createElement("span");
-    bit.className = "confetti-bit";
-    bit.style.left = `${Math.random() * 100}%`;
-    bit.style.background = COLOURS[i % COLOURS.length];
-    bit.style.animationDelay = `${Math.random() * 0.3}s`;
-    bit.style.setProperty("--drift", `${Math.round((Math.random() - 0.5) * 160)}px`);
-    layer.appendChild(bit);
-  }
   document.body.appendChild(layer);
-  setTimeout(() => layer.remove(), 2200);
+  const w = innerWidth;
+  const h = innerHeight;
+  let longest = 0;
+
+  const piece = (x0: number, y0: number, vx: number, vy: number, delay: number) => {
+    const bit = document.createElement("span");
+    const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+    const size = 7 + Math.random() * 7;
+    bit.className = `confetti-piece confetti-${shape}`;
+    bit.style.cssText = `left:${x0}px;top:${y0}px;width:${shape === "ribbon" ? size * 0.5 : size}px;height:${shape === "ribbon" ? size * 2 : size}px;background:${COLOURS[Math.floor(Math.random() * COLOURS.length)]}`;
+    layer.appendChild(bit);
+    const spin = (Math.random() - 0.5) * 900;
+    const dur = 1500 + Math.random() * 900;
+    longest = Math.max(longest, dur + delay);
+    // Up and out first, then gravity pulls it down and it fades.
+    bit.animate(
+      [
+        { transform: "translate(0,0) rotate(0deg)", opacity: 1 },
+        { transform: `translate(${vx * 0.55}px, ${vy}px) rotate(${spin * 0.4}deg)`, opacity: 1, offset: 0.35, easing: "ease-in" },
+        { transform: `translate(${vx}px, ${h * 0.55}px) rotate(${spin}deg)`, opacity: 0 },
+      ],
+      { duration: dur, delay, easing: "cubic-bezier(0.2, 0.7, 0.4, 1)", fill: "both" },
+    );
+  };
+
+  if (kind === "match") {
+    for (let i = 0; i < 36; i++) piece(Math.random() * w, -12, (Math.random() - 0.5) * 160, 0, Math.random() * 300);
+  } else {
+    const cannon = (fromLeft: boolean, count: number, delay: number) => {
+      for (let i = 0; i < count; i++) {
+        const dir = fromLeft ? 1 : -1;
+        const vx = dir * (80 + Math.random() * w * 0.35);
+        const vy = -(h * (0.35 + Math.random() * 0.4));
+        piece(fromLeft ? 0 : w, h, vx, vy, delay + Math.random() * 120);
+      }
+    };
+    const n = kind === "unit" ? 80 : 45;
+    cannon(true, n, 0);
+    cannon(false, n, 0);
+    if (kind === "unit") {
+      cannon(true, 60, 450);
+      cannon(false, 60, 450);
+    }
+  }
+  setTimeout(() => layer.remove(), longest + 200);
 }
