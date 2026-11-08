@@ -153,6 +153,12 @@ nav a[aria-current="page"] { color: var(--text); background: var(--raised); box-
 nav a.brand { color: var(--text); font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; margin-right: var(--space-3); padding-left: 0; }
 nav a.brand:hover { background: transparent; }
 .nav-chips { margin-left: auto; }
+/* Phones: the nav wraps instead of widening the page, and scrolls away so it doesn't eat the screen. */
+nav { flex-wrap: wrap; }
+@media (max-width: 600px) {
+  nav { position: static; padding: var(--space-2) var(--space-3); gap: var(--space-1); }
+  nav a { padding: var(--space-2) var(--space-3); }
+}
 
 .page { max-width: 1120px; margin: var(--space-5) auto; padding: 0 var(--space-4); animation: page-in var(--motion-base) ease-out; }
 @keyframes page-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
@@ -235,8 +241,10 @@ button:hover:not(:disabled), .link-button:hover { transform: translateY(-1px); b
 .map { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
 .map-row { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; padding-bottom: 36px; }
 .map-row:last-child { padding-bottom: 0; }
-.map-stage { display: flex; align-items: center; gap: var(--space-4); transform: translateX(var(--shift, 0px)); }
-.map-link { position: absolute; bottom: 4px; left: 50%; height: 28px; border-left: 3px dotted var(--border-strong); transform: translateX(calc(var(--link-shift, 0px) - 1.5px)); }
+.map-stage { display: flex; align-items: center; gap: var(--space-4); transform: translateX(calc(var(--shift, 0px) * var(--wiggle, 1))); }
+.map-link { position: absolute; bottom: 4px; left: 50%; height: 28px; border-left: 3px dotted var(--border-strong); transform: translateX(calc(var(--link-shift, 0px) * var(--wiggle, 1) - 1.5px)); }
+/* Narrow screens: smaller zig-zag so nodes and the start card stay on screen. */
+@media (max-width: 480px) { .map { --wiggle: 0.3; } }
 .map-row.map-done .map-link { border-left-color: var(--brand-2); }
 .map-label { display: flex; flex-direction: column; min-width: 130px; max-width: 200px; }
 .map-label strong { font-size: 1rem; }
@@ -260,7 +268,7 @@ button:hover:not(:disabled), .link-button:hover { transform: translateY(-1px); b
 @keyframes glow-pulse { 50% { transform: scale(1.18); opacity: 0.55; } }
 @keyframes bob { 50% { transform: translateY(-6px); } }
 
-.start-card { position: relative; z-index: 2; margin-top: var(--space-4); width: min(100%, 360px); text-align: center; padding: var(--space-4) var(--space-5) var(--space-5); background: var(--card); border: 2px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-md), 0 0 0 4px rgba(110, 86, 207, 0.16); animation: pop-in var(--motion-base) cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+.start-card { box-sizing: border-box; position: relative; z-index: 2; margin-top: var(--space-4); width: min(100%, 360px); text-align: center; padding: var(--space-4) var(--space-5) var(--space-5); background: var(--card); border: 2px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-md), 0 0 0 4px rgba(110, 86, 207, 0.16); animation: pop-in var(--motion-base) cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
 .start-card::before { content: ""; position: absolute; top: -10px; left: 50%; width: 18px; height: 18px; background: var(--card); border-left: 2px solid var(--border-strong); border-top: 2px solid var(--border-strong); transform: translateX(-50%) rotate(45deg); }
 .start-card h3 { font-size: 1.2rem; margin: 0 0 var(--space-1); }
 .start-card .start-button { width: 100%; margin-top: var(--space-3); }
@@ -394,6 +402,8 @@ a.feature-tile:hover { border-color: var(--brand-text); background: var(--tint);
 
 /* ---- Camera + dev screens (Ryan's classes; colours via tokens) ---- */
 .camera { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #000; border-radius: var(--radius-lg); overflow: hidden; }
+/* Keep the 4:3 camera inside the viewport height (nav + lesson header + tiles ≈ 380px). ponytail: fixed offset, measure the header if layouts change a lot. */
+.camera { max-width: max(280px, calc((100dvh - 380px) * 4 / 3)); margin-inline: auto; }
 .camera video, .camera canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .camera-msg { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; }
 .hold-bar { position: absolute; left: 0; bottom: 0; height: 8px; background: var(--brand-2); transition: width 50ms linear; }
