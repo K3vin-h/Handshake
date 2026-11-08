@@ -1,7 +1,20 @@
-import { getMe, getUser, pushState } from "./auth";
-import { mergeState } from "./merge";
-import { loadProfile, saveProfile } from "./profile";
-import { loadProgress, saveProgress } from "./progress";
+import { getMe, getUser, pushState } from "./auth.ts";
+import { mergeState } from "./merge.ts";
+import type { Profile } from "./profile.ts";
+import type { Progress } from "./progress.ts";
+
+type IO = {
+  loadProfile(): Profile | null;
+  saveProfile(p: Profile): void;
+  loadProgress(): Progress;
+  saveProgress(p: Progress): void;
+};
+// Loaded lazily so Node tests can inject a fake (profile.ts/progress.ts pull in the whole app graph).
+let io: IO | null = null;
+const getIO = async (): Promise<IO> => (io ??= { ...(await import("./profile")), ...(await import("./progress")) });
+export const _setIO = (x: IO) => { io = x; }; // test hook
+let delay = 2000;
+export const _setDelay = (ms: number) => { delay = ms; }; // test hook
 
 let rev = 0; // last known server rev; 0 = server has no state yet
 let applyingRemote = false;
@@ -9,25 +22,31 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 let started = false;
 let running: Promise<void> = Promise.resolve();
 
-const local = () => ({ profile: loadProfile(), progress: loadProgress() });
+async function local() {
+  const m = await getIO();
+  return { profile: m.loadProfile(), progress: m.loadProgress() };
+}
 
-function applyLocal(s: { profile: ReturnType<typeof loadProfile>; progress: ReturnType<typeof loadProgress> }) {
+async function applyLocal(s: { profile: Profile | null; progress: Progress }) {
+  const m = await getIO();
   applyingRemote = true; // our own saves must not echo back as a push
   try {
-    if (s.profile) saveProfile(s.profile);
-    saveProgress(s.progress);
+    if (s.profile) m.saveProfile(s.profile);
+    m.saveProgress(s.progress);
   } finally {
     applyingRemote = false;
   }
 }
 
 async function push(retry = true): Promise<void> {
-  const r = await pushState(local(), rev);
+  if (!getUser()) return; // signed out (e.g. a debounce timer firing after logout)
+  const s = await local();
+  if (!s.profile) return; // the server rejects a null profile with 400
+  const r = await pushState(s, rev);
   if (r.ok) { rev = r.rev; return; }
   if (r.error === "conflict" && r.state && retry) {
     rev = r.state.rev;
-    const merged = mergeState(local(), r.state);
-    applyLocal(merged);
+    await applyLocal(mergeState(s, r.state));
     await push(false);
   }
 }
@@ -37,7 +56,7 @@ async function pull(): Promise<void> {
   if (!me.ok) return;
   if (me.state) {
     rev = me.state.rev;
-    applyLocal(mergeState(local(), me.state));
+    await applyLocal(mergeState(await local(), me.state));
   } else rev = 0;
   await push();
 }
@@ -55,7 +74,7 @@ export function startSync() {
   addEventListener("handshake:state", () => {
     if (applyingRemote || !getUser()) return;
     clearTimeout(timer);
-    timer = setTimeout(() => { running = running.then(() => push().catch(() => {})); }, 2000);
+    timer = setTimeout(() => { running = running.then(() => push().catch(() => {})); }, delay);
   });
   void syncNow();
 }
