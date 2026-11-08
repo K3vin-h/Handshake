@@ -50,6 +50,13 @@
 .jr-ink-smudge { color: #6b4a2a; filter: blur(0.5px); }
 .jr-ink-plain { color: var(--jr-ink); }
 
+.jr-stamps { display: flex; flex-wrap: wrap; gap: 16px; margin: 24px 0; }
+.jr-log { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.jr-blur { filter: blur(3px); opacity: 0.6; }
+.jr-next { margin-top: 24px; }
+.jr-stack { display: grid; gap: 14px; }
+.jr-stack-wide { gap: 24px; }
+
 @keyframes jr-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes jr-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 

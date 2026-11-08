@@ -65,18 +65,19 @@ export function ProgressScreen() {
           >
             <span style={{ width: `${demo.length ? pct(lessonsDone, demo.length) : 0}%` }} />
           </div>
-          <div className="jr-stamps" style={{ display: "flex", flexWrap: "wrap", gap: "1rem", margin: "1.5rem 0" }}>
-            <Stamp value={progress.streakDays} label={progress.streakDays === 1 ? "day streak" : "day streak"} />
+          <div className="jr-stamps">
+            <Stamp value={progress.streakDays} label="day streak" />
             <Stamp value={progress.xp} label="XP" />
             <Stamp value={tries > 0 ? `${pct(matched, tries)}%` : "No tries yet"} label="matches the reference" />
           </div>
-          <ul className="plain-list" style={{ display: "grid", gap: "0.75rem" }}>
+          <ul className="plain-list jr-log">
             {pages.map((l, i) => (
               <li key={l.id}>
                 <Ink tone="plain">Page {i + 1} · {(l.teaches ?? []).join(" ")}</Ink>
               </li>
             ))}
-            <li aria-hidden="true" style={{ filter: "blur(3px)", opacity: 0.6 }}>
+            {pages.length === 0 && <li>Your first page is waiting. Finish a lesson to write it down.</li>}
+            <li aria-hidden="true" className="jr-blur">
               <Ink tone="smudge">Page {pages.length + 1} · next</Ink>
             </li>
           </ul>
@@ -94,11 +95,13 @@ export function ProgressScreen() {
               );
             })}
           </ol>
-          <p style={{ marginTop: "1.5rem" }}>
-            {next && nextOpen ? (
+          <p className="jr-next">
+            {!next ? (
+              <span>You finished every lesson that is available right now.</span>
+            ) : nextOpen ? (
               <a href={`#/lesson/${next.id}`}>Practise next: {next.id} {next.title}</a>
             ) : (
-              <span>You finished every lesson that is available right now.</span>
+              <span>Finish the lesson before to unlock {next.id}.</span>
             )}
           </p>
           {weak[0] && (
@@ -114,7 +117,7 @@ export function ProgressScreen() {
           {bars.length === 0 ? (
             <p className="muted">Nothing here yet. Practise a lesson and this page fills in.</p>
           ) : (
-            <div style={{ display: "grid", gap: "0.9rem" }}>
+            <div className="jr-stack">
               {bars.map((b) => (
                 <HandBar key={b.letter} label={b.letter} value={b.matched} max={b.attempts} text={`${b.matched} of ${b.attempts}`} tone={b.share < 0.6 ? "warn" : "good"} />
               ))}
@@ -122,24 +125,24 @@ export function ProgressScreen() {
           )}
         </Page>
         <Page side="right" label="Going well" title="Where I am" number={4}>
-          <div style={{ display: "grid", gap: "1.5rem" }}>
-            <section aria-label="Going well">
-              <h3>Going well</h3>
+          <div className="jr-stack jr-stack-wide">
+            <section aria-labelledby="jr-strong">
+              <h3 id="jr-strong">Going well</h3>
               {strong.length ? (
-                <p>{strong.map((l) => <Ink key={l} tone="good">{l} </Ink>)} matches the reference most of the time.</p>
+                <p><Ink tone="good">{strong.join(", ")}</Ink>{" "}{strong.every((l) => items[l].mastered) ? "mastered: 3 in a row" : strong.some((l) => items[l].mastered) ? "mastered or matching the reference most of the time" : "matches the reference most of the time"}</p>
               ) : (
                 <p className="muted">No standouts yet. A few more tries and they show up here.</p>
               )}
             </section>
-            <section aria-label="Needs another go">
-              <h3>Needs another go</h3>
+            <section aria-labelledby="jr-weak">
+              <h3 id="jr-weak">Needs another go</h3>
               {weak.length ? (
-                <p>{weak.map((l) => <Ink key={l} tone="smudge">{l} </Ink>)} could use another go.</p>
+                <p><Ink tone="smudge">{weak.join(", ")}</Ink> could use another go.</p>
               ) : (
                 <p className="muted">Nothing is giving you trouble right now.</p>
               )}
             </section>
-            <div style={{ display: "grid", gap: "0.9rem" }}>
+            <div className="jr-stack">
               <HandBar label="Mastered" value={mastered} max={maxCount} text={String(mastered)} tone="good" />
               <HandBar label="Practising" value={practising} max={maxCount} text={String(practising)} />
             </div>
