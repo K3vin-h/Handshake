@@ -22,7 +22,7 @@ export function strongAndWeak(items: Record<string, Item>) {
   const letters = Object.keys(items).sort(byLetter);
   const rank = (l: string) => share(items[l]);
   const strong = letters
-    .filter((l) => items[l].mastered || (items[l].attempts >= 3 && rank(l) >= 0.8))
+    .filter((l) => items[l].attempts > 0 && (items[l].mastered || (items[l].attempts >= 3 && rank(l) >= 0.8)))
     .sort((a, b) => rank(b) - rank(a) || byLetter(a, b))
     .slice(0, 3);
   const weak = letters
