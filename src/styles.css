@@ -547,7 +547,7 @@ nav.shell-nav .shell-list a[aria-current="page"] { color: var(--brand-text); bac
 /* ---- Camera + dev screens (Ryan's classes; colours via tokens) ---- */
 .camera { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #000; border-radius: var(--radius-lg); overflow: hidden; }
 /* Keep the 4:3 camera inside the viewport height (nav + lesson header + tiles ≈ 380px). ponytail: fixed offset, measure the header if layouts change a lot. */
-.camera { max-width: max(280px, calc((100dvh - 380px) * 4 / 3)); margin-inline: auto; }
+.camera { max-width: max(280px, calc((100dvh - 420px) * 4 / 3)); margin-inline: auto; }
 .camera video, .camera canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .camera-msg { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; }
 .hold-bar { position: absolute; left: 0; bottom: 0; height: 8px; background: var(--brand-2); transition: width 50ms linear; }
@@ -555,9 +555,17 @@ nav.shell-nav .shell-list a[aria-current="page"] { color: var(--brand-text); bac
 .debug { margin-top: var(--space-4); padding: var(--space-3); border: 2px solid var(--border); border-radius: var(--radius-md); background: var(--card); }
 .debug label { display: flex; flex-direction: column; gap: var(--space-1); margin: var(--space-2) 0; font-size: 14px; }
 .debug label.check { flex-direction: row; align-items: center; }
-.hand3d { position: relative; width: 100%; box-sizing: border-box; border-radius: var(--radius-lg); background: var(--panel-light); overflow: hidden; touch-action: none; }
+.hand3d { position: relative; width: 100%; box-sizing: border-box; border-radius: var(--radius-lg); background: var(--panel-light); overflow: hidden; }
 .hand3d.empty { display: grid; place-items: center; padding: var(--space-4); text-align: center; color: var(--on-panel-light); min-height: 200px; }
-.hand3d-bar { position: absolute; left: var(--space-2); right: var(--space-2); bottom: var(--space-2); display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--on-panel-light); }
+.hand3d-views { position: relative; display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: var(--space-2); padding: var(--space-2) var(--space-2) 0; }
+.hand3d-main, .hand3d-small > div { position: relative; min-height: 0; min-width: 0; }
+.hand3d-main { cursor: grab; touch-action: none; }
+.hand3d-main:active { cursor: grabbing; }
+.hand3d-main > div, .hand3d-small > div > div { position: absolute !important; inset: 0; }
+.hand3d-col { height: clamp(150px, calc(100vh - 560px), 280px); display: grid; grid-template-rows: 1fr 1fr; gap: var(--space-2); }
+.hand3d-small { margin: 0; display: grid; grid-template-rows: 1fr auto; min-height: 0; text-align: center; font-size: 13px; color: var(--on-panel-light); }
+.hand3d-small figcaption { padding: 2px 0 var(--space-1); }
+.hand3d-bar { position: relative; display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); font-size: 13px; color: var(--on-panel-light); }
 .check { display: flex; gap: 6px; align-items: center; font-size: 14px; margin-top: var(--space-2); }
 
 /* Confetti (created by celebrate(); never created under reduced motion) */
@@ -607,3 +615,5 @@ nav.shell-nav .shell-list a[aria-current="page"] { color: var(--brand-text); bac
    utility would turn it into a CSS grid, so this unlayered rule restores the old row for plain elements.
    shadcn parts carry data-slot and keep Tailwind's grid. New code should use .chip-row, not .grid. */
 .grid:not([data-slot]) { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.hand3d-bar button { padding: 4px 10px; min-height: 32px; font-size: 13px; }
