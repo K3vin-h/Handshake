@@ -97,6 +97,8 @@ export function LessonView(p: LessonViewProps) {
             <button type="button" className={primary ? "" : "secondary"} onClick={p.onAction} disabled={p.actionDisabled}>
               {p.actionLabel}
             </button>
+            {/* The praise line sits to the right of Continue, on the same row. */}
+            <RewardLine reward={p.reward} />
           </div>
         </div>
 
@@ -109,7 +111,6 @@ export function LessonView(p: LessonViewProps) {
             </p>
           </div>
           <StatusMessage kind={kindOf(p.status, p.feedback)} label={false} message={p.status} />
-          <RewardLine reward={p.reward} />
           {p.howTo && (
             <section aria-label="How to form it">
               <h2 className="small-title">How to form {p.target}</h2>
