@@ -25,9 +25,19 @@ test("Complete reads saved completion and never awards XP on navigation or reloa
     assert.match(renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "3.1" })), /Locked/);
     assert.match(renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "4.1" })), /Locked/);
     assert.match(renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "5.1" })), /Lesson not found/);
-    const referenceLesson = renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "1.1" }));
-    assert.match(referenceLesson, /Reference only/);
-    assert.doesNotMatch(referenceLesson, /<video/);
+    // Every static letter is live (src/cv/practiceable.ts), so lesson 1.1 (RYAN) opens with a live check of R and the camera.
+    const firstLesson = renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "1.1" }));
+    assert.match(firstLesson, /Sign R/);
+    assert.match(firstLesson, /<video/);
+    // The whole static alphabet is live and taught in a demo lesson; J and Z move, so they are never live.
+    const { PRACTICEABLE } = await vite.ssrLoadModule("/src/cv/practiceable.ts");
+    const { buildCurriculum } = await vite.ssrLoadModule("/src/lib/curriculum.ts");
+    const taught = new Set(buildCurriculum({ userName: "Ryan", theirName: "Lily" }).flatMap((u) => u.lessons).filter((l) => l.scope === "demo").flatMap((l) => l.teaches ?? []));
+    for (const letter of "ABCDEFGHIKLMNOPQRSTUVWXY") {
+      assert.ok(PRACTICEABLE.includes(letter), `${letter} is live`);
+      assert.ok(taught.has(letter), `${letter} is in a demo lesson`);
+    }
+    assert.ok(!PRACTICEABLE.includes("J") && !PRACTICEABLE.includes("Z"));
     const { Complete } = await vite.ssrLoadModule("/src/screens/Complete.tsx");
     const render = (lessonId) => renderToStaticMarkup(createElement(Complete, { lessonId }));
     assert.match(render("1.1"), /Keep practising/);

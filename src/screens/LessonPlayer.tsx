@@ -211,10 +211,17 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
   // Once the target matches, the ring and bar stay full until "Try again" (retry() resets the check, so this goes back to live progress).
   const shownProgress = result === "match" ? 1 : check.progress;
   const noLiveCheck = item.kind === "learn" && item.referenceOnly;
+  const moving = target === "J" || target === "Z"; // these are drawn in the air, so a still camera frame can never check them
   const camera = noLiveCheck ? (
     <div className="card">
-      <p><strong>No live check for {target} yet.</strong> It is reference only until the letter passes the Letter gate.</p>
-      <p><a href="#/camera-demo">Try the camera and coach in the demo</a></p>
+      {moving ? (
+        <p><strong>{target} moves, so the camera can't check it.</strong> Watch the motion in a Deaf-led source such as Lifeprint (lifeprint.com), copy it, then continue.</p>
+      ) : (
+        <>
+          <p><strong>No live check for {target} yet.</strong> It is reference only until the letter passes the Letter gate.</p>
+          <p><a href="#/camera-demo">Try the camera and coach in the demo</a></p>
+        </>
+      )}
     </div>
   ) : (
     <>
@@ -232,7 +239,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
   if (item.kind === "learn")
     return (
       <LessonView {...common} title={`Learn ${item.letter}`} showReference progress={0}
-        status={item.referenceOnly ? "Reference only, coming later" : `This is ${item.letter}. Try it, then continue.`}
+        status={item.referenceOnly ? (moving ? `${item.letter} moves: learn the motion, then continue.` : "Reference only, coming later") : `This is ${item.letter}. Try it, then continue.`}
         actionLabel="Continue" onAction={onNext} />
     );
 

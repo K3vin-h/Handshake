@@ -10,7 +10,7 @@ import { DEMO_PROFILE, loadProfile } from "../lib/profile";
 // mistakes or XP. The coach request sends only the letter, the finger codes and a repeat count (never names or images).
 
 const HandModel3D = lazy(() => import("../components/HandModel3D"));
-const LETTERS = ["L", "I", "Y", "A", "5"]; // handshapes with recorded templates
+const LETTERS = ["L", "I", "Y", "A", "B", "C", "D", "E", "F", "G", "H", "K", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "5"]; // every handshape with recorded templates
 const INTRO = "Demo: show the letter to the camera. Nothing here is scored or saved.";
 
 export function CameraDemo() {
@@ -24,7 +24,8 @@ export function CameraDemo() {
   const asking = useRef(false);
   const gen = useRef(0);
 
-  const check = useLetterCheck(target, LETTERS, {
+  // Candidates are the target + its look-alikes only (like a lesson), not all 25 letters, so the demo is as fair as a lesson.
+  const check = useLetterCheck(target, [], {
     leftHanded: profile.leftHanded,
     enabled: !matched, // stop checking once matched; "Try again" restarts (same as the lesson player)
     onMatch: (d) => {
