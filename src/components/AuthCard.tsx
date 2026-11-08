@@ -25,15 +25,18 @@ export function AuthCard({ mode, onDone }: { mode: "signup" | "login"; onDone():
     void getAuthConfig().then((r) => setCfg(r.ok ? r : { accounts: false, googleClientId: null }));
   }, []);
 
-  function fail(code: string) {
+  function fail(code: string, source?: "google") {
     const f = authErrorField(code);
-    setErrs({ [f]: authMessage(code) });
+    setErrs({ [f]: authMessage(code, source) });
     (f === "email" ? emailRef : f === "password" ? pwRef : null)?.current?.focus();
   }
 
-  async function finish(r: { ok: true } | { ok: false; error: string }) {
-    setBusy(false);
-    if (!r.ok) return fail(r.error);
+  // busy stays true through syncNow and onDone, so a second click cannot re-run signUp.
+  async function finish(r: { ok: true } | { ok: false; error: string }, source?: "google") {
+    if (!r.ok) {
+      setBusy(false);
+      return fail(r.error, source);
+    }
     await syncNow();
     onDone();
   }
@@ -56,8 +59,9 @@ export function AuthCard({ mode, onDone }: { mode: "signup" | "login"; onDone():
   }
 
   async function google(credential: string) {
+    if (busy) return;
     setBusy(true);
-    await finish(await loginWithGoogle(credential));
+    await finish(await loginWithGoogle(credential), "google");
   }
 
   if (cfg && !cfg.accounts) {
@@ -109,7 +113,7 @@ export function AuthCard({ mode, onDone }: { mode: "signup" | "login"; onDone():
         </div>
         {/* Live region stays mounted. Field errors are also tied to their field by HaloField (aria-describedby). */}
         <StatusMessage kind="error" label={false} message={errs.form ?? errs.email ?? errs.password ?? ""} />
-        <button type="submit" className="cta" disabled={busy}>{busy ? "One moment..." : signup ? "Create profile" : "Log in"}</button>
+        <button type="submit" className="cta" disabled={busy}>{busy ? "One moment..." : signup ? "Create account" : "Log in"}</button>
         <p className="muted small auth-switch">
           {signup ? <>Already have an account? <a href="#/login">Log in</a></> : <>New here? <a href="#/signup">Create your profile</a></>}
         </p>

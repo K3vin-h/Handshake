@@ -2,26 +2,35 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { HaloField } from "../components/HaloField";
 import { StatusMessage } from "../components/StatusMessage";
 import { forgot, getAuthConfig } from "../lib/auth";
+import { authMessage } from "../lib/authErrors";
 
 export function ForgotPassword() {
   const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [netDown, setNetDown] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [email, setEmail] = useState("");
   const [err, setErr] = useState("");
   const [sent, setSent] = useState(false);
   const ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    void getAuthConfig().then((r) => setEnabled(r.ok && r.resetEmail));
+    void getAuthConfig().then((r) => {
+      setNetDown(!r.ok && r.error === "network");
+      setEnabled(r.ok && r.resetEmail);
+    });
   }, []);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (busy) return;
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
       setErr("Enter a valid email address.");
       return ref.current?.focus();
     }
     setErr("");
+    setBusy(true);
     await forgot(email.trim()); // same answer whatever happens, so the page never reveals which emails have accounts
+    setBusy(false);
     setSent(true);
   }
 
@@ -33,9 +42,9 @@ export function ForgotPassword() {
           onChange={(e) => { setEmail(e.target.value); setErr(""); }} />
         <StatusMessage
           kind="info"
-          message={enabled === false ? "Password reset isn't set up on this server." : sent ? "If that address has an account, we sent a link. It works for 30 minutes." : ""}
+          message={netDown ? authMessage("network") : enabled === false ? "Password reset isn't set up on this server." : sent ? "If that address has an account, we sent a link. It works for 30 minutes." : ""}
         />
-        <button type="submit" className="cta" disabled={enabled !== true}>Send link</button>
+        <button type="submit" className="cta" disabled={enabled !== true || busy}>Send link</button>
         <p className="muted small auth-switch"><a href="#/login">Back to log in</a></p>
       </form>
     </div>

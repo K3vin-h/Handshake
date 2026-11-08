@@ -676,13 +676,13 @@ html { accent-color: var(--brand); scrollbar-color: #b9d6ea transparent; }
 
 /* Accounts: sign-up / log-in card, divider, header chip (existing tokens only) */
 .auth-wrap { max-width: 420px; margin: 0 auto; }
-.auth-card { max-width: 420px; margin: 0 auto var(--space-4); padding: clamp(20px, 4vw, 32px); background: var(--card); border: 2px solid var(--border); border-bottom-width: 4px; border-radius: var(--radius-lg); box-shadow: 0 8px 24px rgba(42, 80, 112, 0.08); display: flex; flex-direction: column; gap: var(--space-3); }
+.auth-card { max-width: 420px; margin: 0 auto var(--space-4); padding: clamp(20px, 4vw, 32px); background: var(--card); border: 2px solid var(--border); border-bottom-width: 4px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: var(--space-3); box-sizing: border-box; width: 100%; min-width: 0; }
 .auth-card h1 { margin: 0; font-size: 1.5rem; }
 .auth-card .cta { width: 100%; }
 .auth-card a, .auth-skip a { color: var(--brand-text); font-weight: 700; text-decoration: underline; }
 .auth-card a:focus-visible, .auth-skip a:focus-visible, a.account-chip:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .auth-skip { text-align: center; margin: 0 0 var(--space-4); }
-.google-btn { display: flex; justify-content: center; min-height: 44px; }
+.google-btn { display: flex; justify-content: center; min-height: 44px; max-width: 100%; overflow: hidden; }
 .auth-divider { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--muted); font-weight: 700; }
 .auth-divider::before, .auth-divider::after { content: ""; flex: 1; border-top: 2px solid var(--border); }
 .auth-pw { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }

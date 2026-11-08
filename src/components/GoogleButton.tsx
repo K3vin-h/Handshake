@@ -40,7 +40,7 @@ export function GoogleButton({ clientId, onCredential }: { clientId: string; onC
       if (!live) return;
       if (!ok || !window.google?.accounts || !ref.current) return setFailed(true);
       window.google.accounts.id.initialize({ client_id: clientId, callback: (r) => cb.current(r.credential) });
-      window.google.accounts.id.renderButton(ref.current, { theme: "outline", size: "large", text: "continue_with", width: 320 });
+      window.google.accounts.id.renderButton(ref.current, { theme: "outline", size: "large", text: "continue_with", width: Math.max(200, Math.min(320, ref.current.clientWidth)) });
     });
     return () => { live = false; };
   }, [clientId]);

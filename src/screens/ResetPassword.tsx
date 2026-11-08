@@ -5,7 +5,10 @@ import { resetPassword } from "../lib/auth";
 import { authMessage } from "../lib/authErrors";
 
 export function ResetPassword() {
-  const token = decodeURIComponent(location.hash.replace(/^#\/reset\//, ""));
+  const raw = location.hash.replace(/^#\/reset\//, "");
+  let token = raw;
+  try { token = decodeURIComponent(raw); } catch { /* malformed escape: use the raw value */ }
+  const [busy, setBusy] = useState(false);
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [fieldErr, setFieldErr] = useState("");
@@ -15,13 +18,16 @@ export function ResetPassword() {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (busy) return;
     setFormErr("");
     if (password.length < 10) {
       setFieldErr(authMessage("weak_password"));
       return ref.current?.focus();
     }
     setFieldErr("");
+    setBusy(true);
     const r = await resetPassword(token, password);
+    setBusy(false);
     if (r.ok) return setDone(true);
     if (r.error === "weak_password") {
       setFieldErr(authMessage(r.error));
@@ -53,7 +59,7 @@ export function ResetPassword() {
           </button>
         </div>
         <StatusMessage kind="error" label={false} message={formErr || fieldErr} />
-        <button type="submit" className="cta">Change password</button>
+        <button type="submit" className="cta" disabled={busy}>Change password</button>
         <p className="muted small auth-switch"><a href="#/forgot">Ask for a new link</a></p>
       </form>
     </div>
