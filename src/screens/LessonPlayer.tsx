@@ -6,7 +6,7 @@ import { completeLesson, dueItems, isUnlocked, loadProgress, recordAttempt, type
 import { reportAttempt, reportLessonComplete } from "../lib/track";
 import { loadMistakes, mistakeCount, recordMistake } from "../lib/mistakes";
 import { DEMO_PROFILE, loadProfile } from "../lib/profile";
-import { SEND_SNAPSHOT, getCoachTip } from "../lib/api";
+import { SEND_SNAPSHOT, getCoachTip, getHowTo } from "../lib/api";
 import { LessonView } from "../components/LessonView";
 import { Camera } from "../components/Camera";
 import { createCoachQueue } from "../lib/coachQueue";
@@ -100,15 +100,7 @@ function Player({ lessonId }: { lessonId: string }) {
   // ONE camera at a time: LetterItem stays mounted across consecutive letter items (no key), so the camera never restarts.
   if (item.kind === "other")
     return <div className="page"><p>Coming in a later milestone: {item.step.kind}</p><button onClick={next}>Continue</button></div>;
-  if (item.kind === "learn") return <main className="page">
-    <progress className="lesson-progress" value={i / items.length} max={1} aria-label={stepLabel} />
-    <h1>Learn {item.letter}</h1><p>{stepLabel}</p>
-    <p>{item.referenceOnly ? "Reference only: live checking is not validated for this letter yet." : "Study the reference, then practise."}</p>
-    <Suspense fallback={<p>Loading reference…</p>}><HandModel3D pose={meanPose3D(item.letter, loadTemplates(), profile.leftHanded)} letter={item.letter} /></Suspense>
-    <p>Matches our recording; this is not a fluent signer’s assessment.</p>
-    <button onClick={next}>Continue</button><p><a href="#/">Back to your path</a></p>
-  </main>;
-  return <LetterItem index={i} item={item} lessonLetters={lessonLetters} leftHanded={profile.leftHanded} stepLabel={stepLabel} lessonProgress={i / items.length} progress={progress} onRestart={() => { if (item.practiceStart !== undefined) setI(item.practiceStart); }} onNext={next} />;
+  return <LetterItem index={i} item={item} lessonLetters={lessonLetters} leftHanded={profile.leftHanded} stepLabel={stepLabel} lessonProgress={i / items.length} progress={progress} onRestart={() => { if (item.kind === "check" && item.practiceStart !== undefined) setI(item.practiceStart); }} onNext={next} />;
 }
 
 type LetterItemProps = {
@@ -159,8 +151,10 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
 
   const check = useLetterCheck(target, lessonLetters, {
     leftHanded,
-    enabled: item.kind === "check" && result !== "match", // stop checking once matched; "Try again" restarts
+    enabled: (item.kind === "check" || !item.referenceOnly) && result !== "match", // stop checking once matched; "Try again" restarts
     onMatch: (d) => {
+      // Learn steps show the camera for trying the sign, but nothing is scored or advanced.
+      if (item.kind !== "check") { setStatus(`Matches our recording: ${d.letter} (practice, not scored)`); return; }
       progress.current = recordAttempt(progress.current, d.letter, true);
       reportAttempt(d.letter, true);
       queue.reset();
@@ -171,6 +165,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
       celebrate();
     },
     onMiss: (feedback) => {
+      if (item.kind !== "check") return;
       onRestart();
       progress.current = recordAttempt(progress.current, target, false);
       reportAttempt(target, false, feedback.map((f) => f.code));
@@ -187,9 +182,24 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     },
   });
 
+  // How to form the letter (Gemini, general ASL knowledge). Hidden until it arrives, and when Gemini is unsure or down.
+  const [howTo, setHowTo] = useState<{ text: string; cached: boolean } | undefined>();
+  useEffect(() => {
+    setHowTo(undefined);
+    let live = true;
+    getHowTo(target).then((r) => live && r.text && setHowTo({ text: r.text, cached: !!r.cached })).catch(() => {});
+    return () => { live = false; };
+  }, [target]);
+
   // Once the target matches, the ring and bar stay full until "Try again" (retry() resets the check, so this goes back to live progress).
   const shownProgress = result === "match" ? 1 : check.progress;
-  const camera = (
+  const noLiveCheck = item.kind === "learn" && item.referenceOnly;
+  const camera = noLiveCheck ? (
+    <div className="card">
+      <p><strong>No live check for {target} yet.</strong> It is reference only until the letter passes the Letter gate.</p>
+      <p><a href="#/camera-demo">Try the camera and coach in the demo</a></p>
+    </div>
+  ) : (
     <>
       <Camera {...check.cam} progress={shownProgress} />
       {check.hint && <p role="status">{check.hint}</p>}
@@ -200,7 +210,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
       <HandModel3D pose={meanPose3D(target, check.templates, leftHanded)} letter={target} />
     </Suspense>
   );
-  const common = { target, reference, camera, landmarkTip, coachTip: coach.tip, coachCached: coach.cached, sideBySide, stepLabel, lessonProgress };
+  const common = { target, reference, camera, landmarkTip, coachTip: coach.tip, coachCached: coach.cached, sideBySide, stepLabel, lessonProgress, howTo };
 
   if (item.kind === "learn")
     return (
