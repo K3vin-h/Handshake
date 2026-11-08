@@ -2,13 +2,16 @@ import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { PathNodeState } from "./PathNode";
+import { MARK_LABEL, StatusMark, type MarkState } from "./StatusMark";
 import { AnimatedProgress } from "./motion/AnimatedProgress";
 
 // The curriculum as a winding path of glowing "platform" nodes, one section per unit.
 // Presentational only: Home maps buildCurriculum() + progress into these props.
 // Motion (float, glow, reveal on scroll) is CSS-only and switched off by prefers-reduced-motion.
 
-export type MapLesson = { id: string; title: string; summary: string; xp: number; state: PathNodeState };
+export type MapLetter = { letter: string; status: MarkState; due?: boolean };
+/** letters: the letters this lesson teaches, each with its status (small, under the lesson). note: optional small line, e.g. "RYAN: 2 of 4 live". */
+export type MapLesson = { id: string; title: string; summary: string; xp: number; state: PathNodeState; letters?: MapLetter[]; note?: string };
 
 const STATE_TEXT: Record<PathNodeState, string> = { locked: "Locked", available: "Ready", current: "Up next", done: "Done" };
 // Horizontal wiggle (px) per row, so the path winds like a trail instead of a straight list.
@@ -46,14 +49,15 @@ function useReveal<T extends HTMLElement>() {
  * - index: 1-based unit number, shown in the "UNIT n" pill.
  * - title, goal: unit text.
  * - lessons: MapLesson[]. state = "done" | "current" | "available" | "locked".
- * - onOpen(id): called when a non-locked node or the "Start" button is activated.
+ * - onOpen(id): called when a non-locked node (or the "Start" button, when shown) is activated.
+ * - showStart: show the "Start" card under the current lesson. Default true. Home turns it off because its banner has the Go button.
  *
  * Accessibility: every node is a real button whose accessible name carries the state and XP in text.
  * Locked nodes stay focusable (aria-disabled). The "Start" card for the current lesson is always visible
  * (never hover-only).
  */
-export function UnitSection(props: { index: number; title: string; goal: string; lessons: MapLesson[]; onOpen: (id: string) => void }) {
-  const { index, title, goal, lessons, onOpen } = props;
+export function UnitSection(props: { index: number; title: string; goal: string; lessons: MapLesson[]; onOpen: (id: string) => void; showStart?: boolean }) {
+  const { index, title, goal, lessons, onOpen, showStart = true } = props;
   const ref = useReveal<HTMLElement>();
   const done = lessons.filter((l) => l.state === "done").length;
   const xp = lessons.reduce((n, l) => n + l.xp, 0);
@@ -108,10 +112,23 @@ export function UnitSection(props: { index: number; title: string; goal: string;
                     <span className="muted small">
                       {STATE_TEXT[l.state]} · {l.xp} XP
                     </span>
+                    {l.letters && l.letters.length > 0 && (
+                      <ul className="mini-letters" aria-label={`Letters in ${l.title}`}>
+                        {l.letters.map((m) => (
+                          <li key={m.letter}>
+                            <StatusMark state={m.status} size={12} />
+                            <strong>{m.letter}</strong>
+                            <span className="sr-only">{MARK_LABEL[m.status]}</span>
+                            {m.due && <span className="mini-due">due</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {l.note && <span className="muted small">{l.note}</span>}
                   </div>
                 </div>
 
-                {l.state === "current" && (
+                {showStart && l.state === "current" && (
                   <div className="start-card">
                     <h3>{l.title}</h3>
                     <p className="muted small">{l.summary}</p>
