@@ -181,6 +181,40 @@ test("login rate limit: 11th attempt for one email is 429 even from different IP
   });
 });
 
+// no per-IP limits (production traffic shares IPs behind the Vercel rewrite)
+test("no per-IP limit: 30 signups, logins and forgots from one IP with distinct emails all pass", async () => {
+  await withApp({}, async (s) => {
+    for (let i = 0; i < 30; i++) {
+      const email = `user${i}@example.com`;
+      assert.equal((await s.post("/api/auth/signup", { email, password: `${PW}-${i}` })).status, 201, `signup ${i}`);
+      assert.equal((await s.post("/api/auth/login", { email, password: `${PW}-${i}` })).status, 200, `login ${i}`);
+      assert.equal((await s.post("/api/auth/forgot", { email })).status, 202, `forgot ${i}`);
+    }
+  });
+});
+
+test("no per-IP limit: requests without a valid email are never rate limited", async () => {
+  await withApp({}, async (s) => {
+    for (let i = 0; i < 30; i++) {
+      assert.equal((await s.post("/api/auth/login", {})).status, 401, `login ${i}`);
+      assert.equal((await s.post("/api/auth/forgot", {})).status, 202, `forgot ${i}`);
+    }
+  });
+});
+
+test("forgot: per-email limit is 3 per hour; the first three answer 202 identically, the fourth is 429", async () => {
+  const db = fakeDb();
+  await addUser(db, { email: "a@example.com" });
+  await withApp({ db }, async (s) => {
+    const rs = [];
+    for (let i = 0; i < 3; i++) rs.push(await s.post("/api/auth/forgot", { email: "a@example.com" }));
+    assert.deepEqual(rs.map((r) => [r.status, r.body]), Array(3).fill([202, { ok: true }]));
+    const r = await s.post("/api/auth/forgot", { email: "a@example.com" });
+    assert.deepEqual([r.status, r.body], [429, { error: "rate_limited" }]);
+    assert.equal((await s.post("/api/auth/forgot", { email: "b@example.com" })).status, 202);
+  });
+});
+
 // google
 test("google: bad token is 401 invalid_token", async () => {
   await withApp({}, async (s) => {

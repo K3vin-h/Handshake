@@ -27,7 +27,7 @@ export function register(app, { db, verifyGoogle, isBreached = realIsBreached, s
   app.get("/api/auth/config", (_req, res) =>
     res.json({ accounts: !!db, googleClientId: db ? googleClientId : null, resetEmail: resetEnabled }));
 
-  app.post("/api/auth/signup", sameOrigin, rateLimit({ windowMs: 3_600_000, max: 10 }), json, needDb, async (req, res) => {
+  app.post("/api/auth/signup", sameOrigin, json, needDb, async (req, res) => {
     const { email, password } = req.body ?? {};
     if (!isEmail(email)) return bad(res);
     if (!strong(password)) return bad(res, "weak_password");
@@ -41,9 +41,13 @@ export function register(app, { db, verifyGoogle, isBreached = realIsBreached, s
     } catch { fail(res); }
   });
 
-  const perEmail = (windowMs, max) => rateLimit({ windowMs, max, key: (req) => norm(req.body?.email) || req.ip });
+  // No valid email: skip (the handler rejects it cheaply). Never fall back to the IP: behind the Vercel rewrite it is shared.
+  const perEmail = (windowMs, max) => {
+    const limit = rateLimit({ windowMs, max, key: (req) => norm(req.body.email) });
+    return (req, res, next) => (isEmail(req.body?.email) ? limit(req, res, next) : next());
+  };
 
-  app.post("/api/auth/login", sameOrigin, rateLimit({ windowMs: 600_000, max: 10 }), json, perEmail(600_000, 10), needDb, async (req, res) => {
+  app.post("/api/auth/login", sameOrigin, json, perEmail(600_000, 10), needDb, async (req, res) => {
     const { email, password } = req.body ?? {};
     try {
       const user = isEmail(email) ? await db.findUserByEmail(norm(email)) : null;
@@ -55,7 +59,7 @@ export function register(app, { db, verifyGoogle, isBreached = realIsBreached, s
     } catch { fail(res); }
   });
 
-  app.post("/api/auth/google", sameOrigin, rateLimit({ windowMs: 600_000, max: 30 }), json, needDb, async (req, res) => {
+  app.post("/api/auth/google", sameOrigin, json, needDb, async (req, res) => {
     const { credential } = req.body ?? {};
     if (typeof credential !== "string" || credential.length > 4096) return bad(res);
     const g = googleClientId && verifyGoogle ? await verifyGoogle(credential, googleClientId).catch(() => null) : null;
@@ -97,7 +101,7 @@ export function register(app, { db, verifyGoogle, isBreached = realIsBreached, s
     res.sendStatus(204);
   });
 
-  app.post("/api/auth/forgot", sameOrigin, rateLimit({ windowMs: 3_600_000, max: 10 }), json, perEmail(3_600_000, 3), needDb, async (req, res) => {
+  app.post("/api/auth/forgot", sameOrigin, json, perEmail(3_600_000, 3), needDb, async (req, res) => {
     res.status(202).json({ ok: true }); // identical answer whether or not the account exists
     const { email } = req.body ?? {};
     if (!resetEnabled || !isEmail(email)) return;
@@ -110,7 +114,7 @@ export function register(app, { db, verifyGoogle, isBreached = realIsBreached, s
     } catch { console.error("Password reset email failed."); }
   });
 
-  app.post("/api/auth/reset", sameOrigin, rateLimit({ windowMs: 600_000, max: 20 }), json, needDb, async (req, res) => {
+  app.post("/api/auth/reset", sameOrigin, json, needDb, async (req, res) => {
     const { token, password } = req.body ?? {};
     if (typeof token !== "string" || token.length > 100) return bad(res, "invalid_token");
     // Validate before consumeReset so a rejected password does not burn the single-use token.

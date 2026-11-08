@@ -45,7 +45,7 @@ user_state     (user_id uuid PK -> users ON DELETE CASCADE, profile jsonb, progr
 `password_hash` is null for Google-only accounts. Tokens are random 32 bytes, base64url in the cookie or link, and only their SHA-256 is stored.
 
 ### API
-All errors are `{ "error": "<code>" }`, matching the existing routes. Auth routes carry their own `express.json` limit and per-IP `rateLimit`.
+All errors are `{ "error": "<code>" }`, matching the existing routes. Auth routes carry their own `express.json` limit. There are no per-IP rate limits on account routes (see Rate limits).
 
 | Route | Body | Success | Errors |
 |---|---|---|---|
@@ -69,8 +69,8 @@ All errors are `{ "error": "<code>" }`, matching the existing routes. Auth route
 - **Password quality (added with user approval):** reject passwords found in the Pwned Passwords breach list (k-anonymity range API; only the first 5 characters of the SHA-1 leave the server; fails open if the service is unreachable) and passwords containing 'handshake' or the email's local part (4+ chars). On reset the check runs before the token is consumed.
 - **Google:** the browser gets an ID token from Google Identity Services; the server verifies signature, issuer, audience (= `GOOGLE_CLIENT_ID`) and expiry with `google-auth-library`, and requires `email_verified`. Accounts are matched by Google's stable `sub`, never by email alone.
 - **Google linking rule:** if a Google sign-in's verified email matches an existing password account, link them (set `google_sub`). If that password account had `email_verified_at` null, **also clear its password hash**, so a squatter who registered the address first cannot keep access. It also **deletes that account's saved state** (`user_state`), so the squatter's names and progress can never sync into the real owner's profile (a verified account keeps its state). The real owner can set a new password through "Forgot password".
-- **Reset tokens:** 30 minutes, single use, hashed at rest. Using one deletes every session for that user. `forgot` is rate limited per IP and per email (3 per hour) and always answers 202.
-- **Rate limits (in-memory, per process):** signup 10 per hour per IP, login 10 per 10 minutes per IP and 10 per 10 minutes per email, forgot as above, state sync 60 per minute per IP.
+- **Reset tokens:** 30 minutes, single use, hashed at rest. Using one deletes every session for that user. `forgot` is rate limited per email (3 per hour) and answers 202 whether or not the account exists.
+- **Rate limits (in-memory, per process):** login 10 per 10 minutes per email, forgot 3 per hour per email (a request without a valid email is not limited; the handler rejects or ignores it), state sync 60 per minute per user. **No per-IP limits on account routes**: production traffic arrives through the Vercel rewrite, so many users share a few egress IPs and a per-IP limit would be a site-wide cap.
 - **Input:** email must satisfy the existing `isEmail`; names in the profile must match `NAME_RE`, except that `theirName` may be `""` (solo learner, PR #17); progress keys must match `/^[A-Za-z0-9 :._-]{1,60}$/`; at most 200 progress items, 60 lessons completed, 12 practice words per lesson. Anything else is 400. Request bodies are capped (20 kB auth, 100 kB state).
 - **Logs:** never log emails, tokens or passwords. Failures log a fixed sentence, as the existing routes do.
 
@@ -118,6 +118,7 @@ New `.env` keys: `GOOGLE_CLIENT_ID`, `RESEND_API_KEY`, `RESEND_FROM`, `APP_ORIGI
 - No email verification in v1.
 - The server contacts api.pwnedpasswords.com on sign-up and password reset (first 5 hash characters only; no password, email or account id).
 - Rate limits are in memory, per process (we run one process).
+- Sign-up and Google sign-in are not rate limited (no per-IP limits behind the Vercel rewrite) and there is no email verification, so bots can create accounts. Mitigation to add if abused: a CAPTCHA, or per-IP limits keyed on the forwarded client IP.
 - Signup reveals whether an email is taken (hiding it breaks sign-up usability); login and reset do not.
 - Google "Testing" mode silently blocks anyone not on the list: check it before the demo.
 - Progress sync is last-write-wins after the merge; two devices editing within 2 seconds can drop one device's most recent attempt.

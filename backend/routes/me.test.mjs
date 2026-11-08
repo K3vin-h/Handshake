@@ -6,11 +6,11 @@ import { COOKIE, hashToken } from "../session.mjs";
 
 const hex = (b) => Buffer.from(b).toString("hex");
 function fakeDb() {
-  const users = new Map([[1, { id: 1, email: "a@b.co", password_hash: "x", google_sub: null }]]);
+  const users = new Map([[1, { id: 1, email: "a@b.co", password_hash: "x", google_sub: null }], [2, { id: 2, email: "c@d.co", password_hash: "x", google_sub: null }]]);
   const states = new Map();
   return {
     users, states,
-    async sessionUser(h) { return hex(h) === hex(hashToken("tok")) ? users.get(1) ?? null : null; },
+    async sessionUser(h) { return users.get(hex(h) === hex(hashToken("tok")) ? 1 : hex(h) === hex(hashToken("tok2")) ? 2 : 0) ?? null; },
     async getState(id) { return states.get(id) ?? null; },
     async saveState(id, profile, progress, baseRev) {
       const cur = states.get(id);
@@ -76,10 +76,17 @@ test("cross-origin PUT 403", () => withApp(async (s) => {
   const r = await s.request("PUT", "/api/me/state", { body: body(0), headers: { ...cookie, Origin: "https://evil.example" } });
   assert.equal(r.status, 403);
 }));
+test("state sync: 61st PUT in a minute from one user is 429; another user from the same IP is unaffected", () => withApp(async (s) => {
+  const put = (c) => s.request("PUT", "/api/me/state", { body: body(0), headers: c });
+  for (let i = 0; i < 60; i++) assert.notEqual((await put(cookie)).status, 429, `put ${i}`);
+  const r = await put(cookie);
+  assert.deepEqual([r.status, r.body], [429, { error: "rate_limited" }]);
+  assert.equal((await put({ Cookie: `${COOKIE}=tok2` })).status, 200);
+}));
 test("delete removes user, clears cookie, then GET is 401", () => withApp(async (s, db) => {
   const r = await s.request("DELETE", "/api/me", { headers: cookie });
   assert.equal(r.status, 204);
   assert.match(String(r.headers["set-cookie"]), /Max-Age=0/);
-  assert.equal(db.users.size, 0);
+  assert.equal(db.users.has(1), false);
   assert.equal((await s.request("GET", "/api/me", { headers: cookie })).status, 401);
 }));

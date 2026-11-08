@@ -14,7 +14,7 @@ export function register(app, { db, secure = false }) {
     try { res.json({ user: publicUser(req.user), state: await db.getState(req.user.id) }); } catch { fail(res); }
   });
 
-  app.put("/api/me/state", sameOrigin, needDb, auth, rateLimit({ windowMs: 60_000, max: 60 }), express.json({ limit: "100kb" }), async (req, res) => {
+  app.put("/api/me/state", sameOrigin, needDb, auth, rateLimit({ windowMs: 60_000, max: 60, key: (req) => req.user.id }), express.json({ limit: "100kb" }), async (req, res) => {
     const s = validateState(req.body);
     if (!s) return res.status(400).json({ error: "bad_request" });
     try {
