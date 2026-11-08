@@ -172,7 +172,7 @@ nav a.brand:hover { background: transparent; }
 nav.top-nav { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--space-3); }
 nav.top-nav .nav-left, nav.top-nav .nav-right { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; min-width: 0; }
 nav.top-nav .nav-right { justify-content: flex-end; gap: var(--space-2); }
-nav.top-nav .nav-center { display: flex; justify-content: center; align-items: center; }
+nav.top-nav .nav-center { display: flex; justify-content: center; align-items: center; gap: var(--space-3); }
 @media (max-width: 820px) { nav.top-nav { grid-template-columns: 1fr; } nav.top-nav .nav-center { justify-content: flex-start; } nav.top-nav .nav-right { justify-content: flex-start; } }
 .nav-chips { margin-left: auto; }
 /* Phones: the nav wraps instead of widening the page, and scrolls away so it doesn't eat the screen. */
@@ -836,3 +836,9 @@ body:has(.progress-page.reward-dawn)::before {
     radial-gradient(ellipse at 100% 0%, rgba(176, 205, 238, 0.95), transparent 55%),
     linear-gradient(180deg, #eef3fb, #efeaf8);
 }
+
+/* Dev tools: tucked into the bottom-left corner, small and faint until hovered or focused (npm run dev only). */
+.dev-corner { position: fixed; left: 10px; bottom: 10px; z-index: 30; opacity: 0.45; transition: opacity 120ms ease; }
+.dev-corner:hover, .dev-corner:focus-within, .dev-corner[open] { opacity: 1; }
+.dev-corner summary { padding: 2px 10px; font-size: 12px; border-width: 1px; background: var(--card); }
+.dev-corner .dev-menu-list { right: auto; left: 0; top: auto; bottom: calc(100% + 6px); }
