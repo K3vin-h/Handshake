@@ -83,6 +83,7 @@ function Player({ lessonId }: { lessonId: string }) {
   const [incomplete, setIncomplete] = useState(false);
   function skip() {
     skipped.current = true;
+    setTurn(0); // leaving a scene mid-way must not leave the next scene starting at a stale turn
     next();
   }
   function startAgain() {
@@ -91,6 +92,7 @@ function Player({ lessonId }: { lessonId: string }) {
     setIncomplete(false);
     setTurn(0);
     setI(0);
+    if (lesson) setItems(expand(lesson.steps, progress.current)); // fresh order, and no leftover "again" items from the last go
   }
   function next() {
     if (finishing.current) return;
@@ -125,7 +127,7 @@ function Player({ lessonId }: { lessonId: string }) {
     const tokens = s.kind === "sign" ? [s.sign] : s.tokens;
     const title = s.kind === "sign" ? `Sign "${SIGNS[s.sign]?.english ?? s.sign}"` : s.english;
     return (
-      <TokenRunner tokens={tokens} leftHanded={profile.leftHanded} onEmpty={next}
+      <TokenRunner tokens={tokens} leftHanded={profile.leftHanded} onEmpty={skip}
         onDone={() => { progress.current = recordAttempt(progress.current, tokens.join(" "), true); celebrate(); next(); }}
         render={(r) => (
           <LessonView title={title} target={tokens.join(" ")} reference={null} showReference={false} progress={0}
@@ -138,8 +140,9 @@ function Player({ lessonId }: { lessonId: string }) {
   // Conversation scene: their line, then your reply as signs, turn by turn, on one camera.
   if (item.kind === "other" && item.step.kind === "scene") {
     const turns = item.step.turns.map((t) => ({ them: { gloss: t.them.tokens.join(" "), english: t.them.english }, you: t.you }));
+    const turnNow = Math.min(turn, turns.length - 1);
     return (
-      <TokenRunner tokens={turns[turn].you.tokens} leftHanded={profile.leftHanded}
+      <TokenRunner tokens={turns[turnNow].you.tokens} leftHanded={profile.leftHanded}
         onDone={() => {
           if (turn + 1 < turns.length) return setTurn(turn + 1);
           progress.current = recordAttempt(progress.current, `scene:${lesson.id}`, true);
@@ -147,8 +150,8 @@ function Player({ lessonId }: { lessonId: string }) {
           setTurn(0);
           next();
         }}
-        onEmpty={() => { if (turn + 1 < turns.length) setTurn(turn + 1); else { setTurn(0); next(); } }}
-        render={(r) => <SceneView title={lesson.title} turns={turns} turnIndex={turn} tokenIndex={r.token} camera={r.camera} prompt={r.prompt} onSelfCheck={r.selfCheck} onSkip={skip} />} />
+        onEmpty={() => { skipped.current = true; if (turnNow + 1 < turns.length) setTurn(turnNow + 1); else { setTurn(0); next(); } }}
+        render={(r) => <SceneView title={lesson.title} turns={turns} turnIndex={turnNow} tokenIndex={r.token} camera={r.camera} prompt={r.prompt} onSelfCheck={r.selfCheck} onSkip={skip} />} />
     );
   }
   // ONE camera at a time: LetterItem stays mounted across consecutive letter items (no key), so the camera never restarts.
@@ -334,6 +337,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
 /** "Which letter is this?": a recorded 3D hand and answer choices. No camera, and it does not count toward mastery (that needs signing). */
 function IdentifyItem({ item, leftHanded, stepLabel, onNext, onMiss }: { item: Extract<Item, { kind: "identify" }>; leftHanded: boolean; stepLabel: string; onNext: () => void; onMiss: () => void }) {
   const templates = useMemo(() => loadTemplates(), []);
+  const pose = useMemo(() => meanPose3D(item.letter, templates, leftHanded), [item.letter, templates, leftHanded]);
   const [picked, setPicked] = useState<string[]>([]);
   const done = picked.includes(item.letter);
   const last = picked[picked.length - 1];
@@ -343,12 +347,22 @@ function IdentifyItem({ item, leftHanded, stepLabel, onNext, onMiss }: { item: E
     if (l !== item.letter && picked.length === 0) onMiss();
     setPicked([...picked, l]);
   }
+  // A quiz needs a hand to look at. If this letter has no recorded 3D pose (older templates), say so and move on instead of
+  // showing a blank hand the learner can only skip. It is not scored either way.
+  if (!pose)
+    return (
+      <div className="page">
+        <p className="muted">{stepLabel}</p>
+        <p role="status">There is no 3D hand for {item.letter} yet, so this question is skipped. It does not count for or against you.</p>
+        <p><button type="button" className="cta" onClick={onNext}>Continue</button></p>
+      </div>
+    );
   return (
     <div className="page">
       <p className="muted">{stepLabel}</p>
       <h1>Which letter is this?</h1>
       <Suspense fallback={<div className="hand3d empty">Loading 3D hand…</div>}>
-        <HandModel3D pose={meanPose3D(item.letter, templates, leftHanded)} letter="?" />
+        <HandModel3D pose={pose} letter="?" />
       </Suspense>
       <div className="choices big-choices" role="group" aria-label="Answer choices">
         {item.options.map((l) => (
