@@ -689,6 +689,8 @@ html { accent-color: var(--brand); scrollbar-color: #b9d6ea transparent; }
 .auth-pw .halo-field { width: 100%; margin-bottom: 0; }
 .auth-toggle { padding: 6px 12px; font-size: 14px; }
 .auth-switch { margin: 0; text-align: center; }
+/* Onboarding's save step has its own "Skip for now" button; AuthCard's skip link would duplicate it. */
+.onboard-save .auth-wrap > .auth-skip { display: none; }
 .account-chip { position: relative; display: inline-block; color: var(--brand-text); font-weight: 700; }
 .account-chip > button { max-width: 180px; padding: 6px 12px; font-size: 14px; }
 .account-email { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

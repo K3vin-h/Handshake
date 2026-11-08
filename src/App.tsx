@@ -16,6 +16,12 @@ import { loadProgress } from "./lib/progress";
 import { ReduceMotionToggle } from "./components/motion/MotionProvider";
 import { PageTransition } from "./components/motion/PageTransition";
 import { StreakXpChip } from "./components/StreakXpChip";
+import { AccountChip } from "./components/AccountChip";
+import { SignUp } from "./screens/SignUp";
+import { Login } from "./screens/Login";
+import { ForgotPassword } from "./screens/ForgotPassword";
+import { ResetPassword } from "./screens/ResetPassword";
+import { Settings } from "./screens/Settings";
 
 // Hash router: "#/lesson/1.1" → name "lesson", param "1.1".
 // Dev tools (record, curriculum, demo) work without a profile; everything else needs onboarding first.
@@ -26,12 +32,18 @@ function screen(hash: string): ReactElement {
   if (name === "demo") return <LessonDemo />;
   if (name === "lesson-preview") return <LessonPreview />;
   if (name === "components") return <ComponentGallery />;
+  // Account screens work without a profile: a returning user logs in before onboarding.
+  if (name === "signup") return <SignUp />;
+  if (name === "login") return <Login />;
+  if (name === "forgot") return <ForgotPassword />;
+  if (name === "reset") return <ResetPassword />;
   if (name === "welcome" || !loadProfile()) return <Onboarding />;
   if (name === "lesson") return <LessonPlayer key={param} lessonId={param} />;
   if (name === "complete") return <Complete lessonId={param} />;
   if (name === "progress") return <ProgressScreen />;
   if (name === "stats") return <StatsPage />;
   if (name === "camera-demo") return <CameraDemo />;
+  if (name === "settings") return <Settings />;
   return <Home />;
 }
 
@@ -48,6 +60,11 @@ const TITLES: Record<string, string> = {
   curriculum: "Curriculum",
   components: "Components",
   "lesson-preview": "Lesson preview",
+  signup: "Create your profile",
+  login: "Log in",
+  forgot: "Forgot password",
+  reset: "Reset password",
+  settings: "Settings",
 };
 
 // Player-facing nav is deliberately small: Home (the main page that leads everywhere) and Progress.
@@ -100,6 +117,7 @@ export default function App() {
             <StreakXpChip streakDays={loadProgress().streakDays} xp={loadProgress().xp} />
           </span>
         )}
+        <AccountChip />
         <ReduceMotionToggle />
         {import.meta.env.DEV && (
           <details className="dev-menu">
