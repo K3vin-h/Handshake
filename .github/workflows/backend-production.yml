@@ -1,0 +1,78 @@
+name: Backend production
+
+on:
+  push:
+    branches: [production]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: handshake-backend-production
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install test dependencies
+        run: npm ci --prefix backend --ignore-scripts
+      - name: Test backend and deployment behavior
+        run: npm test --prefix backend
+      - name: Check deployment script syntax
+        run: bash -n backend/deploy/deploy-release.sh backend/deploy/ssh-command.sh
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/production' && github.repository == 'rhgiang/Handshake'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Deploy exact tested commit and verify public HTTPS
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+          SSH_PRIVATE_KEY: ${{ secrets.VULTR_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.VULTR_SSH_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ -n "$SSH_PRIVATE_KEY" && -n "$SSH_KNOWN_HOSTS" ]]
+          umask 077
+          ssh_dir=$(mktemp -d "$RUNNER_TEMP/handshake-ssh.XXXXXXXX")
+          trap 'rm -rf -- "$ssh_dir"' EXIT
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$ssh_dir/key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$ssh_dir/known_hosts"
+          ssh-keygen -y -P '' -f "$ssh_dir/key" > /dev/null
+          remote() {
+            ssh -F /dev/null -T -p 22 -i "$ssh_dir/key" \
+              -o BatchMode=yes -o IdentitiesOnly=yes -o ClearAllForwardings=yes \
+              -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile="$ssh_dir/known_hosts" \
+              -o GlobalKnownHostsFile=/dev/null -o ConnectTimeout=10 \
+              -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+              handshake-ci@45.63.35.253 "$1 $RELEASE_SHA"
+          }
+          remote deploy
+          if ! curl --silent --show-error --fail --connect-timeout 5 --max-time 15 \
+              --retry 3 --retry-delay 2 --retry-connrefused \
+              https://45-63-35-253.sslip.io/api/features | \
+              python3 -c 'import json,sys; j=json.load(sys.stdin); sys.exit(0 if all(type(j.get(k)) is bool for k in ("stats","notify","agent")) else 1)'; then
+            echo '::error::Public HTTPS verification failed; attempting guarded rollback.'
+            remote rollback || echo '::error::Rollback failed or active SHA changed; administrator must inspect the server.'
+            exit 1
+          fi
+          printf 'Deployed `%s`; service and HTTPS checks passed.\n' "$RELEASE_SHA" >> "$GITHUB_STEP_SUMMARY"
+      - name: Report failure
+        if: failure()
+        run: echo '::error::Backend deployment failed. Inspect deployment output and server state; do not assume rollback succeeded.'
