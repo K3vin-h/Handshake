@@ -608,7 +608,7 @@ nav.shell-nav .shell-list a[aria-current="page"] { color: var(--brand-text); bac
 .hand3d-col { height: clamp(150px, calc(100vh - 560px), 280px); display: grid; grid-template-rows: 1fr 1fr; gap: var(--space-2); }
 .hand3d-small { margin: 0; display: grid; grid-template-rows: 1fr auto; min-height: 0; text-align: center; font-size: 13px; color: var(--on-panel-light); }
 .hand3d-small figcaption { padding: 2px 0 var(--space-1); }
-.hand3d-bar { position: relative; display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); font-size: 13px; color: var(--on-panel-light); }
+.hand3d-bar { position: relative; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); font-size: 13px; color: var(--on-panel-light); }
 .check { display: flex; gap: 6px; align-items: center; font-size: 14px; margin-top: var(--space-2); }
 
 /* Confetti (created by celebrate(); never created under reduced motion) */
@@ -660,6 +660,7 @@ nav.shell-nav .shell-list a[aria-current="page"] { color: var(--brand-text); bac
 .grid:not([data-slot]) { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .hand3d-bar button { padding: 4px 10px; min-height: 32px; font-size: 13px; }
+.hand3d-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
 /* Conversation scene (Ryan): chat bubbles + a row of sign chips. State is always written in text, not colour alone. */
 .scene-chat { list-style: none; margin: var(--space-3) 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
