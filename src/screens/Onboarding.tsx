@@ -7,6 +7,7 @@ import { coverage } from "../components/LiveCoverage";
 import { buildCurriculum, type Personalization } from "../lib/curriculum";
 import { DEMO_PROFILE, loadProfile, refreshPracticeWords, saveProfile } from "../lib/profile";
 import { AuthCard } from "../components/AuthCard";
+import { cleanName } from "../lib/nameRule";
 import { getAuthConfig, getUser, subscribe, type User } from "../lib/auth";
 
 // Onboarding: four short steps. Everything typed here stays in this browser (saveProfile: localStorage in
@@ -141,7 +142,7 @@ export function Onboarding() {
     // Build my path: save locally (try/catch + memory fallback inside saveProfile), then refresh practice words in the
     // background. The local path already exists, so a slow, failing or mock server can never block this.
     // Saved BEFORE the sign-up step, so the sync after sign-up has a profile to push.
-    saveProfile({ userName: foldName(you).trim(), theirName: foldName(them).trim(), relationship, leftHanded });
+    saveProfile({ userName: cleanName(foldName(you)), theirName: cleanName(foldName(them)), relationship, leftHanded });
     void refreshPracticeWords().catch(() => {});
     if (step < TOTAL) return go(step + 1);
     goHome();
@@ -169,7 +170,7 @@ export function Onboarding() {
           <div className={stepClass}>
             <h1 ref={heading} tabIndex={-1}>Save your progress</h1>
             <p className="muted">Create an account to keep your path and progress on any device. You can skip this.</p>
-            <AuthCard mode="signup" onDone={goHome} />
+            <AuthCard mode="signup" headingLevel={2} onDone={goHome} />
           </div>
           <div className="step-actions">
             <button type="button" className="secondary" onClick={() => go(PATH_STEPS)}>Back</button>
