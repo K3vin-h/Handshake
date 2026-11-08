@@ -6,7 +6,7 @@ import { SIGNS, PACK_WORDS } from "../cv/signs";
 //   "demo"    → must work on stage (Unit 1, the easy letter groups, their name, HELLO/intro, Scene 1)
 //   "stretch" → same engine, only built/tested if time allows
 //
-// Unit 1  Introduce yourself      the letters of YOUR name → spell it → checkpoint
+// Unit 1  Your name                the letters of YOUR name → spell it → checkpoint
 // Unit 2  The alphabet            handshape families, easiest first; same ids for everyone, their name after the demo families
 // Unit 3  Greetings + sentences   whole signs (assisted: handshape + location + movement), ASL word order
 // Unit 4  Conversation            scripted scenes; Gemini fills small talk from the word pack
@@ -56,7 +56,7 @@ export type Personalization = {
 
 const MOVING = ["J", "Z"];
 
-/** Static letter families, easiest first. Same for every learner: Unit 1 letters are simply practised again. */
+/** Static letter families, easiest first. Same for every learner: Unit 1 letters are simply practiced again. */
 const FAMILIES: { id: string; title: string; letters: string[]; scope: "demo" | "stretch" }[] = [
   { id: "flat", title: "Flat and curved", letters: ["B", "C", "O"], scope: "demo" },
   { id: "point", title: "Point and pinky", letters: ["D", "I", "L", "Y"], scope: "demo" },
@@ -106,7 +106,7 @@ export function buildCurriculum(p: Personalization): Unit[] {
   const myLetters = unique([...me]).filter((l) => !MOVING.includes(l));
   const unit1: Unit = {
     id: "u1",
-    title: "Introduce yourself",
+    title: "Your name",
     goal: `Spell ${me} without help`,
     lessons: [
       { id: "1.1", title: "Your letters", summary: myLetters.join(" "), scope: "demo", grading: "auto", xp: 10 * myLetters.length, teaches: myLetters, steps: letterSteps(myLetters, known) },
@@ -164,16 +164,16 @@ export function buildCurriculum(p: Personalization): Unit[] {
   });
   const unit3: Unit = {
     id: "u3",
-    title: "Greetings and basic sentences",
-    goal: "Introduce yourself in signs",
+    title: "Introduce yourself",
+    goal: "Sign hello, nice to meet you, my name is…",
     lessons: [
-      signLesson("3.1", "Hello and goodbye", ["HELLO", "BYE"], "demo"),
-      signLesson("3.2", "Introductions", ["MY", "NAME"], "demo", [{ kind: "sentence", tokens: ["MY", "NAME", `fs:${me}`], english: `My name is ${p.userName || me}.` }]),
+      // Demo path: learn each sign of the introduction, then say it all in order: "Hello. Nice to meet you. My name is <you>."
+      signLesson("3.1", "The signs", ["HELLO", "NICE", "MEET", "YOU", "MY", "NAME"], "demo"),
+      { id: "3.2", title: "Introduce yourself", summary: `HELLO · NICE MEET YOU · MY NAME ${me}`, scope: "demo", grading: "assisted", xp: 60, steps: [{ kind: "sentence", tokens: ["HELLO", "NICE", "MEET", "YOU", "MY", "NAME", `fs:${me}`], english: `Hello, nice to meet you. My name is ${p.userName || me}.` }] },
       signLesson("3.3", "Being polite", ["PLEASE", "THANK-YOU", "SORRY"], "stretch"),
       signLesson("3.4", "Asking questions", ["YOU", "YOUR", "HOW", "WHAT"], "stretch", [{ kind: "sentence", tokens: ["YOUR", "NAME", "WHAT"], english: "What's your name? (eyebrows down)" }]),
       signLesson("3.5", "Answering", ["YES", "NO", "GOOD", "FINE"], "stretch"),
       signLesson("3.6", p.relationship ? `Words for your ${p.relationship}` : "Everyday words", pack, "stretch"),
-      { id: "3.7", title: "Checkpoint: a full introduction", summary: `HELLO, MY NAME ${me}`, scope: "stretch", grading: "assisted", xp: 50, steps: [{ kind: "sentence", tokens: ["HELLO", "MY", "NAME", `fs:${me}`], english: `Hello, my name is ${p.userName || me}.` }] },
     ],
   };
 

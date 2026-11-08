@@ -129,7 +129,7 @@ function DeckCard(props: {
         </span>
       </div>
       <button type="button" className="lp-card-open" onClick={onOpen} aria-haspopup="dialog">
-        {unit.state === "locked" ? "Preview lessons" : unit.state === "done" ? "Practise again" : "Open lessons"}
+        {unit.state === "locked" ? "Preview lessons" : unit.state === "done" ? "Practice again" : "Open lessons"}
         <span className="sr-only"> for level {unit.number}</span>
       </button>
     </motion.li>

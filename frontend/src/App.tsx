@@ -1,6 +1,8 @@
 import { useEffect, useReducer, useRef, useState, type ReactElement } from "react";
 import { LessonDemo } from "./screens/LessonDemo";
 import { RecordPage } from "./screens/RecordPage";
+import { RecordSignsPage } from "./screens/RecordSignsPage";
+import { SignDiagramsPage } from "./screens/SignDiagramsPage";
 import { CurriculumPreview } from "./screens/CurriculumPreview";
 import { ComponentGallery } from "./screens/ComponentGallery";
 import { StatsPage } from "./screens/StatsPage";
@@ -10,6 +12,7 @@ import { PathPage } from "./screens/Path";
 import { Onboarding } from "./screens/Onboarding";
 import { LessonPlayer } from "./screens/LessonPlayer";
 import { Complete } from "./screens/Complete";
+import { Alphabet } from "./screens/Alphabet";
 import { ProgressScreen } from "./screens/Progress";
 import { LessonPreview } from "./screens/LessonPreview";
 import { Settings } from "./screens/Settings";
@@ -29,6 +32,8 @@ import { ResetPassword } from "./screens/ResetPassword";
 function screen(hash: string): ReactElement {
   const [, name = "", param = ""] = hash.split("/");
   if (name === "record") return <RecordPage />;
+  if (name === "record-signs") return <RecordSignsPage />;
+  if (name === "sign-diagrams") return <SignDiagramsPage />;
   if (name === "curriculum") return <CurriculumPreview />;
   if (name === "demo") return <LessonDemo />;
   if (name === "lesson-preview") return <LessonPreview />;
@@ -41,6 +46,7 @@ function screen(hash: string): ReactElement {
   if (name === "welcome" || !loadProfile()) return <Onboarding />;
   if (name === "lesson") return <LessonPlayer key={param} lessonId={param} />;
   if (name === "complete") return <Complete lessonId={param} />;
+  if (name === "alphabet") return <Alphabet lessonId={param || undefined} />;
   if (name === "progress") return <ProgressScreen />;
   if (name === "settings") return <Settings />;
   if (name === "path") return <PathPage />;
@@ -55,12 +61,15 @@ const TITLES: Record<string, string> = {
   welcome: "Welcome",
   lesson: "Lesson",
   complete: "Lesson complete",
+  alphabet: "Your alphabet",
   progress: "Progress",
   settings: "Settings",
   stats: "Stats",
   "camera-demo": "Camera demo",
   demo: "Demo",
   record: "Record",
+  "record-signs": "Record signs",
+  "sign-diagrams": "Sign diagrams",
   curriculum: "Curriculum",
   components: "Components",
   "lesson-preview": "Lesson preview",
@@ -76,15 +85,23 @@ const NAV: [string, string][] = [
   ["#/", "Home"],
   ["#/path", "Levels"],
   ["#/progress", "Progress"],
-  ["#/settings", "Settings"],
 ];
+/** Settings sits at the right end of the bar, by the Dev tools menu. */
+const SETTINGS: [string, string] = ["#/settings", "Settings"];
 const DEV_NAV: [string, string][] = [
   ["#/demo", "Demo"],
   ["#/record", "Record"],
+  ["#/record-signs", "Record signs"],
+  ["#/sign-diagrams", "Sign diagrams"],
   ["#/curriculum", "Curriculum"],
   ["#/lesson-preview", "Lesson preview"],
   ["#/components", "Components"],
 ];
+
+/** Pages that belong to a nav item. "Levels" also covers the lesson, completion and alphabet pages that you reach from it. */
+const LEVEL_PAGES = ["path", "lesson", "complete", "alphabet"];
+export const navActive = (href: string, hash: string) =>
+  href === "#/path" ? LEVEL_PAGES.includes(hash.split("/")[1]?.split("?")[0] ?? "") : hash === href || (href !== "#/" && hash.startsWith(`${href}/`));
 
 export default function App() {
   const [hash, setHash] = useState(location.hash || "#/");
@@ -93,7 +110,9 @@ export default function App() {
     // rerender: Onboarding saves the profile while already at "#/", so the hash is unchanged but screen() must run again.
     const on = () => { setHash(location.hash || "#/"); rerender(); };
     addEventListener("hashchange", on);
-    return () => removeEventListener("hashchange", on);
+    // Progress and profile saves announce themselves: re-read the top bar's streak and XP then, not only on navigation.
+    addEventListener("handshake:state", rerender);
+    return () => { removeEventListener("hashchange", on); removeEventListener("handshake:state", rerender); };
   }, []);
   // Route change: update the tab title and move focus to <main> so keyboard and screen-reader users land on the new page.
   const first = useRef(true);
@@ -112,32 +131,40 @@ export default function App() {
       <a className="skip-link" href="#main" onClick={(e) => { e.preventDefault(); document.getElementById("main")?.focus(); }}>
         Skip to content
       </a>
-      <nav aria-label="Main">
-        <a className="brand" href="#/">Handshake</a>
-        {NAV.map(([href, label]) => (
-          <a key={href} href={href} aria-current={hash === href || (href !== "#/" && hash.startsWith(`${href}/`)) ? "page" : undefined}>
-            {label}
-          </a>
-        ))}
-        {loadProfile() && (
-          <span className="nav-chips">
-            <StreakXpChip streakDays={loadProgress().streakDays} xp={loadProgress().xp} />
-          </span>
-        )}
-        <AccountChip />
-        <ReduceMotionToggle />
-        {import.meta.env.DEV && (
-          <details className="dev-menu">
-            <summary>Dev tools</summary>
-            <div className="dev-menu-list">
-              {DEV_NAV.map(([href, label]) => (
-                <a key={href} href={href} aria-current={hash === href ? "page" : undefined}>
-                  {label}
-                </a>
-              ))}
-            </div>
-          </details>
-        )}
+      <nav aria-label="Main" className="top-nav">
+        {/* Three zones with equal side columns, so the streak and XP chip is always exactly in the middle. */}
+        <div className="nav-left">
+          <a className="brand" href="#/">Handshake</a>
+          {NAV.map(([href, label]) => (
+            <a key={href} href={href} aria-current={navActive(href, hash) ? "page" : undefined}>
+              {label}
+            </a>
+          ))}
+        </div>
+        <div className="nav-center">
+          {loadProfile() && (
+            <span className="nav-chips">
+              <StreakXpChip streakDays={loadProgress().streakDays} xp={loadProgress().xp} />
+            </span>
+          )}
+        </div>
+        <div className="nav-right">
+          <AccountChip />
+          <ReduceMotionToggle />
+          {import.meta.env.DEV && (
+            <details className="dev-menu">
+              <summary>Dev tools</summary>
+              <div className="dev-menu-list">
+                {DEV_NAV.map(([href, label]) => (
+                  <a key={href} href={href} aria-current={hash === href ? "page" : undefined}>
+                    {label}
+                  </a>
+                ))}
+              </div>
+            </details>
+          )}
+          <a href={SETTINGS[0]} aria-current={navActive(SETTINGS[0], hash) ? "page" : undefined}>{SETTINGS[1]}</a>
+        </div>
       </nav>
       <main id="main" tabIndex={-1}>
         <PageTransition key={hash}>{screen(hash)}</PageTransition>

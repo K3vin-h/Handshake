@@ -11,7 +11,7 @@ export const yesterdayOf = (now = Date.now()) => {
   return dayKey(d);
 };
 
-/** Streak after practising at `now`: same day keeps it, the day after adds one, any gap starts again at 1. */
+/** Streak after practicing at `now`: same day keeps it, the day after adds one, any gap starts again at 1. */
 export function touchStreak(streakDays: number, lastActiveDay: string | null, now = Date.now()) {
   const t = today(now);
   if (lastActiveDay === t) return { streakDays, lastActiveDay };

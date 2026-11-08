@@ -1,4 +1,5 @@
 import type { HandFrame, Prediction } from "./types";
+import type { FaceAnchors } from "./faceTracker";
 
 // Whole-sign checking for Units 3–4 ("assisted" grading).
 // A sign = HANDSHAPE (recognized like a letter) + LOCATION (zone on the body) + MOVEMENT
@@ -23,6 +24,8 @@ export type SignDef = {
   howTo: string;
   /** "assisted" = auto-checked as above; "self" = two-handed / needs the face: learner confirms. */
   grading: "assisted" | "self";
+  /** Hands the sign needs (default 1). Two-handed signs are only matched against recorded takes (#/record-signs). */
+  hands?: 1 | 2;
   /** Topic packs Gemini can pick from during onboarding. */
   packs?: ("coworker" | "friend" | "family" | "classmate" | "partner")[];
   verified?: boolean;
@@ -32,10 +35,10 @@ export const SIGNS: Record<string, SignDef> = {
   HELLO: { id: "HELLO", english: "hello", handshape: "B", zone: "forehead", movement: "away", alsoMovement: ["side"], grading: "assisted", howTo: "Flat hand at the side of your forehead, then move it outward, like a small salute." },
   BYE: { id: "BYE", english: "bye", handshape: "5", zone: "side", movement: "side", grading: "assisted", howTo: "Open hand, palm out, and wave." },
   MY: { id: "MY", english: "my", handshape: "B", zone: "chest", movement: "none", grading: "assisted", howTo: "Flat palm placed on your chest." },
-  NAME: { id: "NAME", english: "name", handshape: "H", zone: "chest", movement: "tap", grading: "assisted", howTo: "Both hands in the H shape; tap the top fingers on the bottom fingers twice." },
+  NAME: { id: "NAME", hands: 2, english: "name", handshape: "H", zone: "chest", movement: "tap", grading: "assisted", howTo: "Both hands in the H shape; tap the top fingers on the bottom fingers twice." },
   YOU: { id: "YOU", english: "you", handshape: "D", zone: "chest", movement: "away", grading: "assisted", howTo: "Point your index finger at the person you're talking to." },
-  NICE: { id: "NICE", english: "nice", handshape: "B", zone: "chest", movement: "side", grading: "self", howTo: "Slide one flat palm across the other flat palm." },
-  MEET: { id: "MEET", english: "meet", handshape: "D", zone: "chest", movement: "side", grading: "self", howTo: "Two index fingers pointing up come together in front of you." },
+  NICE: { id: "NICE", hands: 2, english: "nice", handshape: "B", zone: "chest", movement: "side", grading: "self", howTo: "Slide one flat palm across the other flat palm." },
+  MEET: { id: "MEET", hands: 2, english: "meet", handshape: "D", zone: "chest", movement: "side", grading: "self", howTo: "Two index fingers pointing up come together in front of you." },
   PLEASE: { id: "PLEASE", english: "please", handshape: "B", zone: "chest", movement: "circle", grading: "assisted", howTo: "Flat hand on your chest, rub in a circle." },
   "THANK-YOU": { id: "THANK-YOU", english: "thank you", handshape: "B", zone: "chin", movement: "away", grading: "assisted", howTo: "Fingertips of a flat hand start at your chin and move forward and down." },
   SORRY: { id: "SORRY", english: "sorry", handshape: "A", zone: "chest", movement: "circle", grading: "assisted", howTo: "A-hand (fist, thumb at the side) on your chest, rub in a circle." },
@@ -60,9 +63,9 @@ export const PACK_WORDS = (pack: string) => Object.values(SIGNS).filter((s) => s
 
 /** Vertical zones as a fraction of frame height (0 = top). Tune at the venue: depends on camera framing. */
 export const ZONES: Record<Exclude<Zone, "side">, [number, number]> = {
-  forehead: [0, 0.32],
-  chin: [0.32, 0.48],
-  chest: [0.48, 0.9],
+  forehead: [0, 0.38],
+  chin: [0.38, 0.5],
+  chest: [0.5, 0.9],
 };
 
 type Sample = { t: number; x: number; y: number; size: number };
@@ -75,9 +78,20 @@ function handCenter(hand: HandFrame) {
   return { x, y, size };
 }
 
-export function zoneOf(hand: HandFrame): Zone {
+/**
+ * Where the hand is. With a detected face the zones are measured from the learner's own head (H = forehead-to-chin):
+ * forehead = above half-way down the face, chin = down to 0.3 H below the chin, chest = below that.
+ * Without a face (model not loaded, head out of frame) it falls back to fixed fractions of the frame height.
+ */
+export function zoneOf(hand: HandFrame, face?: FaceAnchors | null): Zone {
   const { x, y } = handCenter(hand);
   if (x < 0.15 || x > 0.85) return "side";
+  if (face && face.chin > face.top) {
+    const h = face.chin - face.top;
+    if (y < face.top + 0.5 * h) return "forehead";
+    if (y < face.chin + 0.3 * h) return "chin";
+    return "chest";
+  }
   if (y < ZONES.forehead[1]) return "forehead";
   if (y < ZONES.chin[1]) return "chin";
   return "chest";
@@ -136,6 +150,7 @@ export class SignChecker {
   private placedSince = 0;
   private samples: Sample[] = [];
   private moveStart = 0;
+  private lastGood = 0;
 
   sign: SignDef;
   constructor(sign: SignDef) {
@@ -145,26 +160,37 @@ export class SignChecker {
   reset() {
     this.stage = "handshape";
     this.samples = [];
+    this.placedSince = 0;
+    this.lastGood = 0;
   }
 
-  update(hand: HandFrame | null, pred: Prediction, now: number): SignCheck {
+  update(hand: HandFrame | null, pred: Prediction, now: number, face?: FaceAnchors | null): SignCheck {
     const s = this.sign;
     if (this.stage === "done") return { stage: "done", message: `${s.english}: nice!` };
     if (!hand) return { stage: this.stage, message: "Show your hand to the camera" };
 
+    const shapeName = s.handshape === "5" ? "open hand" : `${s.handshape} hand`;
     const shapeOk = pred.letter === s.handshape;
-    const zone = zoneOf(hand);
+    const zone = zoneOf(hand, face);
+    // "side" = out in the open, not touching your body (a wave): it holds wherever the hand is in front of you.
+    const zoneOk = s.zone === "side" || zone === s.zone;
 
     if (this.stage !== "movement") {
+      // One flickering frame must not throw away a pose that was just right: keep going for a short grace period.
+      if (shapeOk && zoneOk) this.lastGood = now;
+      else if (this.placedSince && now - this.lastGood < GRACE_MS) return { stage: "position", message: "Hold it there…" };
       if (!shapeOk) {
         this.stage = "handshape";
-        return { stage: "handshape", message: `Make the ${s.handshape === "5" ? "open hand" : s.handshape} handshape` };
+        this.placedSince = 0;
+        const seen = pred.letter ? `I see ${pred.letter === "5" ? "an open hand" : `a ${pred.letter}`}. ` : "I can't tell the shape yet. ";
+        return { stage: "handshape", message: `${seen}Make the ${shapeName}: ${shapeTip(s.handshape)}` };
       }
-      if (zone !== s.zone) {
+      if (!zoneOk) {
         this.stage = "position";
-        this.placedSince = now;
-        return { stage: "position", message: `Good handshape. Now move your hand to your ${s.zone}` };
+        this.placedSince = 0;
+        return { stage: "position", message: `Good ${shapeName}. Your hand is ${where(zone)}; bring it to ${s.zone === "side" ? "the side, out in the open" : `your ${s.zone}`}` };
       }
+      if (!this.placedSince) this.placedSince = now;
       if (now - this.placedSince < 300) return { stage: "position", message: "Hold it there…" };
       if (s.movement === "none") {
         this.stage = "done";
@@ -182,13 +208,21 @@ export class SignChecker {
       this.stage = "done";
       return { stage: "done", message: `${s.english}: nice!` };
     }
-    if (now - this.moveStart > 1500) {
-      this.stage = "handshape"; // start over, the coach can explain what happened
-      return { stage: "handshape", message: `Try the movement again: ${s.howTo}` };
+    if (now - this.moveStart > MOVE_MS) {
+      this.stage = "position"; // the pose was right: ask for the movement again, not the whole sign
+      this.placedSince = 0;
+      this.lastGood = 0;
+      return { stage: "position", message: `Shape and place are good. Try the movement again: ${s.howTo}` };
     }
-    return { stage: "movement", message: movementHint(s.movement) };
+    return { stage: "movement", message: `Shape and place are good. ${movementHint(s.movement)}` };
   }
 }
+
+const GRACE_MS = 500;
+const MOVE_MS = 2500;
+const where = (z: Zone) => ({ forehead: "up at your forehead", chin: "at chin height", chest: "low, at chest height", side: "off to the side" })[z];
+export const shapeTip = (h: string) =>
+  h === "5" ? "all five fingers spread, palm facing out." : h === "B" ? "fingers together and straight, thumb tucked against the palm." : "match the 3D hand.";
 
 function movementHint(m: Movement) {
   return {

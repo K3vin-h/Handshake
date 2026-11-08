@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { ConvexGeometry } from "three/examples/jsm/geometries/ConvexGeometry.js";
 import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { Vec3 } from "../cv/pose3d";
-import { centrePose, retargetPose } from "../cv/handRetarget";
+import { centrePose, closeFingers, retargetPose, straightenFingers } from "../cv/handRetarget";
 import { defaultView, palmNormal } from "../cv/handView";
 import { useReduceMotion } from "./motion/MotionProvider";
 
@@ -264,7 +264,7 @@ export function HandModel3D({ pose: poseProp, letter, height }: { pose: Vec3[] |
   // hand's geometry that often froze the camera, so keep the same array until the numbers actually change.
   const poseKey = poseProp ? poseProp.map((p) => p.join(",")).join(";") : "";
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const pose = useMemo(() => (poseProp ? centrePose(retargetPose(poseProp)) : null), [poseKey]);
+  const pose = useMemo(() => (poseProp ? centrePose(closeFingers(straightenFingers(retargetPose(poseProp), letter), letter)) : null), [poseKey, letter]);
   const home = useMemo(() => (pose ? defaultView(letter, pose) : { x: 0, y: 0 }), [pose, letter]);
 
   const wake = useRef<(() => void) | null>(null);

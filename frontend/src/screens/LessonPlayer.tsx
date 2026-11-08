@@ -10,6 +10,7 @@ import { SEND_SNAPSHOT, getCoachTip, getHowTo } from "../lib/api";
 import { LessonView } from "../components/LessonView";
 import { SceneView } from "../components/SceneView";
 import { Camera } from "../components/Camera";
+import { AnimatedProgress } from "../components/motion/AnimatedProgress";
 import { createCoachQueue } from "../lib/coachQueue";
 import type { FingerFeedback } from "../cv/types";
 import { loadTemplates } from "../cv/classifier";
@@ -82,6 +83,33 @@ export function expand(steps: Step[], _progress: Progress, names: string[] = [])
 export function LessonPlayer({ lessonId }: { lessonId: string }) {
   return <Player key={lessonId} lessonId={lessonId} />;
 }
+/** The whole phrase in order, with the part you are on marked in words (not colour alone). */
+function PhraseTracker({ tokens, current }: { tokens: string[]; current: number }) {
+  return (
+    <ol className="row" aria-label="The phrase, in order" style={{ flexWrap: "wrap", gap: "0.4rem", listStyle: "none", padding: 0 }}>
+      {tokens.map((t, k) => {
+        const label = t.startsWith("fs:") ? t.slice(3) + " (spell)" : (SIGNS[t]?.english ?? t);
+        const state = k < current ? "done" : k === current ? "now" : "next";
+        return (
+          <li key={k} className={state === "now" ? "chip ok" : "chip"} aria-current={state === "now" ? "step" : undefined}>
+            {state === "done" ? "✓ " : state === "now" ? "▶ " : ""}{label}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** "Part 3 of 11: MEET" with a bar, for a phrase made of several parts. Words as well as the bar, so it never relies on the bar alone. */
+function PartProgress({ index, total, name }: { index: number; total: number; name: string }) {
+  return (
+    <div role="group" aria-label="Progress through the phrase" style={{ margin: "0 0 0.75rem" }}>
+      <p style={{ margin: "0 0 0.35rem", fontWeight: 700 }}>Part {Math.min(index + 1, total)} of {total}: {name}{index > 0 ? ` · ${index} done` : ""}</p>
+      <AnimatedProgress value={index} max={total} label={`Phrase progress: ${index} of ${total} parts done`} />
+    </div>
+  );
+}
+
 function Player({ lessonId }: { lessonId: string }) {
   const profile = requireProfile();
   const units = useMemo(() => buildCurriculum(profile).filter((u) => ["u1", "u2", "u3", "u4"].includes(u.id)), []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -161,7 +189,7 @@ function Player({ lessonId }: { lessonId: string }) {
       </div>
     );
   const item = items[i];
-  if (!item) return <div className="page"><p>Nothing to practise here yet.</p><button onClick={next}>Continue</button></div>;
+  if (!item) return <div className="page"><p>Nothing to practice here yet.</p><button onClick={next}>Continue</button></div>;
   const stepLabel = `Step ${i + 1} of ${items.length}`;
 
   // Whole signs and sentences: one TokenRunner walks the parts (handshape → place → movement) on one camera.
@@ -173,9 +201,11 @@ function Player({ lessonId }: { lessonId: string }) {
       <TokenRunner tokens={tokens} leftHanded={profile.leftHanded} onEmpty={skip}
         onDone={() => { progress.current = recordAttempt(progress.current, tokens.join(" "), true); celebrate(); next(); }}
         render={(r) => (
-          <LessonView title={title} target={tokens.join(" ")} reference={r.guide} showReference={!!r.guide} progress={0}
-            camera={r.camera} status={r.prompt} landmarkTip="" coachTip="" coachCached={false} sideBySide={false}
-            stepLabel={`${stepLabel} · part ${r.index + 1} of ${r.units.length}`} lessonProgress={i / items.length}
+          <LessonView title={title} target={(() => { const u = r.units[r.index]; return u ? (u.kind === "sign" ? u.id : u.letter) : tokens.join(" "); })()}
+            reference={<>{s.kind === "sentence" && <PhraseTracker tokens={tokens} current={r.token} />}{r.guide}</>} showReference={!!r.guide} progress={0}
+            camera={<>{r.units.length > 1 && <PartProgress index={r.index} total={r.units.length} name={(() => { const u = r.units[r.index]; return u.kind === "sign" ? (SIGNS[u.id]?.english ?? u.id) : `spell ${u.letter}`; })()} />}{r.camera}</>}
+            status={r.prompt} landmarkTip="" coachTip="" coachCached={false} sideBySide={false}
+            stepLabel={`${stepLabel} · part ${r.index + 1} of ${r.units.length}`} lessonProgress={(i + r.index / r.units.length) / items.length}
             actionLabel="Skip" onAction={skip} onSelfCheck={r.selfCheck} />
         )} />
     );
@@ -374,7 +404,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
   return (
     <LessonView {...common} title={item.word ? `Spell ${item.word.letters.join("")}` : `Sign ${item.letter}`} word={item.word}
       showReference={item.showReference || sideBySide || recall} progress={shownProgress}
-      status={status || (recall ? `From memory: sign ${target}. The reference is hidden on purpose so you practise recalling it.` : `Hold the sign for ${target}${reps > 1 ? ` (${rep} of ${reps})` : ""}`)} feedback={result || undefined}
+      status={status || (recall ? `From memory: sign ${target}. The reference is hidden on purpose so you practice recalling it.` : `Hold the sign for ${target}${reps > 1 ? ` (${rep} of ${reps})` : ""}`)} feedback={result || undefined}
       actionLabel="Continue" actionDisabled={result !== "match"} onAction={onNext}
       onRetry={result === "match" ? retry : undefined} onSkip={result === "match" ? undefined : onSkip} />
   );
