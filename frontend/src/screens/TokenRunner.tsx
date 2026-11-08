@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { SIGNS, SignChecker, isPracticeable, useLetterCheck, zoneOf } from "../cv";
+import { SIGNS, SignChecker, isPracticeable, useLetterCheck, zoneOf, type SignStage } from "../cv";
 import { Camera } from "../components/Camera";
 import { SignGuide } from "./SignGuide";
 
@@ -41,6 +41,7 @@ export function TokenRunner(props: {
   const [k, setK] = useState(0);
   const [msg, setMsg] = useState("");
   const [zone, setZone] = useState("");
+  const [stage, setStage] = useState<SignStage>("handshape");
   useEffect(() => setK(0), [tokensKey]); // the same runner (and camera) is reused for the next step
   const u = units[k];
   const def = u?.kind === "sign" ? SIGNS[u.id] : undefined;
@@ -48,6 +49,7 @@ export function TokenRunner(props: {
   const checker = useMemo(() => (def ? new SignChecker(def) : null), [def]);
   const advance = () => {
     setMsg("");
+    setStage("handshape");
     checker?.reset(); // the same sign can come up again (e.g. YOU in consecutive scene turns)
     if (k + 1 < units.length) setK(k + 1);
     else {
@@ -60,11 +62,12 @@ export function TokenRunner(props: {
     leftHanded: props.leftHanded,
     enabled: !!u && auto,
     onMatch: () => u?.kind === "letter" && advance(),
-    onFrame: (hand, pred, now) => {
+    onFrame: (hand, pred, now, face) => {
       if (!checker || !auto) return;
-      if (hand) setZone(zoneOf(hand));
-      const r = checker.update(hand, pred, now);
+      if (hand) setZone(`${zoneOf(hand, face)}${face ? " (face found)" : " (no face, fixed zones)"}`);
+      const r = checker.update(hand, pred, now, face);
       setMsg(r.message);
+      setStage(r.stage);
       if (r.stage === "done") advance();
     },
   });
@@ -94,6 +97,6 @@ export function TokenRunner(props: {
     </>
   );
   // Whole signs get a picture guide (handshape + place + movement); fingerspelled letters already have the 3D hand.
-  const guide = def ? <SignGuide def={def} templates={check.templates} leftHanded={props.leftHanded} /> : null;
+  const guide = def ? <SignGuide def={def} templates={check.templates} leftHanded={props.leftHanded} stage={auto ? stage : undefined} /> : null;
   return <>{props.render({ camera, prompt, index: k, token: u.token, units, guide, selfCheck: auto ? undefined : advance })}</>;
 }
