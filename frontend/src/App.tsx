@@ -88,7 +88,6 @@ const NAV: [string, string][] = [
 ];
 /** Settings sits at the right end of the bar, by the Dev tools menu. */
 const SETTINGS: [string, string] = ["#/settings", "Settings"];
-const LEVELS: [string, string] = ["#/path", "Levels"];
 const DEV_NAV: [string, string][] = [
   ["#/demo", "Demo"],
   ["#/record", "Record"],
@@ -133,17 +132,16 @@ export default function App() {
         Skip to content
       </a>
       <nav aria-label="Main" className="top-nav">
-        {/* Three zones with equal side columns: Levels and the streak / XP chip are always exactly in the middle. */}
+        {/* Three zones with equal side columns: the streak / XP chip is always exactly in the middle. */}
         <div className="nav-left">
           <a className="brand" href="#/">Handshake</a>
-          {NAV.filter(([href]) => href !== LEVELS[0]).map(([href, label]) => (
+          {NAV.map(([href, label]) => (
             <a key={href} href={href} aria-current={navActive(href, hash) ? "page" : undefined}>
               {label}
             </a>
           ))}
         </div>
         <div className="nav-center">
-          <a href={LEVELS[0]} aria-current={navActive(LEVELS[0], hash) ? "page" : undefined}>{LEVELS[1]}</a>
           {loadProfile() && (
             <span className="nav-chips">
               <StreakXpChip streakDays={loadProgress().streakDays} xp={loadProgress().xp} />
