@@ -19,10 +19,10 @@ export function ProgressScreen() {
   const maxMiss = Math.max(1, ...FINGERS.map((f) => fingerCounts.get(f) ?? 0));
 
   const statusOf = (l: string): { kind: BadgeKind; text: string } => {
-    if (!isPracticeable(l)) return { kind: "reference", text: "Reference only" };
+    if (!isPracticeable(l)) return { kind: "reference-only", text: "Reference only" };
     const it = progress.items[l];
-    if (!it) return { kind: "live", text: "Not started" };
-    return it.mastered ? { kind: "mastered", text: "Mastered" } : { kind: "live", text: `Practising: ${Math.min(it.streak, 3)} of 3 in a row` };
+    if (!it) return { kind: "not-started", text: "Not started" };
+    return it.mastered ? { kind: "mastered", text: "Mastered" } : { kind: "practising", text: `Practising: ${Math.min(it.streak, 3)} of 3 in a row` };
   };
 
   return (
