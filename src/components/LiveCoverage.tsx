@@ -35,7 +35,7 @@ export function LiveCoverage(props: { name: string; isLive: (letter: string) => 
     <div className="live-coverage">
       <p>
         <strong>
-          {name.trim().toUpperCase()}: {c.liveCount} of {c.total} live
+          {name.trim().toUpperCase()}: {c.liveCount} of {c.total} have a camera check (not gate-tested)
         </strong>
         {!allLive && <span className="muted"> · {c.total - c.liveCount} of its letters are reference only (no pass/fail)</span>}
       </p>

@@ -163,7 +163,7 @@ export function ProgressScreen() {
           <summary>
             Alphabet{" "}
             <span className="muted">
-              · {mastered} of {liveLetters.length} live mastered, {LETTERS.length - liveLetters.length} reference only. Open or close the list.
+              · {mastered} of {liveLetters.length} camera-checked letters mastered (not gate-tested), {LETTERS.length - liveLetters.length} reference only. Open or close the list.
             </span>
           </summary>
           <div className="table-wrap">

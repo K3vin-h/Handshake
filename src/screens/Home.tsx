@@ -49,7 +49,7 @@ export function Home() {
     const letters = (l.teaches ?? []).filter((x) => /^[A-Z]$/.test(x)).map((x) => ({ letter: x, status: letterStatus(x), due: dueSet.has(x) }));
     const spell = l.title.match(/^Spell (.+)$/i)?.[1];
     const c = spell ? coverage(spell, isPracticeable) : null;
-    return { letters, note: c && c.total > 0 ? `${spell!.toUpperCase()}: ${c.liveCount} of ${c.total} live` : undefined };
+    return { letters, note: c && c.total > 0 ? `${spell!.toUpperCase()}: ${c.liveCount} of ${c.total} have a camera check` : undefined };
   };
 
   return (
