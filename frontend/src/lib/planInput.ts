@@ -15,8 +15,8 @@ const isLetter = (s: string) => /^[A-Z]$/.test(s);
 export function lessonLetters(l: Lesson): string[] {
   const out = new Set<string>(l.teaches ?? []);
   for (const s of l.steps) {
-    if (s.kind === "learn" || s.kind === "practice") out.add(s.letter);
-    else if (s.kind === "contrast") s.letters.forEach((c) => out.add(c));
+    if (s.kind === "learn" || s.kind === "practice" || s.kind === "identify") out.add(s.letter);
+    else if (s.kind === "contrast" || s.kind === "mix") s.letters.forEach((c) => out.add(c));
     else if (s.kind === "spell") [...s.word.toUpperCase()].forEach((c) => out.add(c));
   }
   return [...out].filter(isLetter).sort();

@@ -19,6 +19,8 @@ export type Token = string;
 export type Step =
   | { kind: "learn"; letter: string } //            see it (3D hand + photo), no grading
   | { kind: "practice"; letter: string; reps: number } // sign it N times in a row
+  | { kind: "identify"; letter: string; options: string[] } // "which letter is this?": 3D hand + multiple choice, no camera
+  | { kind: "mix"; letters: string[] } //            sign these again from memory, shuffled
   | { kind: "contrast"; letters: string[] } //      look-alikes in random order
   | { kind: "spell"; word: string; showReference: boolean }
   | { kind: "sign"; sign: string } //              a whole sign (SignChecker)
@@ -68,15 +70,28 @@ const FAMILIES: { id: string; title: string; letters: string[]; scope: "demo" | 
 const clean = (s: string) => s.toUpperCase().replace(/[^A-Z]/g, "");
 const unique = (xs: string[]) => [...new Set(xs)];
 
+/** Answer choices for "which letter is this?": the letter, look-alikes first, then other known letters. Order is fixed per letter. */
+function optionsFor(letter: string, pool: string[]): string[] {
+  const alike = (CONFUSABLE[letter] ?? []).filter((c) => pool.includes(c));
+  const others = pool.filter((c) => c !== letter && !alike.includes(c)).sort((a, b) => ((a.charCodeAt(0) * 7 + letter.charCodeAt(0)) % 13) - ((b.charCodeAt(0) * 7 + letter.charCodeAt(0)) % 13));
+  const opts = [letter, ...alike, ...others].slice(0, 3).sort();
+  const r = letter.charCodeAt(0) % opts.length;
+  return [...opts.slice(r), ...opts.slice(0, r)];
+}
+
+// Duolingo-style: sign each new letter once, then mixed practice (identify from the 3D hand, then sign from memory in random order).
 function letterSteps(letters: string[], known: Set<string>): Step[] {
   const steps: Step[] = [];
   for (const l of letters) {
-    steps.push({ kind: "learn", letter: l }, { kind: "practice", letter: l, reps: 2 });
+    steps.push({ kind: "learn", letter: l }, { kind: "practice", letter: l, reps: 1 });
     known.add(l);
   }
+  const pool = [...known];
+  if (pool.length > 1) for (const l of letters.slice(0, 2)) steps.push({ kind: "identify", letter: l, options: optionsFor(l, pool) });
+  if (letters.length > 1) steps.push({ kind: "mix", letters });
   // Look-alike drills only between letters the learner already knows.
   const pairs = unique(letters.flatMap((l) => (CONFUSABLE[l] ?? []).filter((c) => known.has(c)).map((c) => [l, c].sort().join(""))));
-  for (const p of pairs.slice(0, 2)) steps.push({ kind: "contrast", letters: p.split("") });
+  for (const p of pairs.slice(0, 1)) steps.push({ kind: "contrast", letters: p.split("") });
   return steps;
 }
 
@@ -95,7 +110,7 @@ export function buildCurriculum(p: Personalization): Unit[] {
     goal: `Spell ${me} without help`,
     lessons: [
       { id: "1.1", title: "Your letters", summary: myLetters.join(" "), scope: "demo", grading: "auto", xp: 10 * myLetters.length, teaches: myLetters, steps: letterSteps(myLetters, known) },
-      { id: "1.2", title: `Spell ${me}`, summary: "Whole word, then without the reference", scope: "demo", grading: "auto", xp: 20, steps: [{ kind: "spell", word: me, showReference: true }, { kind: "spell", word: me, showReference: false }] },
+      { id: "1.2", title: `Spell ${me}`, summary: "Your name, with the reference", scope: "demo", grading: "auto", xp: 20, steps: [{ kind: "spell", word: me, showReference: true }] },
       { id: "1.3", title: "Checkpoint", summary: "Spell your name from memory", scope: "demo", grading: "auto", xp: 30, steps: [{ kind: "spell", word: me, showReference: false }] },
     ],
   };
@@ -116,7 +131,7 @@ export function buildCurriculum(p: Personalization): Unit[] {
       grading: "auto",
       xp: 10 * letters.length,
       teaches: letters,
-      steps: [...letterSteps(letters, known), ...words(id).slice(0, 3).map((w) => ({ kind: "spell", word: w, showReference: false }) as Step), { kind: "review" }],
+      steps: [...letterSteps(letters, known), ...words(id).slice(0, 1).map((w) => ({ kind: "spell", word: w, showReference: false }) as Step), { kind: "review" }],
     });
     // Their name: one fixed place for everyone, right after the last demo family.
     if (fam.id === "fist" && !solo) {
@@ -124,11 +139,11 @@ export function buildCurriculum(p: Personalization): Unit[] {
       unit2Lessons.push({
         id: nid,
         title: `Spell ${them}`,
-        summary: "Their name, plus word drills",
+        summary: "Their name, plus one word drill",
         scope: "demo",
         grading: "auto",
         xp: 30,
-        steps: [{ kind: "spell", word: them, showReference: true }, { kind: "spell", word: them, showReference: false }, ...words(nid).slice(0, 3).map((w) => ({ kind: "spell", word: w, showReference: false }) as Step)],
+        steps: [{ kind: "spell", word: them, showReference: true }, ...words(nid).slice(0, 1).map((w) => ({ kind: "spell", word: w, showReference: false }) as Step)],
       });
     }
   }
