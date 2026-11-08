@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
-import { isPracticeable, meanPose3D, useLetterCheck } from "../cv";
+import { SIGNS, isPracticeable, meanPose3D, useLetterCheck } from "../cv";
+import { TokenRunner } from "./TokenRunner";
 import { buildCurriculum, flatLessons, type Step } from "../lib/curriculum";
 import { completeLesson, dueItems, isUnlocked, loadProgress, recordAttempt, type Progress } from "../lib/progress";
 import { reportAttempt, reportLessonComplete } from "../lib/track";
@@ -7,6 +8,7 @@ import { loadMistakes, mistakeCount, recordMistake } from "../lib/mistakes";
 import { DEMO_PROFILE, loadProfile } from "../lib/profile";
 import { SEND_SNAPSHOT, getCoachTip, getHowTo } from "../lib/api";
 import { LessonView } from "../components/LessonView";
+import { SceneView } from "../components/SceneView";
 import { Camera } from "../components/Camera";
 import { createCoachQueue } from "../lib/coachQueue";
 import type { FingerFeedback } from "../cv/types";
@@ -54,11 +56,12 @@ export function LessonPlayer({ lessonId }: { lessonId: string }) {
 }
 function Player({ lessonId }: { lessonId: string }) {
   const profile = loadProfile() ?? DEMO_PROFILE;
-  const units = useMemo(() => buildCurriculum(profile).filter((u) => u.id === "u1" || u.id === "u2"), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const units = useMemo(() => buildCurriculum(profile).filter((u) => ["u1", "u2", "u3", "u4"].includes(u.id)), []); // eslint-disable-line react-hooks/exhaustive-deps
   const lesson = useMemo(() => flatLessons(units).find((l) => l.id === lessonId), [units, lessonId]);
   const progress = useRef(loadProgress()); // a ref, not state: recordAttempt mutates, and StrictMode would double-apply updaters
   const items = useMemo(() => (lesson ? expand(lesson.steps, progress.current) : []), [lesson]);
   const [i, setI] = useState(0);
+  const [turn, setTurn] = useState(0); // which exchange of a conversation scene (hooks stay above the early returns)
   const lessonLetters = useMemo(() => [...new Set(items.flatMap((x) => (x.kind === "check" ? [x.letter] : [])))], [items]);
 
   const finishing = useRef(false);
@@ -80,6 +83,37 @@ function Player({ lessonId }: { lessonId: string }) {
   if (!item) return <div className="page"><p>Nothing to practise here yet.</p><button onClick={next}>Continue</button></div>;
   const stepLabel = `Step ${i + 1} of ${items.length}`;
 
+  // Whole signs and sentences: one TokenRunner walks the parts (handshape → place → movement) on one camera.
+  if (item.kind === "other" && (item.step.kind === "sign" || item.step.kind === "sentence")) {
+    const s = item.step;
+    const tokens = s.kind === "sign" ? [s.sign] : s.tokens;
+    const title = s.kind === "sign" ? `Sign "${SIGNS[s.sign]?.english ?? s.sign}"` : s.english;
+    return (
+      <TokenRunner tokens={tokens} leftHanded={profile.leftHanded}
+        onDone={() => { progress.current = recordAttempt(progress.current, tokens.join(" "), true); celebrate(); next(); }}
+        render={(r) => (
+          <LessonView title={title} target={tokens.join(" ")} reference={null} showReference={false} progress={0}
+            camera={r.camera} status={r.prompt} landmarkTip="" coachTip="" coachCached={false} sideBySide={false}
+            stepLabel={`${stepLabel} · part ${r.index + 1} of ${r.units.length}`} lessonProgress={i / items.length}
+            actionLabel="Skip" onAction={next} onSelfCheck={r.selfCheck} />
+        )} />
+    );
+  }
+  // Conversation scene: their line, then your reply as signs, turn by turn, on one camera.
+  if (item.kind === "other" && item.step.kind === "scene") {
+    const turns = item.step.turns.map((t) => ({ them: { gloss: t.them.tokens.join(" "), english: t.them.english }, you: t.you }));
+    return (
+      <TokenRunner tokens={turns[turn].you.tokens} leftHanded={profile.leftHanded}
+        onDone={() => {
+          if (turn + 1 < turns.length) return setTurn(turn + 1);
+          progress.current = recordAttempt(progress.current, `scene:${lesson.id}`, true);
+          celebrate();
+          setTurn(0);
+          next();
+        }}
+        render={(r) => <SceneView turns={turns} turnIndex={turn} tokenIndex={r.token} camera={r.camera} prompt={r.prompt} onSelfCheck={r.selfCheck} />} />
+    );
+  }
   // ONE camera at a time: LetterItem stays mounted across consecutive letter items (no key), so the camera never restarts.
   if (item.kind === "other")
     return <div className="page"><p>Coming in a later milestone: {item.step.kind}</p><button onClick={next}>Continue</button></div>;
@@ -174,6 +208,8 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     return () => { live = false; };
   }, [target]);
 
+  // Once the target matches, the ring and bar stay full until "Try again" (retry() resets the check, so this goes back to live progress).
+  const shownProgress = result === "match" ? 1 : check.progress;
   const noLiveCheck = item.kind === "learn" && item.referenceOnly;
   const camera = noLiveCheck ? (
     <div className="card">
@@ -182,7 +218,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     </div>
   ) : (
     <>
-      <Camera {...check.cam} progress={check.progress} />
+      <Camera {...check.cam} progress={shownProgress} />
       {check.hint && <p role="status">{check.hint}</p>}
     </>
   );
@@ -202,7 +238,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
 
   return (
     <LessonView {...common} title={item.word ? `Spell ${item.word.letters.join("")}` : `Sign ${item.letter}`} word={item.word}
-      showReference={item.showReference || sideBySide} progress={check.progress}
+      showReference={item.showReference || sideBySide} progress={shownProgress}
       status={status || `Hold the sign for ${target}`} feedback={result || undefined}
       actionLabel="Continue" actionDisabled={result !== "match"} onAction={onNext}
       onRetry={result === "match" ? retry : undefined} onSkip={result === "match" ? undefined : onNext} />

@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { isPracticeable } from "../cv";
-import { LockedUnit } from "../components/LockedUnit";
 import { UnitSection, type MapLesson } from "../components/PathMap";
 import { MARK_LABEL, StatusMark, type MarkState } from "../components/StatusMark";
 import { coverage } from "../components/LiveCoverage";
@@ -8,7 +7,7 @@ import { buildCurriculum } from "../lib/curriculum";
 import { DEMO_PROFILE, loadProfile } from "../lib/profile";
 import { dueItems, isUnlocked, loadProgress, nextLesson } from "../lib/progress";
 
-// Home: the path. Units 1-2 are active; Units 3-4 are locked ("Coming later").
+// Home: the path. Units 1-4 are active (demo lessons only).
 // Reads the profile and progress from localStorage only.
 
 export function Home() {
@@ -92,7 +91,7 @@ export function Home() {
 
       <div className="home-single">
         <div className="units stagger" style={{ "--i": 2 } as React.CSSProperties}>
-          {units.slice(0, 2).map((u, i) => (
+          {units.slice(0, 4).map((u, i) => (
             <UnitSection
               key={u.id}
               index={i + 1}
@@ -103,11 +102,6 @@ export function Home() {
               showStart={false}
             />
           ))}
-          <div className="locked-grid">
-            {units.slice(2, 4).map((u, i) => (
-              <LockedUnit key={u.id} title={`Unit ${i + 3} · ${u.title}`} />
-            ))}
-          </div>
         </div>
 
       </div>

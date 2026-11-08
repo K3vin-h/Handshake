@@ -153,9 +153,10 @@ We are building Handshake: live handshape checking and personal coaching for ASL
 Every task must serve a target below. If a task serves none, say so before building it. The planning doc is the source of truth for owners, hours and scope.
 
 ## Scope (stated openly)
-- IN: Unit 1 (your name) and Unit 2 (the alphabet), static handshapes only.
+- IN: Unit 1 (your name), Unit 2 (the alphabet) and Unit 3 lessons 3.1-3.2 (HELLO, BYE, MY, NAME as "assisted" signs: handshape + place + movement). Scope override by Ryan, 2026-11-07 (M3). Unit 3 signs are not verified by a fluent signer: say "matches our recording" and say the sign descriptions are simplified. If signs miss 4/5 tries, set `SIGNS_AUTO = false` in `src/screens/TokenRunner.tsx` (self-check only).
+- IN (M4, override by Ryan, 2026-11-07): Unit 4 scene 4.1 "First hello" (3 exchanges, reuses the Unit 3 sign checking; NICE and MEET are self-checked). If the Unit 3 signs miss 4/5 tries, drop the scene from the stage demo.
 - Live pass/fail ONLY for letters that pass the Letter gate. All other letters are reference-only (image + how to make it, no pass/fail). J and Z move, so reference-only.
-- OUT for now: Units 3-4 (phrases, conversation), whole signs, facial grammar, signed reference clips. Show them as locked "Coming later". Do not build them.
+- OUT for now: scenes 4.2-4.4, facial grammar, signed reference clips. Do not build them.
 - Demo word: LILY (L, I, Y are live; confirm every letter of the demo word passed the gate).
 
 ## Letter gate (Ryan owns; log in docs/test-log.md)
