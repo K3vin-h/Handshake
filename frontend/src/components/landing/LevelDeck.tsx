@@ -269,15 +269,12 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
   const slot = width + GAP;
   const pad = (vw - width) / 2;
 
-  // Centring the active card leaves an empty gutter beside the first card (left) and the last card (right). So near the
-  // ends the whole track slides toward that side by the gutter, which puts the first card flush left (next level peeking
-  // in on the right) and the last card flush right (previous level peeking in on the left). The cards keep reading their
-  // tilt/scale from the unshifted `x`, so the active card is still untilted. Middle cards stay centred.
-  const edge = Math.min(pad, 12);
-  const gutter = Math.max(0, pad - edge);
-  const shiftIn = units.map((_, i) => -i * slot);
-  const shiftOut = units.map((_, i) => (units.length > 1 && i === 0 ? -gutter : units.length > 1 && i === units.length - 1 ? gutter : 0));
-  const shift = useTransform(x, shiftIn.length > 1 ? shiftIn : [0, -1], shiftIn.length > 1 ? shiftOut : [0, 0]);
+  // The active card sits at the LEFT edge, with the next levels showing to its right. (Centring it left a wide empty gutter
+  // beside level 1. Sliding the ends flush instead made the step between 1 and 2 and between 3 and 4 move only a few pixels.)
+  // Because the active card always sits in the same place, every step moves the track by exactly one card width, so a drag
+  // feels the same at every level. After level 4 the right side is empty, as before. On a phone the cards are nearly as
+  // wide as the screen, so `lead` is just the small side margin there.
+  const lead = Math.min(pad, 16);
 
   const goTo = useCallback(
     (i: number, instant = false) => {
@@ -318,10 +315,9 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
 
       <div className="lp-deck" role="group" aria-roledescription="carousel" aria-label="Levels">
         <div className="lp-viewport" ref={viewport} tabIndex={0} onKeyDown={onKey} aria-label="Levels. Use the Left and Right arrow keys to switch.">
-          <motion.div style={{ x: shift, width: "max-content" }}>
           <motion.ul
             className="lp-track"
-            style={{ x, paddingLeft: pad, gap: GAP }}
+            style={{ x, paddingLeft: lead, gap: GAP }}
             drag="x"
             dragConstraints={{ left: -(units.length - 1) * slot, right: 0 }}
             dragElastic={reduce ? 0 : 0.14}
@@ -332,7 +328,6 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
               <DeckCard key={u.id} unit={u} index={i} slot={slot} x={x} active={i === index} flat={reduce} width={width} onSelect={() => goTo(i)} onOpen={() => setOpen(u)} />
             ))}
           </motion.ul>
-          </motion.div>
         </div>
 
         <div className="lp-deck-nav">
