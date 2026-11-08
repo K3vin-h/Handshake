@@ -64,7 +64,7 @@ function CardArt({ unit }: { unit: DeckUnit }) {
   }
   return (
     <div className="lp-art lp-art-tiles" aria-hidden="true">
-      {unit.art.slice(0, 5).map((t, i) => (
+      {unit.art.slice(0, 12).map((t, i) => (
         <span key={i} style={{ ["--r" as string]: `${[-6, 4, -3, 5, -4][i % 5]}deg` }}>
           {t}
         </span>
@@ -302,9 +302,17 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
 
   const onDragEnd = (_: unknown, info: PanInfo) => {
     const { offset, velocity } = info;
-    if (offset.x < -DRAG_BUFFER || velocity.x < -VELOCITY) goTo(index + 1);
-    else if (offset.x > DRAG_BUFFER || velocity.x > VELOCITY) goTo(index - 1);
-    else goTo(index);
+    // Settle on the level whose resting spot is nearest to where the card was let go (plus a little for a flick), so a long
+    // drag lands on the level you dragged to instead of springing back to the one you started on.
+    const landed = x.get() + velocity.x * 0.15;
+    let best = 0;
+    for (let i = 1; i < units.length; i++) if (Math.abs(restOf(i) - landed) < Math.abs(restOf(best) - landed)) best = i;
+    if (best === index) {
+      // A short drag or flick still moves one level in the direction you went.
+      if (offset.x < -DRAG_BUFFER || velocity.x < -VELOCITY) best = index + 1;
+      else if (offset.x > DRAG_BUFFER || velocity.x > VELOCITY) best = index - 1;
+    }
+    goTo(best);
   };
   const onKey = (e: KeyboardEvent) => {
     if (e.key === "ArrowRight") { e.preventDefault(); goTo(index + 1); }

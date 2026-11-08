@@ -107,7 +107,7 @@
 .lp-state-done { background: var(--match-bg); color: var(--match); border-color: var(--match); }
 
 .lp-art { margin: var(--space-4) 0 var(--space-3); min-height: 72px; display: flex; align-items: center; }
-.lp-art-tiles { gap: 8px; }
+.lp-art-tiles { gap: 8px; flex-wrap: wrap; }
 .lp-art-tiles span { display: grid; place-items: center; width: 44px; height: 52px; background: rgba(255, 255, 255, 0.9); color: var(--brand-deep); border: 2px solid var(--border-strong); border-bottom-width: 4px; border-radius: 12px; font-size: 1.5rem; font-weight: 900; rotate: var(--r, 0deg); }
 .lp-art-bubbles { flex-direction: column; align-items: flex-start; gap: 8px; }
 .lp-bubble { padding: 6px 14px; border-radius: 18px; font-size: 0.95rem; font-weight: 800; letter-spacing: 0.01em; }
