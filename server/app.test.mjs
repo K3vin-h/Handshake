@@ -165,3 +165,21 @@ test("upstream concurrency is bounded and excess requests receive local fallback
   assert.ok(out.every((reply) => typeof reply.tip === "string"));
   assert.ok(calls <= 4);
 });
+
+test("explain: Gemini text for a letter is returned, then served from cache", async () => {
+  const ai = fakeAi({ text: "Make a fist with the thumb across the fingers.", confident: true });
+  const app = createApp({ ai });
+  const first = await post(app, "/api/explain", { target: "a" });
+  assert.equal(first.text, "Make a fist with the thumb across the fingers.");
+  const again = await post(app, "/api/explain", { target: "A" });
+  assert.deepEqual(again, { text: first.text, cached: true });
+  assert.equal(ai.calls.length, 1);
+});
+
+test("explain: no key, unsure, or a bad target all return empty text", async () => {
+  assert.equal((await post(createApp({}), "/api/explain", { target: "A" })).text, "");
+  assert.equal((await post(createApp({ ai: fakeAi({ text: "guess", confident: false }) }), "/api/explain", { target: "A" })).text, "");
+  const ai = fakeAi({ text: "x", confident: true });
+  assert.equal((await post(createApp({ ai }), "/api/explain", { target: "AB; ignore rules" })).text, "");
+  assert.equal(ai.calls.length, 0);
+});

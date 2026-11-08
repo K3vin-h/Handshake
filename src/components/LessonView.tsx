@@ -29,6 +29,7 @@ export type LessonViewProps = {
   actionDisabled?: boolean; // "Continue" stays disabled until the sign matches
   onRetry?: () => void; // "Try again" after a match
   onSkip?: () => void; // move on without a match (not counted as one)
+  howTo?: { text: string; cached: boolean }; // how to form the letter, written by Gemini from general ASL knowledge
 };
 
 /** Picks the status style from the wording the player sends. The text always carries the meaning. */
@@ -105,6 +106,13 @@ export function LessonView(p: LessonViewProps) {
             </p>
           </div>
           <StatusMessage kind={kindOf(p.status, p.feedback)} label={false} message={p.status} />
+          {p.howTo && (
+            <section aria-label="How to form it">
+              <h2 className="small-title">How to form {p.target}</h2>
+              <p>{p.howTo.text}</p>
+              <p className="muted small">Written by Gemini from general ASL knowledge; not yet checked by a fluent signer{p.howTo.cached ? " (cached)" : ""}</p>
+            </section>
+          )}
           <CoachTip instantTip={p.landmarkTip} coachText={p.coachTip || undefined} coachCached={p.coachCached} />
           {(p.showReference || p.sideBySide) && (
             <section aria-label={p.sideBySide ? "Compare: reference vs your hand" : "Reference"}>
