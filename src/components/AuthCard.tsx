@@ -10,7 +10,8 @@ type Cfg = { accounts: boolean; googleClientId: string | null };
 type Errs = { email?: string; password?: string; form?: string };
 
 /** Shared sign-up / log-in card. Never stores or logs the password. */
-export function AuthCard({ mode, onDone }: { mode: "signup" | "login"; onDone(): void }) {
+export function AuthCard({ mode, onDone, headingLevel = 1 }: { mode: "signup" | "login"; onDone(): void; headingLevel?: 1 | 2 }) {
+  const H = headingLevel === 1 ? "h1" : "h2";
   const signup = mode === "signup";
   const [cfg, setCfg] = useState<Cfg | null>(null);
   const [email, setEmail] = useState("");
@@ -68,7 +69,7 @@ export function AuthCard({ mode, onDone }: { mode: "signup" | "login"; onDone():
     return (
       <div className="auth-wrap">
         <div className="auth-card">
-          <h1>{signup ? "Create your profile" : "Log in"}</h1>
+          <H>{signup ? "Create your profile" : "Log in"}</H>
           <StatusMessage kind="info" message={authMessage("accounts_unavailable")} />
         </div>
         <p className="auth-skip"><a href="#/">Continue without an account</a></p>
@@ -78,7 +79,7 @@ export function AuthCard({ mode, onDone }: { mode: "signup" | "login"; onDone():
   return (
     <div className="auth-wrap">
       <form className="auth-card" onSubmit={submit} noValidate>
-        <h1>{signup ? "Create your profile" : "Log in"}</h1>
+        <H>{signup ? "Create your profile" : "Log in"}</H>
         {cfg?.googleClientId && (
           <>
             <GoogleButton clientId={cfg.googleClientId} onCredential={google} />
