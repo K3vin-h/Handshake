@@ -15,7 +15,7 @@ export function lessonHeadline(lesson: Lesson, them: string): string {
   const byId: Record<string, string> = {
     "1.1": "You're learning your name!",
     "1.2": "Now spell your whole name!",
-    "1.3": "Checkpoint: spell your name three times!",
+    "1.3": "Checkpoint: spell your name from memory!",
     "3.1": "Time to sign hello and goodbye!",
     "3.2": "Now introduce yourself in signs!",
     "3.3": "Being polite: please, thank you, sorry!",

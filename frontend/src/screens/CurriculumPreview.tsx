@@ -1,3 +1,4 @@
+import { loadProfile } from "../lib/profile";
 import { useMemo, useState } from "react";
 import { buildCurriculum, requiredHandshapes, type Personalization } from "../lib/curriculum";
 
@@ -7,8 +8,8 @@ import { buildCurriculum, requiredHandshapes, type Personalization } from "../li
 const RELATIONSHIPS: Personalization["relationship"][] = ["coworker", "friend", "family", "classmate", "partner"];
 
 export function CurriculumPreview() {
-  const [userName, setUserName] = useState("Ryan");
-  const [theirName, setTheirName] = useState("Lily");
+  const [userName, setUserName] = useState(loadProfile()?.userName ?? "");
+  const [theirName, setTheirName] = useState(loadProfile()?.theirName ?? "");
   const [relationship, setRelationship] = useState<Personalization["relationship"]>("coworker");
   const [demoOnly, setDemoOnly] = useState(false);
   const units = useMemo(() => buildCurriculum({ userName, theirName, relationship }), [userName, theirName, relationship]);

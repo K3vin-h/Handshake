@@ -5,7 +5,7 @@ import { LetterBadge } from "../components/LetterBadge";
 import { LockedUnit } from "../components/LockedUnit";
 import { coverage } from "../components/LiveCoverage";
 import { buildCurriculum, type Personalization } from "../lib/curriculum";
-import { DEMO_PROFILE, loadProfile, refreshPracticeWords, saveProfile } from "../lib/profile";
+import { loadProfile, refreshPracticeWords, saveProfile } from "../lib/profile";
 
 // Onboarding: four short steps. Everything typed here stays in this browser (saveProfile: localStorage in
 // try/catch with an in-memory fallback). "Build my path" saves the profile, builds the path locally
@@ -284,13 +284,6 @@ export function Onboarding() {
         </div>
 
         <p className="muted small privacy">{PRIVACY}</p>
-        {dev && (
-          <p>
-            <button type="button" className="secondary" onClick={() => { saveProfile(DEMO_PROFILE); goHome(); void refreshPracticeWords().catch(() => {}); }}>
-              Use demo profile (Ryan → Lily)
-            </button>
-          </p>
-        )}
       </form>
     </div>
   );

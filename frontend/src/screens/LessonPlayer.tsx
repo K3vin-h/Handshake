@@ -5,7 +5,7 @@ import { buildCurriculum, flatLessons, type Step } from "../lib/curriculum";
 import { completeLesson, dueItems, isUnlocked, loadProgress, recordAttempt, type Progress } from "../lib/progress";
 import { reportAttempt, reportLessonComplete } from "../lib/track";
 import { loadMistakes, mistakeCount, recordMistake } from "../lib/mistakes";
-import { DEMO_PROFILE, loadProfile } from "../lib/profile";
+import { requireProfile } from "../lib/requireProfile";
 import { SEND_SNAPSHOT, getCoachTip, getHowTo } from "../lib/api";
 import { LessonView } from "../components/LessonView";
 import { SceneView } from "../components/SceneView";
@@ -55,7 +55,7 @@ export function LessonPlayer({ lessonId }: { lessonId: string }) {
   return <Player key={lessonId} lessonId={lessonId} />;
 }
 function Player({ lessonId }: { lessonId: string }) {
-  const profile = loadProfile() ?? DEMO_PROFILE;
+  const profile = requireProfile();
   const units = useMemo(() => buildCurriculum(profile).filter((u) => ["u1", "u2", "u3", "u4"].includes(u.id)), []); // eslint-disable-line react-hooks/exhaustive-deps
   const lesson = useMemo(() => flatLessons(units).find((l) => l.id === lessonId), [units, lessonId]);
   const progress = useRef(loadProgress()); // a ref, not state: recordAttempt mutates, and StrictMode would double-apply updaters
@@ -113,7 +113,7 @@ function Player({ lessonId }: { lessonId: string }) {
     const tokens = s.kind === "sign" ? [s.sign] : s.tokens;
     const title = s.kind === "sign" ? `Sign "${SIGNS[s.sign]?.english ?? s.sign}"` : s.english;
     return (
-      <TokenRunner tokens={tokens} leftHanded={profile.leftHanded}
+      <TokenRunner tokens={tokens} leftHanded={profile.leftHanded} onEmpty={next}
         onDone={() => { progress.current = recordAttempt(progress.current, tokens.join(" "), true); celebrate(); next(); }}
         render={(r) => (
           <LessonView title={title} target={tokens.join(" ")} reference={null} showReference={false} progress={0}
@@ -135,7 +135,8 @@ function Player({ lessonId }: { lessonId: string }) {
           setTurn(0);
           next();
         }}
-        render={(r) => <SceneView turns={turns} turnIndex={turn} tokenIndex={r.token} camera={r.camera} prompt={r.prompt} onSelfCheck={r.selfCheck} />} />
+        onEmpty={() => { if (turn + 1 < turns.length) setTurn(turn + 1); else { setTurn(0); next(); } }}
+        render={(r) => <SceneView title={lesson.title} turns={turns} turnIndex={turn} tokenIndex={r.token} camera={r.camera} prompt={r.prompt} onSelfCheck={r.selfCheck} onSkip={skip} />} />
     );
   }
   // ONE camera at a time: LetterItem stays mounted across consecutive letter items (no key), so the camera never restarts.
@@ -227,6 +228,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     },
     onMiss: (feedback) => {
       if (item.kind !== "check") return;
+      if (relax.current) return; // between reps the hand is resting in frame on purpose: that is not a miss
       // A miss shows the tip and keeps the same rep going. It does not send the learner back to rep 1 (that looped for
       // anyone the model misses often). Mastery still needs 3 in a row: recordAttempt resets the streak on a miss.
       progress.current = recordAttempt(progress.current, target, false);

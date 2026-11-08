@@ -6,13 +6,13 @@ import { getFeatures, getStats, planToday, type Features, type Plan, type Stats 
 import { buildCurriculum } from "../lib/curriculum";
 import { learnerId } from "../lib/learner";
 import { buildPlanRequest } from "../lib/planInput";
-import { DEMO_PROFILE, loadProfile } from "../lib/profile";
+import { requireProfile } from "../lib/requireProfile";
 import { loadProgress, weakItems } from "../lib/progress";
 
 const NO_FEATURES: Features = { stats: false, notify: false, agent: false };
 
 export function StatsPage() {
-  const [profile] = useState(() => loadProfile() ?? DEMO_PROFILE);
+  const [profile] = useState(() => requireProfile());
   const units = useMemo(() => buildCurriculum(profile), [profile]);
   const progress = useMemo(() => loadProgress(), []);
   const planReq = useMemo(() => buildPlanRequest(units, progress, weakItems(progress, 5), learnerId()), [units, progress]);

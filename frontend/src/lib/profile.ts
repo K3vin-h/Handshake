@@ -45,19 +45,22 @@ export const fillNames = (text: string, p: Pick<Profile, "userName" | "theirName
 export async function fetchPracticeWords(p: Profile, weak: string[] = []): Promise<Record<string, string[]>> {
   const known = new Set<string>();
   const out: Record<string, string[]> = {};
-  let offline = false; // after one failed request, reuse saved words instead of waiting on 4 more timeouts
+  const jobs: Promise<void>[] = [];
   for (const lesson of flatLessons(buildCurriculum(p))) {
     (lesson.teaches ?? []).filter(isPracticeable).forEach((letter) => known.add(letter));
     if (!lesson.id.startsWith("2.") || lesson.scope !== "demo") continue;
     if (known.size < 2) { out[lesson.id] = []; continue; }
-    if (offline) { out[lesson.id] = p.practiceWords?.[lesson.id] ?? []; continue; }
-    try {
-      out[lesson.id] = (await getPracticeWords([...known], weak.filter((letter) => known.has(letter)))).words;
-    } catch {
-      offline = true;
-      out[lesson.id] = p.practiceWords?.[lesson.id] ?? [];
-    }
+    // Each lesson's request depends only on the letters known SO FAR, so they are independent: send them together
+    // (one wait, not up to seven in a row). A failed one falls back to the saved words for that lesson.
+    const id = lesson.id;
+    const knownNow = [...known];
+    jobs.push(
+      getPracticeWords(knownNow, weak.filter((letter) => knownNow.includes(letter)))
+        .then((r) => { out[id] = r.words; })
+        .catch(() => { out[id] = p.practiceWords?.[id] ?? []; }),
+    );
   }
+  await Promise.all(jobs);
   return out;
 }
 
