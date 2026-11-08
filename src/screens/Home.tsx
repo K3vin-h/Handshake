@@ -3,6 +3,7 @@ import { isPracticeable } from "../cv";
 import { UnitSection, type MapLesson } from "../components/PathMap";
 import { MARK_LABEL, StatusMark, type MarkState } from "../components/StatusMark";
 import { coverage } from "../components/LiveCoverage";
+import { lessonHeadline } from "../components/lessonHeadline";
 import { buildCurriculum } from "../lib/curriculum";
 import { DEMO_PROFILE, loadProfile } from "../lib/profile";
 import { dueItems, isUnlocked, loadProgress, nextLesson } from "../lib/progress";
@@ -33,17 +34,9 @@ export function Home() {
   // the name itself (accents, hyphens), so a title match broke for names like "Mary-Ann" or "José".
   const spellThem = units.find((u) => u.id === "u2")?.lessons.find((l) => /^Spell /i.test(l.title));
   const spellOpen = spellThem ? isUnlocked(units, progress, spellThem.id) : false;
-  // Banner headline: a plain statement of what the learner is doing now. No promises about outcomes.
+  // Banner headline: one hand-written line per lesson (see lessonHeadline). No AI, no promises about outcomes.
   const them = profile.theirName;
-  const headline = !next
-    ? "You've finished every available lesson!"
-    : next.id === spellThem?.id
-      ? `Now for ${them}'s name!`
-      : next.id.startsWith("1.")
-        ? "You're learning your name!"
-        : next.id.startsWith("2.")
-          ? "You're learning the alphabet!"
-          : "Keep going!";
+  const headline = next ? lessonHeadline(next, them) : "You've finished every available lesson!";
   // Small letters + live coverage under each lesson block (replaces the old side panels).
   const lessonExtras = (l: { title: string; teaches?: string[] }): Pick<MapLesson, "letters" | "note"> => {
     const letters = (l.teaches ?? []).filter((x) => /^[A-Z]$/.test(x)).map((x) => ({ letter: x, status: letterStatus(x), due: dueSet.has(x) }));
