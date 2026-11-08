@@ -45,17 +45,17 @@ user_state     (user_id uuid PK -> users ON DELETE CASCADE, profile jsonb, progr
 `password_hash` is null for Google-only accounts. Tokens are random 32 bytes, base64url in the cookie or link, and only their SHA-256 is stored.
 
 ### API
-All errors are `{ "error": "<code>" }`, matching the existing routes. Auth routes carry their own `express.json` limit and per-IP `rateLimit`.
+All errors are `{ "error": "<code>" }`, matching the existing routes. Auth routes carry their own `express.json` limit. There are no per-IP rate limits on account routes (see Rate limits).
 
 | Route | Body | Success | Errors |
 |---|---|---|---|
 | `GET /api/auth/config` | none | `{ accounts, googleClientId, resetEmail }` | none |
-| `POST /api/auth/signup` | `{ email, password }` | 201 `{ user }` + session cookie | 400 `bad_request`/`weak_password`, 409 `email_taken`, 429, 503 |
+| `POST /api/auth/signup` | `{ email, password }` | 201 `{ user }` + session cookie | 400 `bad_request`/`weak_password` (length only)/`obvious_password`/`breached_password`, 409 `email_taken`, 429, 503 |
 | `POST /api/auth/login` | `{ email, password }` | 200 `{ user }` + cookie | 401 `invalid_credentials`, 429 |
 | `POST /api/auth/google` | `{ credential }` (Google ID token) | 200 `{ user, isNew }` + cookie | 401 `invalid_token`, 429 |
 | `POST /api/auth/logout` | none | 204, cookie cleared, session deleted | none |
 | `POST /api/auth/forgot` | `{ email }` | **always** 202 (no account enumeration) | 429 |
-| `POST /api/auth/reset` | `{ token, password }` | 204, all sessions of that user deleted | 400 `invalid_token`/`weak_password` |
+| `POST /api/auth/reset` | `{ token, password }` | 204, all sessions of that user deleted | 400 `invalid_token`/`weak_password` (length only)/`obvious_password`/`breached_password` |
 | `GET /api/me` | none | `{ user: { email, hasPassword, google }, state: { profile, progress, rev } \| null }` | 401 `unauthenticated` |
 | `PUT /api/me/state` | `{ profile, progress, baseRev }` | 200 `{ rev }` | 409 `conflict` with `{ state }`, 400, 401 |
 | `DELETE /api/me` | none | 204, account and all its rows removed | 401 |
@@ -64,20 +64,21 @@ All errors are `{ "error": "<code>" }`, matching the existing routes. Auth route
 
 ### Security rules (each has a test in the plan)
 - **Passwords:** scrypt (N=16384, r=8, p=1), 16-byte random salt per user, stored as `scrypt$N$r$p$salt$hash`, compared with `timingSafeEqual`. Login against an unknown email still runs a scrypt against a dummy hash, so timing does not reveal which emails exist. Login says only `invalid_credentials`.
-- **Sessions:** httpOnly, `SameSite=Lax`, `Path=/`, 30 days, `Secure` when `SERVE_STATIC=1` (production, behind Caddy HTTPS). Never `Secure` in dev, where the site is plain http on localhost.
-- **CSRF:** every non-GET route rejects a request whose `Origin` header host differs from its `Host` header (403 `forbidden`). Bodies are JSON only. SPA and API share one origin in dev (Vite proxy keeps the Host header) and in production (Caddy keeps it), so no CORS is configured.
+- **Sessions:** httpOnly, `SameSite=Lax`, `Path=/`, 30 days, `Secure` when `COOKIE_SECURE=1` or in production (`NODE_ENV=production`, unless `COOKIE_SECURE=0`). Never `Secure` in dev, where the site is plain http on localhost.
+- **CSRF:** every non-GET route rejects a request whose `Origin` header host differs from its `Host` header (403 `forbidden`). Bodies are JSON only. Account calls are same-origin: in dev through the Vite proxy (keeps the Host header), in production through the Vercel `/api` rewrite (`frontend/vercel.json`, destination host set by a human). Behind that rewrite `Host` is the API host, so when Express `trust proxy` is on (`TRUST_PROXY_HOPS`) the check compares against the first `X-Forwarded-Host` value instead; with trust proxy off that header is ignored. Account calls use no CORS and no credentials CORS.
+- **Password quality (added with user approval):** reject passwords found in the Pwned Passwords breach list (k-anonymity range API; only the first 5 characters of the SHA-1 leave the server; fails open if the service is unreachable) and passwords containing 'handshake' or the email's local part (4+ chars). On reset the check runs before the token is consumed.
 - **Google:** the browser gets an ID token from Google Identity Services; the server verifies signature, issuer, audience (= `GOOGLE_CLIENT_ID`) and expiry with `google-auth-library`, and requires `email_verified`. Accounts are matched by Google's stable `sub`, never by email alone.
-- **Google linking rule:** if a Google sign-in's verified email matches an existing password account, link them (set `google_sub`). If that password account had `email_verified_at` null, **also clear its password hash**, so a squatter who registered the address first cannot keep access. The real owner can set a new password through "Forgot password".
-- **Reset tokens:** 30 minutes, single use, hashed at rest. Using one deletes every session for that user. `forgot` is rate limited per IP and per email (3 per hour) and always answers 202.
-- **Rate limits (in-memory, per process):** signup 10 per hour per IP, login 10 per 10 minutes per IP and 10 per 10 minutes per email, forgot as above, state sync 60 per minute per IP.
-- **Input:** email must satisfy the existing `isEmail`; names in the profile must match `NAME_RE`; progress keys must match `/^[A-Za-z0-9 :._-]{1,60}$/`; at most 200 progress items, 60 lessons completed, 12 practice words per lesson. Anything else is 400. Request bodies are capped (20 kB auth, 100 kB state).
+- **Google linking rule:** if a Google sign-in's verified email matches an existing password account, link them (set `google_sub`). If that password account had `email_verified_at` null, **also clear its password hash**, so a squatter who registered the address first cannot keep access. It also **deletes that account's saved state** (`user_state`), so the squatter's names and progress can never sync into the real owner's profile (a verified account keeps its state). The real owner can set a new password through "Forgot password".
+- **Reset tokens:** 30 minutes, single use, hashed at rest. Using one deletes every session for that user. `forgot` is rate limited per email (3 per hour) and answers 202 whether or not the account exists.
+- **Rate limits (in-memory, per process):** login 10 per 10 minutes per email, forgot 3 per hour per email (a request without a valid email is not limited; the handler rejects or ignores it), state sync 60 per minute per user. **No per-IP limits on account routes**: production traffic arrives through the Vercel rewrite, so many users share a few egress IPs and a per-IP limit would be a site-wide cap.
+- **Input:** email must satisfy the existing `isEmail`; names in the profile must match `NAME_RE`, except that `theirName` may be `""` (solo learner, PR #17); progress keys must match `/^[A-Za-z0-9 :._-]{1,60}$/`; at most 200 progress items, 60 lessons completed, 12 practice words per lesson. Anything else is 400. Request bodies are capped (20 kB auth, 100 kB state).
 - **Logs:** never log emails, tokens or passwords. Failures log a fixed sentence, as the existing routes do.
 
 ### Saving and merging (client)
 `localStorage` stays the working copy, so the app works offline and for guests exactly as now. When signed in:
 1. **On load and after sign-in:** `GET /api/me`. If `state` is null, push the local profile and progress. If not, merge, save locally, then push.
 2. **After every change** to progress or profile (both `saveProgress` and `saveProfile` fire a `handshake:state` event), push after a 2 second debounce with `baseRev`. On 409, merge the returned state and retry once. Failures are silent; the next change retries.
-3. **Merge rules** (pure function `mergeState(local, server)` in `src/lib/merge.ts`):
+3. **Merge rules** (pure function `mergeState(local, server)` in `frontend/src/lib/merge.ts`):
    - `profile`: the account's profile wins when the account already has state; local wins only when the account has none.
    - `progress.completed`: union. `xp`: the larger. Streak: take the side with the later `lastActiveDay` (tie: larger `streakDays`). `items`: per key, the side with more `attempts` (tie: the server's).
    - The result is never smaller than either side for completed lessons or XP.
@@ -89,11 +90,11 @@ All errors are `{ "error": "<code>" }`, matching the existing routes. Auth route
 - `#/reset/<token>`: new password field.
 - Onboarding gets a final step "Save your progress" that shows the sign-up card inline, and a "I already have an account" link on step 1.
 - The header shows an account chip: the email when signed in (menu: Settings, Log out), "Log in" when not. Settings gets "Account": log out, delete account (with confirmation text).
-- Accessibility: every field labelled, errors in an `aria-live` region and tied to their field, focus moves to the first error, no CAPTCHA, no information carried by colour alone, works with the keyboard only, respects reduced motion. Same tokens as the rest of the app (the "A Silent Voice" palette passes `node src/styles.contrast.mjs`).
+- Accessibility: every field labelled, errors in an `aria-live` region and tied to their field, focus moves to the first error, no CAPTCHA, no information carried by colour alone, works with the keyboard only, respects reduced motion. Same tokens as the rest of the app (the "A Silent Voice" palette passes `node frontend/src/styles.contrast.mjs`).
 
 ## Privacy and honesty (must change with this feature)
 - `CLAUDE.md` privacy rules say the profile, names and mistake history stay in the browser. New text: **guests:** unchanged. **Signed-in users:** their profile and progress are stored on our server, tied to their account, and deleted when they delete the account. Gemini still receives only letters and error codes, never names. Attempt rows in Tiger Data stay anonymous.
-- Onboarding's footer ("Your names never leave this browser. Only lists of letters may be sent.") becomes accurate for both cases: shown as is for guests, and "Signed in: your names and progress are saved to your account." when signed in.
+- Onboarding's footer ("Your names never leave this browser. Only lists of letters may be sent.") becomes accurate for both cases: shown as is for guests, and "You're signed in: your names and progress are saved to your account." when signed in.
 - `docs/superpowers/specs/2026-11-07-sponsor-tracks-spec.md` lines saying "no auth or accounts" get a pointer to this spec. "Best Use of Auth0" stays out: we use Google sign-in directly.
 - The Devpost must say: accounts store email, a password hash or Google id, names and progress; no email verification.
 
@@ -109,16 +110,21 @@ All errors are `{ "error": "<code>" }`, matching the existing routes. Auth route
 2. Add and verify your sending domain (DNS records on GoDaddy). Until it is verified, Resend only delivers from `onboarding@resend.dev`, and only to the email address of the Resend account owner, so test with that address.
 3. Set `RESEND_FROM`, e.g. `Handshake <hello@yourdomain>`.
 
-New `.env` keys: `GOOGLE_CLIENT_ID`, `RESEND_API_KEY`, `RESEND_FROM`, `APP_ORIGIN` (for example `http://localhost:5173` in dev, `https://<your domain>` in production).
+New `.env` keys: `GOOGLE_CLIENT_ID`, `RESEND_API_KEY`, `RESEND_FROM`, `APP_ORIGIN` (for example `http://localhost:5173` in dev, the public Vercel URL such as `https://<app>.vercel.app` in production, never the API host). Server: `COOKIE_SECURE` (see Sessions).
 
 `APP_ORIGIN` is required for reset emails and must be configured, never read from the request. Building the emailed link from the `Host` header would let an attacker send a forged `Host` and make the victim's reset link point at the attacker's site (host header poisoning), leaking the token. If `APP_ORIGIN` or `RESEND_API_KEY` is unset, `resetEmail` is false in `/api/auth/config` and the "Forgot password" screen says so.
 
 ## Risks we accept and state
 - No email verification in v1.
+- The server contacts api.pwnedpasswords.com on sign-up and password reset (first 5 hash characters only; no password, email or account id).
 - Rate limits are in memory, per process (we run one process).
+- Sign-up and Google sign-in are not rate limited (no per-IP limits behind the Vercel rewrite) and there is no email verification, so bots can create accounts. Mitigation to add if abused: a CAPTCHA, or per-IP limits keyed on the forwarded client IP.
 - Signup reveals whether an email is taken (hiding it breaks sign-up usability); login and reset do not.
 - Google "Testing" mode silently blocks anyone not on the list: check it before the demo.
 - Progress sync is last-write-wins after the merge; two devices editing within 2 seconds can drop one device's most recent attempt.
+- The per-email login limit lets anyone lock a victim out of password login for 10 minutes.
+- Shared devices: logout leaves the browser's working copy, so a second account that signs in on the same browser merges the first one's progress into itself.
+- Deleting an account does not clear the learner id, camera preference or the n8n opt-in stored in the browser, and an n8n subscription keeps running until it is stopped on #/stats.
 
 ## Testing
-Server: `node --test` with fake database objects, following `server/routes/attempts.test.mjs` and `server/testutil.mjs`. Client: pure `src/lib/merge.test.ts`, `src/lib/auth.test.ts`. Screens: manual checklist in the plan (Google cannot be automated). Run `npm run build`, `node src/styles.contrast.mjs` and `npm test` before every merge. Note: the two slowest tests (`server/complete.test.mjs`, `server/profile.test.mjs`) start a Vite server and can time out on a loaded machine; rerun them alone.
+Server: `node --test` with fake database objects, following `backend/routes/attempts.test.mjs` and `backend/testutil.mjs`. Client: pure `frontend/src/lib/merge.test.ts`, `frontend/src/lib/auth.test.ts`. Screens: manual checklist in the plan (Google cannot be automated). Run `npm run build`, `node frontend/src/styles.contrast.mjs` and `npm test` before every merge. Note: the two slowest tests (`frontend/tests/complete.test.mjs`, `frontend/tests/profile.test.mjs`) start a Vite server and can time out on a loaded machine; rerun them alone.
