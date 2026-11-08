@@ -127,9 +127,6 @@ export function ProgressScreen() {
               </li>
             ))}
             {pages.length === 0 && <li>Your first page is waiting. Finish a lesson to write it down.</li>}
-            <li aria-hidden="true" className="jr-blur">
-              <Ink tone="smudge">Page {pages.length + 1} · next</Ink>
-            </li>
           </ul>
         </Page>
         <Page side="right" label="Your alphabet" title={`Your alphabet · ${doneCount} of 26`} ribbon number={2}>
@@ -175,7 +172,7 @@ export function ProgressScreen() {
             </div>
           )}
         </Page>
-        <Page side="right" label="Standouts" title="Where I am" number={4} stain>
+        <Page side="right" label="Standouts" title="Where I am" number={4}>
           <div className="jr-stack jr-stack-wide">
             <section aria-labelledby="jr-strong">
               <h3 id="jr-strong">Going well</h3>
@@ -219,7 +216,7 @@ export function ProgressScreen() {
           )}
           <p className="jr-note">How often the camera measured each finger away from the reference. Fewer is better.</p>
         </Page>
-        <Page side="right" label="Kinds of difference" title="Curl, direction, placement" number={6} stain>
+        <Page side="right" label="Kinds of difference" title="Curl, direction, placement" number={6}>
           {noMistakes ? (
             <p className="muted">Nothing to sort yet.</p>
           ) : (

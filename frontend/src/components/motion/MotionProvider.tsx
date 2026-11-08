@@ -43,6 +43,12 @@ export function useMotionSource(): { os: boolean; userChoice: boolean } {
   return { os, userChoice };
 }
 
+/** The in-app choice plus the device preference, for the Settings switch. */
+export function useMotionChoice(): { os: boolean; userChoice: boolean; setUserChoice(v: boolean): void } {
+  const { os, userChoice, setUserChoice } = useContext(MotionCtx);
+  return { os, userChoice, setUserChoice };
+}
+
 /** Nav switch. Text states the current setting, so it never relies on colour or an icon. */
 export function ReduceMotionToggle() {
   const { userChoice, setUserChoice } = useContext(MotionCtx);
@@ -50,29 +56,5 @@ export function ReduceMotionToggle() {
     <button type="button" className="reduce-motion-toggle" aria-pressed={userChoice} onClick={() => setUserChoice(!userChoice)}>
       Reduce motion: {userChoice ? "On" : "Off"}
     </button>
-  );
-}
-
-/**
- * The Settings control for motion. Plain words, no colour-only state.
- * Default follows the device (prefers-reduced-motion); the switch adds "always reduce" on top.
- */
-export function ReduceMotionSetting() {
-  const { os, userChoice, setUserChoice } = useContext(MotionCtx);
-  const on = os || userChoice;
-  return (
-    <div className="setting-row">
-      <div>
-        <p className="setting-title">Reduce motion: {on ? "On" : "Off"}</p>
-        <p className="muted small" id="rm-help">
-          {os
-            ? "Your device asks for reduced motion, so animation is off. Handshake follows that setting."
-            : "By default Handshake follows your device setting, which currently allows animation. Turn this on to stop movement anyway."}
-        </p>
-      </div>
-      <button type="button" className="secondary" aria-pressed={userChoice || os} aria-describedby="rm-help" disabled={os} onClick={() => setUserChoice(!userChoice)}>
-        {on ? "Reduced" : "Reduce motion"}
-      </button>
-    </div>
   );
 }

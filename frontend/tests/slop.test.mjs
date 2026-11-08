@@ -59,11 +59,13 @@ function hueOf(c) {
 const COLOUR = /#[0-9a-f]{8}\b|#[0-9a-f]{6}\b|#[0-9a-f]{3,4}\b|rgba?\([^)]*\)|hsla?\([^)]*\)/gi;
 
 test("no gradients (flat surfaces)", () => assert.deepEqual(find(/(linear|radial|conic)-gradient\(/), []));
-test("no violet/indigo colours (hue 245-320)", () => {
+// The owner-chosen palette (indigo/periwinkle/lavender, #3D52A0 #7091E6 #8697C4 #ADBBDA #EDE8F5) sits at hue 220-265, so only
+// true purple/magenta (272-320) is banned. The AI-look tell is purple gradients, which the "no gradients" test bans.
+test("no purple/magenta colours (hue 272-320; the palette itself is hue 220-265)", () => {
   const bad = files.flatMap(({ file, text }) =>
     [...text.matchAll(COLOUR)].flatMap((m) => {
       const x = hueOf(m[0]);
-      return x !== null && x >= 245 && x <= 320 ? [`${file}:${lineOf(text, m.index)}  ${m[0]}`] : [];
+      return x !== null && x >= 272 && x <= 320 ? [`${file}:${lineOf(text, m.index)}  ${m[0]}`] : [];
     }),
   );
   assert.deepEqual(bad, []);

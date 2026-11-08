@@ -84,3 +84,58 @@ test("lesson headlines are calm: no exclamation marks for any lesson", () =>
       assert.doesNotMatch(h, /!/, `${l.id}: ${h}`);
     }
   }));
+
+test("nav brand: decorative handshake mark plus the text 'Handshake' as the link name", () =>
+  withApp(async (load, render, h) => {
+    const { TopNav } = await load("/src/components/TopNav.tsx");
+    const html = render(h(TopNav, { hash: "#/" }));
+    const brand = html.match(/<a class="brand"[^>]*>(.*?)<\/a>/s)?.[1] ?? "";
+    assert.match(brand, /<svg[^>]*aria-hidden="true"/);
+    assert.equal(brand.replace(/<[^>]*>/g, "").trim(), "Handshake");
+  }));
+
+test("progress page: no blur teaser, water stain or ripple", () =>
+  withApp(async (load, render, h) => {
+    const { ProgressScreen } = await load("/src/screens/Progress.tsx");
+    const html = render(h(ProgressScreen));
+    assert.doesNotMatch(html, /jr-blur|jr-stain|jr-ripple/);
+    assert.doesNotMatch(html, /· next</);
+  }));
+
+test("settings: name tiles, switch for reduce motion, grouped rows, camera link", () =>
+  withApp(async (load, render, h) => {
+    const { Settings } = await load("/src/screens/Settings.tsx");
+    const html = render(h(Settings));
+    assert.equal((html.match(/<h1/g) ?? []).length, 1);
+    assert.match(html, /role="switch"[^>]*aria-checked="(true|false)"/);
+    for (const l of ["R", "Y", "A", "N", "L", "I"]) assert.match(html, new RegExp(`>${l}<`));
+    assert.match(html, /href="#\/camera-demo"/);
+    assert.ok((html.match(/<h2/g) ?? []).length >= 4);
+    assert.doesNotMatch(html, /set-group[^>]*>(?:(?!<\/section>).)*<section[^>]*set-group/s);
+    assert.match(html, /Right-handed/);
+    assert.doesNotMatch(html.replace(/<[^>]*>/g, " "), /!/);
+  }));
+
+test("settings: long names are capped with an ellipsis tile, non-letters are ignored", () =>
+  withApp(async (load, render, h) => {
+    const { NameTiles } = await load("/src/components/settings/NameTiles.tsx");
+    const html = render(h(NameTiles, { name: "Jo-Anne Marie Smith", label: "You" }));
+    assert.equal((html.match(/set-tile"/g) ?? []).length, 8);
+    assert.match(html, /set-tile-more/);
+    assert.doesNotMatch(html, />-</);
+    const short = render(h(NameTiles, { name: "Al", label: "You" }));
+    assert.doesNotMatch(short, /set-tile-more/);
+  }));
+
+test("settings: tiles are one labelled image; a name with no A-Z letters shows as plain text", () =>
+  withApp(async (load, render, h) => {
+    const { NameTiles, nameLetters } = await load("/src/components/settings/NameTiles.tsx");
+    assert.deepEqual(nameLetters(""), []);
+    assert.deepEqual(nameLetters("李明"), []);
+    const { Settings } = await load("/src/screens/Settings.tsx");
+    assert.match(render(h(Settings)), /role="img"[^>]*aria-label="You: Ryan"/);
+    const html = render(h(NameTiles, { name: "李明", label: "You" }));
+    assert.doesNotMatch(html, /set-tile/);
+    assert.match(html, /李明/);
+    assert.match(html, /You/);
+  }));

@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import "./TopNav.css";
+import { HandshakeMark } from "./HandshakeMark";
 import { StreakXpChip } from "./StreakXpChip";
 import { ReduceMotionToggle } from "./motion/MotionProvider";
 import { springs } from "./motion/tokens";
@@ -29,7 +30,7 @@ export function TopNav({ hash }: { hash: string }) {
   const progress = loadProgress();
   return (
     <nav aria-label="Main" className="top-nav">
-      <div className="nav-left"><a className="brand" href="#/">Handshake</a></div>
+      <div className="nav-left"><a className="brand" href="#/"><HandshakeMark /><span>Handshake</span></a></div>
       <div className="nav-center">
         <div className="nav-links">
           {NAV.map(([href, label]) => {

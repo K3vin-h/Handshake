@@ -7,8 +7,8 @@ export function Spread({ children }: { children: ReactNode }) {
   return <section className="jr-spread">{children}</section>;
 }
 
-export function Page({ side, label, title, number, ribbon, stain, children }: {
-  side: "left" | "right"; label?: string; title?: string; number?: number; ribbon?: boolean; stain?: boolean; children?: ReactNode;
+export function Page({ side, label, title, number, ribbon, children }: {
+  side: "left" | "right"; label?: string; title?: string; number?: number; ribbon?: boolean; children?: ReactNode;
 }) {
   return (
     <div className={`jr-page jr-page-${side}`}>
@@ -17,12 +17,6 @@ export function Page({ side, label, title, number, ribbon, stain, children }: {
       {label && <div className="jr-label">{label}</div>}
       {title && <h2 className="jr-title">{title}</h2>}
       <div className="jr-body">{children}</div>
-      {stain && (
-        <>
-          <div className="jr-stain" aria-hidden="true" />
-          <div className="jr-ripple" aria-hidden="true" />
-        </>
-      )}
       {number !== undefined && <span className="jr-num" aria-hidden="true">{number}</span>}
     </div>
   );
