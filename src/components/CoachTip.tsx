@@ -12,9 +12,9 @@ import { useEffect, useRef, useState } from "react";
  * - onAskCoach: when given and there is no coachText yet, shows an "Ask Coach" button.
  *   This component does no fetching; the screen decides when to call the server and what it sends.
  *
- * Look: a card with a soft rotating "halo" glow (our own CSS, inspired by Cult UI's Halo Input) so new coaching is
- * hard to miss. When the tip or the coach text CHANGES the glow flares, the new text pops in and a "New" label shows for
- * a few seconds. "New" is real text, so it does not rely on colour or motion; the motion stops under prefers-reduced-motion
+ * Look: a frosted card with a thin rim and two soft colour glows (river blue, sakura) inside it, drifting slowly (our own CSS,
+ * inspired by Cult UI's Halo Input). When the tip or the coach text CHANGES the glow brightens, the new text pops in and a
+ * "New" label shows for a few seconds. "New" is real text, so it does not rely on colour or motion; the motion stops under prefers-reduced-motion
  * and the in-app "Reduce motion" switch. The card is an aria-live="polite" region, so a changed tip is announced.
  */
 export function CoachTip(props: {
@@ -43,6 +43,7 @@ export function CoachTip(props: {
   return (
     <div className={`coach-halo${hasContent ? " is-active" : ""}${fresh ? " is-fresh" : ""}`}>
       <section className="coach" aria-label="Coaching" aria-live="polite">
+        <span className="coach-glow" aria-hidden="true" />
         {fresh && <span className="coach-new">New</span>}
         {instantTip && (
           <p key={instantTip} className="coach-instant coach-pop">
