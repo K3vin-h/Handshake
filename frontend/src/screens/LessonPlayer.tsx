@@ -24,7 +24,14 @@ export const MATCH_WORDING = "Matches our recording";
 export type Item =
   | { kind: "learn"; letter: string; referenceOnly: boolean }
   | { kind: "check"; letter: string; showReference: boolean; reps?: number; word?: { letters: string[]; index: number } }
+  | { kind: "identify"; letter: string; options: string[]; again?: boolean } // "which letter is this?": no camera
   | { kind: "other"; step: Step }; // sign / sentence / scene: group-1 Tasks 10 and 12
+
+const shuffle = <T,>(xs: T[]): T[] => {
+  const a = [...xs];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+};
 
 export function expand(steps: Step[], _progress: Progress): Item[] {
   const out: Item[] = [];
@@ -34,6 +41,11 @@ export function expand(steps: Step[], _progress: Progress): Item[] {
     else if (s.kind === "practice") {
       // One step per letter: LetterItem counts the reps (relax the hand between them).
       if (isPracticeable(s.letter)) out.push({ kind: "check", letter: s.letter, showReference: true, reps: s.reps });
+    } else if (s.kind === "identify") {
+      if (isPracticeable(s.letter)) out.push({ kind: "identify", letter: s.letter, options: s.options }); // needs a recorded 3D pose
+    } else if (s.kind === "mix") {
+      // Sign again from memory, random order, reference hidden (hint ladder available).
+      for (const l of shuffle(s.letters.filter(isPracticeable))) out.push({ kind: "check", letter: l, showReference: false });
     } else if (s.kind === "spell") {
       const letters = [...s.word];
       letters.forEach((l, index) => out.push(isPracticeable(l)
@@ -59,7 +71,7 @@ function Player({ lessonId }: { lessonId: string }) {
   const units = useMemo(() => buildCurriculum(profile).filter((u) => ["u1", "u2", "u3", "u4"].includes(u.id)), []); // eslint-disable-line react-hooks/exhaustive-deps
   const lesson = useMemo(() => flatLessons(units).find((l) => l.id === lessonId), [units, lessonId]);
   const progress = useRef(loadProgress()); // a ref, not state: recordAttempt mutates, and StrictMode would double-apply updaters
-  const items = useMemo(() => (lesson ? expand(lesson.steps, progress.current) : []), [lesson]);
+  const [items, setItems] = useState<Item[]>(() => (lesson ? expand(lesson.steps, progress.current) : [])); // state: a missed "which letter" comes back once at the end
   const [i, setI] = useState(0);
   const [turn, setTurn] = useState(0); // which exchange of a conversation scene (hooks stay above the early returns)
   const lessonLetters = useMemo(() => [...new Set(items.flatMap((x) => (x.kind === "check" ? [x.letter] : [])))], [items]);
@@ -117,12 +129,15 @@ function Player({ lessonId }: { lessonId: string }) {
   // ONE camera at a time: LetterItem stays mounted across consecutive letter items (no key), so the camera never restarts.
   if (item.kind === "other")
     return <div className="page"><p>Coming in a later milestone: {item.step.kind}</p><button onClick={next}>Continue</button></div>;
+  if (item.kind === "identify")
+    return <IdentifyItem key={i} item={item} leftHanded={profile.leftHanded} stepLabel={stepLabel} onNext={next}
+      onMiss={() => { if (!item.again) setItems((xs) => [...xs, { ...item, again: true }]); }} />;
   return <LetterItem index={i} item={item} lessonLetters={lessonLetters} leftHanded={profile.leftHanded} stepLabel={stepLabel} lessonProgress={i / items.length} stepSize={1 / items.length} progress={progress} onNext={next} />;
 }
 
 type LetterItemProps = {
   index: number;
-  item: Exclude<Item, { kind: "other" }>;
+  item: Exclude<Item, { kind: "other" } | { kind: "identify" }>;
   lessonLetters: string[];
   leftHanded: boolean;
   stepLabel: string;
@@ -275,5 +290,40 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
       status={status || (recall ? `From memory: sign ${target}. The reference is hidden on purpose so you practise recalling it.` : `Hold the sign for ${target}${reps > 1 ? ` (${rep} of ${reps})` : ""}`)} feedback={result || undefined}
       actionLabel="Continue" actionDisabled={result !== "match"} onAction={onNext}
       onRetry={result === "match" ? retry : undefined} onSkip={result === "match" ? undefined : onNext} />
+  );
+}
+
+/** "Which letter is this?": a recorded 3D hand and answer choices. No camera, and it does not count toward mastery (that needs signing). */
+function IdentifyItem({ item, leftHanded, stepLabel, onNext, onMiss }: { item: Extract<Item, { kind: "identify" }>; leftHanded: boolean; stepLabel: string; onNext: () => void; onMiss: () => void }) {
+  const templates = useMemo(() => loadTemplates(), []);
+  const [picked, setPicked] = useState<string[]>([]);
+  const done = picked.includes(item.letter);
+  const last = picked[picked.length - 1];
+  const status = done ? `Yes, that is ${item.letter}. It matches the reference.` : last ? `Not ${last}. Try another.` : "Pick the letter this hand is showing.";
+  function pick(l: string) {
+    if (done || picked.includes(l)) return;
+    if (l !== item.letter && picked.length === 0) onMiss();
+    setPicked([...picked, l]);
+  }
+  return (
+    <div className="page">
+      <p className="muted">{stepLabel}</p>
+      <h1>Which letter is this?</h1>
+      <Suspense fallback={<div className="hand3d empty">Loading 3D hand…</div>}>
+        <HandModel3D pose={meanPose3D(item.letter, templates, leftHanded)} letter="?" />
+      </Suspense>
+      <div className="choices big-choices" role="group" aria-label="Answer choices">
+        {item.options.map((l) => (
+          <button key={l} type="button" className="secondary" disabled={done || picked.includes(l)} onClick={() => pick(l)}>
+            {l}{picked.includes(l) && l !== item.letter ? " (not this one)" : ""}{done && l === item.letter ? " ✓" : ""}
+          </button>
+        ))}
+      </div>
+      <p role="status" aria-live="polite">{status}</p>
+      <p>
+        <button type="button" className="cta" disabled={!done} onClick={onNext}>Continue</button>{" "}
+        {!done && <button type="button" className="secondary" onClick={onNext}>Skip</button>}
+      </p>
+    </div>
   );
 }
