@@ -60,3 +60,79 @@ export function centrePose(pose: Vec3[]): Vec3[] {
   const c = [0, 1, 2].map((k) => (Math.min(...pose.map((p) => p[k])) + Math.max(...pose.map((p) => p[k]))) / 2);
   return pose.map((p) => [p[0] - c[0], p[1] - c[1], p[2] - c[2]]);
 }
+
+/** Finger radii the viewer draws (knuckle end, tip end), cm. KEEP IN SYNC with FINGERS in components/HandModel3D.tsx. Index = CHAINS index. */
+const RADII: [number, number][] = [[1.15, 0.78], [0.92, 0.64], [0.95, 0.66], [0.9, 0.62], [0.8, 0.55]];
+const radiusAt = (finger: number, k: number) => RADII[finger][0] + (RADII[finger][1] - RADII[finger][0]) * (k / 3);
+
+/**
+ * Letters whose neighbouring fingers press together, as [anchor finger, finger that leans toward it] (1 index, 2 middle, 3 ring, 4 pinky).
+ * Recordings of these letters average out slightly apart (MediaPipe noise), which looks wrong on the model.
+ * Only letters listed here change; V, W, 5 and the rest keep their recorded spacing.
+ */
+export const TOGETHER: Record<string, [number, number][]> = {
+  U: [[1, 2]],
+  H: [[1, 2]],
+  B: [[2, 1], [2, 3], [3, 4]], // anchored on the middle finger: index and ring lean in, then the pinky leans toward the ring
+};
+
+/**
+ * Letters whose listed fingers are held straight (1 index, 2 middle, 3 ring, 4 pinky). Averaged recordings leave a
+ * slight curl in them (MediaPipe noise), which looks wrong on the model. Only listed letters change.
+ */
+export const STRAIGHT: Record<string, number[]> = {
+  U: [1, 2],
+  H: [1, 2],
+  V: [1, 2],
+  B: [1, 2, 3, 4],
+};
+
+/**
+ * Lay each listed finger out along one straight line from its knuckle to where its tip was pointing. Every bone keeps
+ * its length, the knuckle stays put, and the overall direction of the finger is the recorded one: only the curl goes.
+ */
+export function straightenFingers(pose: Vec3[], letter: string): Vec3[] {
+  const fingers = STRAIGHT[letter];
+  if (!fingers) return pose;
+  const out: Vec3[] = pose.map((p) => [...p] as Vec3);
+  for (const f of fingers) {
+    const ids = CHAINS[f].ids;
+    const axis = sub(pose[ids[3]], pose[ids[0]]);
+    const n = norm(axis);
+    if (n < EPS) continue;
+    let reach = 0;
+    for (let i = 1; i < ids.length; i++) {
+      reach += norm(sub(pose[ids[i]], pose[ids[i - 1]]));
+      out[ids[i]] = [pose[ids[0]][0] + (axis[0] / n) * reach, pose[ids[0]][1] + (axis[1] / n) * reach, pose[ids[0]][2] + (axis[2] / n) * reach];
+    }
+  }
+  return out;
+}
+
+/**
+ * Lean each listed finger toward its neighbour until the drawn fingers just touch (centre distance = sum of the two
+ * radii at that joint). The finger is re-placed bone by bone from its knuckle, so every bone keeps its length: only
+ * the direction changes. Fingers already closer are left alone; the knuckle never moves.
+ */
+export function closeFingers(pose: Vec3[], letter: string): Vec3[] {
+  const pairs = TOGETHER[letter];
+  if (!pairs) return pose;
+  const out: Vec3[] = pose.map((p) => [...p] as Vec3);
+  for (const [a, b] of pairs) {
+    const ids = CHAINS[b].ids;
+    for (let k = 1; k <= 3; k++) {
+      const pa = out[CHAINS[a].ids[k]];
+      const d = sub(pose[ids[k]], pa);
+      const n = norm(d);
+      const touch = radiusAt(a, k) + radiusAt(b, k);
+      // Where the joint should be to touch the neighbour; if already as close, keep the recorded spot.
+      const want: Vec3 = n > touch && n > EPS ? [pa[0] + (d[0] / n) * touch, pa[1] + (d[1] / n) * touch, pa[2] + (d[2] / n) * touch] : pose[ids[k]];
+      const prev = out[ids[k - 1]];
+      const len = norm(sub(pose[ids[k]], pose[ids[k - 1]]));
+      const to = sub(want, prev);
+      const tn = norm(to);
+      if (tn > EPS) out[ids[k]] = [prev[0] + (to[0] / tn) * len, prev[1] + (to[1] / tn) * len, prev[2] + (to[2] / tn) * len];
+    }
+  }
+  return out;
+}

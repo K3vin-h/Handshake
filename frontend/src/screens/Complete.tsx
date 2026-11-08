@@ -7,12 +7,14 @@ import { buildCurriculum, flatLessons } from "../lib/curriculum";
 import { refreshPracticeWords } from "../lib/profile";
 import { requireProfile } from "../lib/requireProfile";
 import { isUnlocked, loadProgress, nextLesson } from "../lib/progress";
+import { AlphabetStrip } from "../components/AlphabetStrip";
 
 // Level-complete. The player records completion: visiting this route never awards XP or unlocks a lesson.
 // Focus moves to the heading on arrival and the result is also shown as text. Confetti is skipped under
 // prefers-reduced-motion (see celebrate()). Only Units 1-2 are active, so only they are considered.
 
-export function Complete({ lessonId }: { lessonId: string }) {
+export function Complete({ lessonId: routeParam }: { lessonId: string }) {
+  const lessonId = routeParam.split("?")[0]; // tolerate a stray query on the hash
   const heading = useRef<HTMLHeadingElement>(null);
   const celebrated = useRef(false);
   const [progress] = useState(loadProgress);
@@ -68,46 +70,55 @@ export function Complete({ lessonId }: { lessonId: string }) {
 
   const next = nextLesson(units, progress);
   const nextOpen = next && isUnlocked(units, progress, next.id);
-  return (
-    <div className="page complete">
-      <header className="hero">
-        <p className="eyebrow">Lesson {lesson.id}</p>
-        <h1 ref={heading} tabIndex={-1}>Lesson complete</h1>
-      </header>
-
+  const btn = "h-12 rounded-2xl border-2";
+  const primary = "h-12 rounded-2xl border-b-4 border-brand-deep";
+  const status = (
+    <>
       <StatusMessage kind="match" label="Lesson complete" message={`You finished ${lesson.title} and earned ${lesson.xp} XP. Your total is ${progress.xp} XP.`} />
-
       {unitDone && unit && <StatusMessage kind="match" label="Unit complete" message={`You finished every lesson in ${unit.title}.`} />}
+    </>
+  );
+  const stats = (
+    <dl className="stats">
+      <div><dt>Lesson XP</dt><dd>{lesson.xp}</dd></div>
+      <div><dt>Total XP</dt><dd>{progress.xp}</dd></div>
+      <div><dt>Practice streak</dt><dd>{progress.streakDays} {progress.streakDays === 1 ? "day" : "days"}</dd></div>
+    </dl>
+  );
+  const continueBtn = nextOpen ? (
+    <Button asChild size="lg" className={primary}><a href={`#/lesson/${next.id}`}>Continue: {next.id} {next.title}</a></Button>
+  ) : (
+    <p>You finished the current path. Greetings and conversations are coming later.</p>
+  );
+  const others = (
+    <>
+      <Button asChild variant="outline" size="lg" className={btn}><a href={`#/lesson/${lessonId}`}>Practice again</a></Button>
+      <Button asChild variant="outline" size="lg" className={btn}><a href="#/path">Back to levels</a></Button>
+      <Button asChild variant="outline" size="lg" className={btn}><a href="#/progress">View progress</a></Button>
+    </>
+  );
+  const whatNext = (
+    <Card className="rounded-3xl border-2">
+      <CardHeader><CardTitle className="text-xl">What next</CardTitle></CardHeader>
+      <CardContent className="flex flex-wrap items-center gap-2">{continueBtn}{others}</CardContent>
+    </Card>
+  );
+  const hero = (
+    <header className="hero">
+      <p className="eyebrow">Lesson {lesson.id}</p>
+      <h1 ref={heading} tabIndex={-1}>Lesson complete</h1>
+    </header>
+  );
 
-      <dl className="stats">
-        <div><dt>Lesson XP</dt><dd>{lesson.xp}</dd></div>
-        <div><dt>Total XP</dt><dd>{progress.xp}</dd></div>
-        <div><dt>Practice streak</dt><dd>{progress.streakDays} {progress.streakDays === 1 ? "day" : "days"}</dd></div>
-      </dl>
-
-      <Card className="rounded-3xl border-2">
-        <CardHeader>
-          <CardTitle className="text-xl">What next</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-2">
-          {nextOpen ? (
-            <Button asChild size="lg" className="h-12 rounded-2xl border-b-4 border-brand-deep">
-              <a href={`#/lesson/${next.id}`}>Continue: {next.id} {next.title}</a>
-            </Button>
-          ) : (
-            <p>You finished the current path. Greetings and conversations are coming later.</p>
-          )}
-          <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl border-2">
-            <a href={`#/lesson/${lessonId}`}>Practice again</a>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl border-2">
-            <a href="#/">Back to your path</a>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl border-2">
-            <a href="#/progress">View progress</a>
-          </Button>
-        </CardContent>
-      </Card>
+  // Two columns on wide screens: the result and what next on the left, the alphabet always visible on the right.
+  // On phones the columns stack.
+  return (
+    <div className="page complete reward-dawn">
+      {hero}
+      <div className="complete-cols">
+        <div>{status}{stats}{whatNext}</div>
+        <aside aria-label="Alphabet"><AlphabetStrip units={units} progress={progress} lessonId={lessonId} /></aside>
+      </div>
     </div>
   );
 }
