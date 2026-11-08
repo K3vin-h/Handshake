@@ -262,7 +262,7 @@ button:hover:not(:disabled), .link-button:hover { transform: translateY(-1px); b
 /* Narrow screens: smaller zig-zag so nodes and the start card stay on screen. --wiggle scales the nodes AND the dotted links together. */
 @media (max-width: 520px) { .map { --wiggle: 0.35; } .map-label { min-width: 0; } }
 @media (max-width: 360px) { .map { --wiggle: 0.2; } } /* very small phones: tighter zig-zag */
-.map-row.map-done .map-link { border-left-color: var(--brand-2); }
+.map-row.map-done .map-link { border-left-color: var(--match); }
 .map-label { display: flex; flex-direction: column; min-width: 130px; max-width: 200px; }
 .map-label strong { font-size: 1rem; }
 
@@ -277,8 +277,8 @@ button:hover:not(:disabled), .link-button:hover { transform: translateY(-1px); b
 .map-current .map-glyph { color: #1d3a55; font-size: 1.3rem; }
 .map-current .map-glow { opacity: 1; animation: glow-pulse 2.4s ease-in-out infinite; }
 .map-current .map-node { animation: bob 3s ease-in-out infinite; }
-.map-done .map-disc { border-color: var(--brand-2); background: radial-gradient(circle at 35% 30%, #fde4ec, #e58aa8 60%, #b4466c); box-shadow: 0 10px 0 #8e3455, 0 14px 22px rgba(30, 50, 70, 0.14); }
-.map-done .map-glyph { color: #1d3a55; font-size: 1.6rem; }
+.map-done .map-disc { border-color: var(--match); background: radial-gradient(circle at 35% 30%, var(--match-bg), #6fc296 60%, var(--match)); box-shadow: 0 10px 0 #11482f, 0 14px 22px rgba(30, 50, 70, 0.14); }
+.map-done .map-glyph { color: #0b2f1e; font-size: 1.6rem; }
 .map-locked .map-disc { border-style: dashed; background: var(--raised); box-shadow: 0 10px 0 #dde5ec, 0 14px 22px rgba(30, 50, 70, 0.08); opacity: 0.85; }
 .map-locked .map-node { cursor: not-allowed; }
 .map-locked .map-label { opacity: 0.85; }

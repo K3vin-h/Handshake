@@ -22,7 +22,7 @@ export function Settings() {
         <CardContent>
           <div className="setting-row">
             <p className="setting-title">
-              {profile.userName} → {profile.theirName} · {profile.leftHanded ? "Left" : "Right"}-handed
+              {profile.userName}{profile.theirName ? ` → ${profile.theirName}` : " (learning for yourself)"} · {profile.leftHanded ? "Left" : "Right"}-handed
             </p>
             <a className="button-link secondary" href="#/welcome">Change names or hand</a>
           </div>

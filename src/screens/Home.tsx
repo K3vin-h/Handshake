@@ -85,7 +85,7 @@ export function Home() {
         </div>
 
         <div className="hero-names">
-          {([["Your name", yourLetters], [`${them}'s name`, theirLetters]] as const).map(([caption, letters]) => (
+          {([["Your name", yourLetters], [`${them}'s name`, theirLetters]] as const).filter(([, letters]) => letters.length).map(([caption, letters]) => (
             <div key={caption} role="group" aria-label={`${caption}: ${letters.join("")}`}>
               <p className="hero-caption">{caption}</p>
               <ol className="name-tiles">

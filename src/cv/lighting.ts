@@ -86,10 +86,22 @@ export function enhanceFrame(cv: CV, video: HTMLVideoElement, work: HTMLCanvasEl
 
 /** Ask the camera for 720p and automatic exposure / white balance where supported (mostly Chrome). */
 export async function openCamera(): Promise<MediaStream> {
-  const stream = await navigator.mediaDevices.getUserMedia({
+  const ask = () => navigator.mediaDevices.getUserMedia({
     video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 }, facingMode: "user" },
     audio: false,
   });
+  // "Device in use" (NotReadableError) is often our own previous stream still being released between lesson steps.
+  // Retry a few times; if it persists, another app or tab really has the camera.
+  let stream: MediaStream | undefined;
+  for (let attempt = 0; !stream; attempt++) {
+    try {
+      stream = await ask();
+    } catch (e) {
+      if (!(e instanceof DOMException && e.name === "NotReadableError")) throw e;
+      if (attempt >= 3) throw new Error("The camera is in use by another app or browser tab. Close it (Zoom, Teams, another tab), then press Turn camera off and on.");
+      await new Promise((r) => setTimeout(r, 400));
+    }
+  }
   const track = stream.getVideoTracks()[0];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const caps: any = track.getCapabilities?.() ?? {};
