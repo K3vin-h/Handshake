@@ -452,6 +452,43 @@ nav.shell-nav .shell-list a[aria-current="page"] { color: var(--brand-text); bac
 [data-reduce-motion] .stagger, [data-reduce-motion] .map-current .map-node, [data-reduce-motion] .map-current .map-glow { animation: none; }
 [data-reduce-motion] .shell-indicator { transition: none; }
 
+/* ---- Home: one loud focus card, everything else quiet ---- */
+.focus { position: relative; overflow: hidden; margin-bottom: var(--space-4); padding: clamp(24px, 4vw, 44px); border-radius: var(--radius-lg); color: #fff; background: linear-gradient(120deg, var(--brand-deep) 0%, #5b47b8 45%, var(--brand-2) 100%); box-shadow: 0 18px 40px rgba(75, 58, 156, 0.28); }
+.focus::before { content: ""; position: absolute; right: -90px; top: -110px; width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.28), transparent 65%); animation: drift 14s ease-in-out infinite alternate; }
+.focus > * { position: relative; }
+.focus-eyebrow { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #fff; opacity: 0.92; }
+.focus h1 { margin: var(--space-2) 0 var(--space-5); max-width: 22ch; font-size: clamp(1.9rem, 4.6vw, 3rem); line-height: 1.1; letter-spacing: -0.025em; color: #fff; }
+.focus-next { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-4) var(--space-5); border-radius: var(--radius-md); background: rgba(20, 12, 60, 0.28); border: 2px solid rgba(255, 255, 255, 0.55); }
+.focus-lesson { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+.focus-kicker { margin: 0; font-size: 14px; font-weight: 700; color: #fff; }
+.focus-note { margin: var(--space-1) 0 0; color: #fff; }
+.focus h2 { margin: 2px 0 0; font-size: clamp(1.4rem, 3vw, 1.9rem); color: #fff; }
+.focus-letters { display: flex; gap: var(--space-2); }
+.focus-letters span { display: grid; place-items: center; width: 52px; height: 60px; border-radius: 14px; background: #fff; color: var(--brand-deep); font-size: 1.9rem; font-weight: 900; box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18); animation: pop-in 520ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both; animation-delay: calc(var(--k, 0) * 90ms + 250ms); }
+.focus-cta { display: inline-flex; align-items: center; gap: var(--space-1); min-height: 56px; padding: 0 var(--space-6); border: 0; border-bottom: 5px solid rgba(0, 0, 0, 0.22); border-radius: var(--radius-md); background: #fff; color: var(--brand-deep); font: inherit; font-size: 1.15rem; font-weight: 800; cursor: pointer; transition: transform 160ms ease, box-shadow 160ms ease; }
+.focus-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(0, 0, 0, 0.25); }
+.focus-cta:active { transform: translateY(2px); border-bottom-width: 2px; }
+.focus-cta:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.shortcuts { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: 0 0 var(--space-5); padding: 0; list-style: none; font-size: 15px; }
+.shortcuts a { color: var(--muted); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.shortcuts a:hover { color: var(--brand-text); }
+.shortcuts .is-locked { color: var(--muted); }
+
+/* Quiet secondary rail: no boxes, small headings, compact chips */
+.side { gap: var(--space-5); }
+.rail h2 { margin: 0 0 var(--space-2); font-size: 13px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.rail p { margin: 0 0 var(--space-2); font-size: 14px; }
+.rail .live-coverage > p .muted { display: block; }
+.rail .badge { min-width: 0; flex-direction: row; align-items: center; gap: var(--space-2); padding: 4px 10px; border-width: 1px; border-bottom-width: 1px; border-radius: var(--radius-pill); box-shadow: none; }
+.rail .badge-letter { font-size: 16px; font-weight: 800; }
+.rail .badge-status { font-size: 12px; font-weight: 600; }
+.rail .chip-row { gap: var(--space-2); }
+.unit-card { box-shadow: none; border-width: 1px; padding: var(--space-4); }
+.unit-badge { width: 44px; height: 44px; border-radius: 14px; margin-bottom: var(--space-2); box-shadow: none; }
+.unit-badge span { font-size: 1.3rem; }
+@media (prefers-reduced-motion: reduce) { .focus::before, .focus-letters span { animation: none; } }
+[data-reduce-motion] .focus::before, [data-reduce-motion] .focus-letters span { animation: none; }
+
 /* ---- Camera + dev screens (Ryan's classes; colours via tokens) ---- */
 .camera { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #000; border-radius: var(--radius-lg); overflow: hidden; }
 .camera video, .camera canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }

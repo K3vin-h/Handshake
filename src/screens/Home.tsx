@@ -4,8 +4,6 @@ import { LiveCoverage } from "../components/LiveCoverage";
 import { LockedUnit } from "../components/LockedUnit";
 import { UnitSection, type MapLesson } from "../components/PathMap";
 import { LetterBadge, type LetterStatus } from "../components/LetterBadge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildCurriculum } from "../lib/curriculum";
 import { DEMO_PROFILE, loadProfile } from "../lib/profile";
 import { dueItems, isUnlocked, loadProgress, nextLesson } from "../lib/progress";
@@ -30,36 +28,61 @@ export function Home() {
     return isUnlocked(units, progress, id) ? "available" : "locked";
   };
   const open = (id: string) => (location.hash = `#/lesson/${id}`);
+  const themKey = profile.theirName.toUpperCase().replace(/[^A-Z]/g, "");
+  const spellThem = units.flatMap((u) => u.lessons).find((l) => l.title.toUpperCase() === `SPELL ${themKey}`);
+  const spellOpen = spellThem ? isUnlocked(units, progress, spellThem.id) : false;
+  // Big decorative letters for "Spell WORD" lessons: the eye-catcher. The lesson title already says it in text.
+  const word = next?.title.match(/^Spell ([A-Za-z]+)$/)?.[1]?.toUpperCase().split("") ?? [];
 
   return (
     <div className="page home">
-      <header className="hero stagger" style={{ "--i": 0 } as React.CSSProperties}>
-        <p className="eyebrow">Your path</p>
-        <h1>
+      <section className="focus stagger" style={{ "--i": 0 } as React.CSSProperties} aria-labelledby="focus-title">
+        <p className="focus-eyebrow">Your path</p>
+        <h1 id="focus-title">
           Start with your name, {profile.userName}. Then {profile.theirName}&rsquo;s.
         </h1>
-      </header>
-
-      <section className="continue-card stagger" style={{ "--i": 1 } as React.CSSProperties} aria-labelledby="continue-title">
         {next ? (
-          <>
-            <div>
-              <p className="eyebrow" id="continue-title">Continue</p>
-              <h2>{next.title}</h2>
-              <p className="muted">Lesson {next.id} · {next.xp} XP</p>
+          <div className="focus-next">
+            <div className="focus-lesson">
+              {word.length > 0 && (
+                <div className="focus-letters" aria-hidden="true">
+                  {word.map((l, i) => (
+                    <span key={i} style={{ "--k": i } as React.CSSProperties}>{l}</span>
+                  ))}
+                </div>
+              )}
+              <div>
+                <p className="focus-kicker">Up next · Lesson {next.id} · {next.xp} XP</p>
+                <h2>{next.title}</h2>
+              </div>
             </div>
-            <Button size="lg" className="h-12 rounded-2xl border-b-4 border-brand-deep px-7 text-base" onClick={() => open(next.id)}>
+            <button type="button" className="focus-cta" onClick={() => open(next.id)}>
               Continue lesson {next.id}
-            </Button>
-          </>
+              <span aria-hidden="true"> →</span>
+            </button>
+          </div>
         ) : (
-          <div>
-            <p className="eyebrow" id="continue-title">Continue</p>
-            <h2>Every available lesson is finished</h2>
-            <p className="muted">More lessons are coming later.</p>
+          <div className="focus-next">
+            <div>
+              <p className="focus-kicker">All caught up</p>
+              <h2>Every available lesson is finished</h2>
+              <p className="focus-note">More lessons are coming later.</p>
+            </div>
           </div>
         )}
       </section>
+
+      <ul className="shortcuts stagger" style={{ "--i": 1 } as React.CSSProperties} aria-label="Shortcuts">
+        <li><a href="#/progress">Progress</a></li>
+        <li><a href="#/camera-demo">Camera demo</a></li>
+        <li><a href="#/stats">Stats</a></li>
+        {spellThem && (
+          <li>
+            {spellOpen ? <a href={`#/lesson/${spellThem.id}`}>{spellThem.title}</a> : <span className="is-locked">{spellThem.title} (locked until the lessons before it are done)</span>}
+          </li>
+        )}
+        <li><a href="#/welcome">Names and hand</a></li>
+      </ul>
 
       <div className="home-layout">
         <div className="units stagger" style={{ "--i": 2 } as React.CSSProperties}>
@@ -81,33 +104,22 @@ export function Home() {
         </div>
 
         <aside className="side stagger" style={{ "--i": 3 } as React.CSSProperties} aria-label="Your letters and review">
-          <Card className="rounded-3xl border-2 gap-3 py-5">
-            <CardHeader className="gap-0 px-5">
-              <CardTitle className="text-xl">Letters in {profile.theirName}</CardTitle>
-            </CardHeader>
-            <CardContent className="px-5">
-              <LiveCoverage name={profile.theirName} isLive={isPracticeable} stateOf={letterState} />
-            </CardContent>
-          </Card>
-          <Card className="rounded-3xl border-2 gap-3 py-5">
-            <CardHeader className="gap-0 px-5">
-              <CardTitle className="text-xl">Due for review</CardTitle>
-            </CardHeader>
-            <CardContent className="px-5">
-              {due.length === 0 ? (
-                <p className="muted">Nothing is due. Letters you practise will come back here for review.</p>
-              ) : (
-                <div className="chip-row">
-                  {due.map((l) => (
-                    <LetterBadge key={l} letter={l} status={isPracticeable(l) ? letterState(l) : "reference-only"} />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          <p className="muted small">
-            <a href="#/camera-demo">Try the camera and coach (demo, not scored)</a>
-          </p>
+          <section className="rail" aria-labelledby="rail-letters">
+            <h2 id="rail-letters">Letters in {profile.theirName}</h2>
+            <LiveCoverage name={profile.theirName} isLive={isPracticeable} stateOf={letterState} />
+          </section>
+          <section className="rail" aria-labelledby="rail-due">
+            <h2 id="rail-due">Due for review</h2>
+            {due.length === 0 ? (
+              <p className="muted">Nothing is due. Letters you practise will come back here for review.</p>
+            ) : (
+              <div className="chip-row">
+                {due.map((l) => (
+                  <LetterBadge key={l} letter={l} status={isPracticeable(l) ? letterState(l) : "reference-only"} />
+                ))}
+              </div>
+            )}
+          </section>
         </aside>
       </div>
     </div>
