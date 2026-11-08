@@ -14,6 +14,9 @@ import { DEMO_PROFILE, loadProfile, refreshPracticeWords, saveProfile } from "..
 
 const TOTAL = 4;
 
+// Onboarding is often shown AT "#/" (no profile yet). Setting the same hash fires no hashchange, so the router would never re-render.
+const goHome = () => (location.hash === "#/" ? dispatchEvent(new HashChangeEvent("hashchange")) : (location.hash = "#/"));
+
 /**
  * Privacy line. ONE constant, chosen by whether "Build my path" currently calls the server.
  * It does: refreshPracticeWords() posts lists of letters to /api/words. If that call is removed, set this to false.
@@ -125,7 +128,7 @@ export function Onboarding() {
     // Build my path: save locally (try/catch + memory fallback inside saveProfile), then refresh practice words in the
     // background. The local path already exists, so a slow, failing or mock server can never block this.
     saveProfile({ userName: foldName(you).trim(), theirName: foldName(them).trim(), relationship, leftHanded });
-    location.hash = "#/";
+    goHome();
     void refreshPracticeWords().catch(() => {});
   }
 
@@ -277,7 +280,7 @@ export function Onboarding() {
         <p className="muted small privacy">{PRIVACY}</p>
         {dev && (
           <p>
-            <button type="button" className="secondary" onClick={() => { saveProfile(DEMO_PROFILE); location.hash = "#/"; void refreshPracticeWords().catch(() => {}); }}>
+            <button type="button" className="secondary" onClick={() => { saveProfile(DEMO_PROFILE); goHome(); void refreshPracticeWords().catch(() => {}); }}>
               Use demo profile (Ryan → Lily)
             </button>
           </p>
