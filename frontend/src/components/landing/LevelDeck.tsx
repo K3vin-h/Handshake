@@ -266,10 +266,10 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
     return () => ro.disconnect();
   }, []);
 
-  const width = Math.max(240, Math.min(360, vw - 64));
-  // The active card drifts across the deck (see restOf), which eats into how far the track moves per step. A wider gap on
-  // wide screens gives that distance back, so each step travels further while neither end has an empty gutter.
-  const gap = vw > 700 ? 160 : GAP;
+  // Wider cards on wide screens: the active card drifts across the deck (see restOf), which eats into how far the track
+  // moves per step, and a wider card gives that distance back without a gap between cards.
+  const width = Math.max(240, Math.min(vw > 700 ? 470 : 360, vw - 64));
+  const gap = GAP;
   const slot = width + gap;
   const pad = (vw - width) / 2;
 
