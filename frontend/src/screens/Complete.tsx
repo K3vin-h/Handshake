@@ -8,6 +8,9 @@ import { refreshPracticeWords } from "../lib/profile";
 import { requireProfile } from "../lib/requireProfile";
 import { isUnlocked, loadProgress, nextLesson } from "../lib/progress";
 import { AlphabetStrip } from "../components/AlphabetStrip";
+import { RewardLine } from "../components/RewardLine";
+import { praise } from "../lib/api";
+import type { Praise } from "../lib/praise";
 
 // Level-complete. The player records completion: visiting this route never awards XP or unlocks a lesson.
 // Focus moves to the heading on arrival and the result is also shown as text. Confetti is skipped under
@@ -24,6 +27,15 @@ export function Complete({ lessonId: routeParam }: { lessonId: string }) {
   // "Level" complete = the last demo lesson of its unit is now done. Stretch lessons never gate (same rule as unlocking).
   const unit = units.find((u) => u.lessons.some((l) => l.id === lessonId));
   const unitDone = !!unit && done && unit.lessons.filter((l) => l.scope === "demo").every((l) => progress.completed.includes(l.id));
+
+  // Praise for the finished lesson (Gemini or canned, "cached"). Only the lesson id is sent.
+  const [reward, setReward] = useState<Praise | undefined>();
+  useEffect(() => {
+    if (!done) return;
+    let live = true;
+    void praise("lesson", lessonId).then((r) => { if (live) setReward(r); });
+    return () => { live = false; };
+  }, [lessonId, done]);
 
   useEffect(() => {
     if (done) void refreshPracticeWords(); // re-pick practice words around the learner's weakest letters
@@ -76,6 +88,7 @@ export function Complete({ lessonId: routeParam }: { lessonId: string }) {
     <>
       <StatusMessage kind="match" label="Lesson complete" message={`You finished ${lesson.title} and earned ${lesson.xp} XP. Your total is ${progress.xp} XP.`} />
       {unitDone && unit && <StatusMessage kind="match" label="Unit complete" message={`You finished every lesson in ${unit.title}.`} />}
+      <RewardLine reward={reward} />
     </>
   );
   const stats = (

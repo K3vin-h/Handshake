@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { SIGNS, SequenceChecker, SignChecker, getSignTemplate, isPracticeable, useLetterCheck, zoneOf, type SignStage } from "../cv";
 import { Camera } from "../components/Camera";
 import { SignGuide } from "./SignGuide";
+import { praise } from "../lib/api";
+import { streakAfter, type Praise } from "../lib/praise";
 
 /** Cut rule (H14): false → every sign is self-checked with "I signed it". */
 export const SIGNS_AUTO = true;
@@ -15,7 +17,7 @@ export const unitsOf = (tokens: string[]): RunUnit[] =>
     t.startsWith("fs:") ? [...t.slice(3)].filter(isPracticeable).map((letter) => ({ kind: "letter", letter, token })) : [{ kind: "sign", id: t, token }],
   );
 
-type RenderArgs = { camera: ReactNode; prompt: string; index: number; token: number; units: RunUnit[]; guide: ReactNode; selfCheck?: () => void };
+type RenderArgs = { camera: ReactNode; prompt: string; index: number; token: number; units: RunUnit[]; guide: ReactNode; selfCheck?: () => void; reward?: Praise };
 
 /**
  * Walks a list of tokens (signs and fingerspelled words) one part at a time on ONE camera.
@@ -42,7 +44,11 @@ export function TokenRunner(props: {
   const [msg, setMsg] = useState("");
   const [zone, setZone] = useState("");
   const [stage, setStage] = useState<SignStage>("handshape");
-  useEffect(() => setK(0), [tokensKey]); // the same runner (and camera) is reused for the next step
+  // Praise for the part just matched, shown while the next part runs; cleared (and late replies dropped) when the step changes.
+  const [reward, setReward] = useState<Praise | undefined>();
+  const live = useRef(tokensKey);
+  const streak = useRef(0);
+  useEffect(() => { setK(0); live.current = tokensKey; streak.current = 0; setReward(undefined); }, [tokensKey]); // the same runner (and camera) is reused for the next step
   const u = units[k];
   const def = u?.kind === "sign" ? SIGNS[u.id] : undefined;
   // A sign with recorded takes (#/record-signs) is checked against them; otherwise the handshape + place + movement rules.
@@ -50,7 +56,14 @@ export function TokenRunner(props: {
   const auto = u?.kind === "letter" || !!tpl || (SIGNS_AUTO && def?.grading === "assisted");
   const checker = useMemo(() => (def && !tpl ? new SignChecker(def) : null), [def, tpl]);
   const seqChecker = useMemo(() => (tpl ? new SequenceChecker(tpl) : null), [tpl]);
-  const advance = () => {
+  // confirmed = the camera matched it. A self-check ("I signed it") is not confirmed, so it gets no praise.
+  const advance = (confirmed = false) => {
+    if (confirmed && u) {
+      streak.current = streakAfter(streak.current, "match");
+      const key = tokensKey;
+      void praise(u.kind === "sign" ? "sign" : "letter", u.kind === "sign" ? u.id : u.letter, { streak: streak.current })
+        .then((r) => { if (live.current === key) setReward(r); });
+    }
     setMsg("");
     setStage("handshape");
     checker?.reset();
@@ -65,13 +78,13 @@ export function TokenRunner(props: {
   const check = useLetterCheck(u?.kind === "letter" ? u.letter : def?.handshape ?? "", [], {
     leftHanded: props.leftHanded,
     enabled: !!u && auto,
-    onMatch: () => u?.kind === "letter" && advance(),
+    onMatch: () => u?.kind === "letter" && advance(true),
     onFrame: (hand, pred, now, face) => {
       // Recorded takes (#/record-signs): matched as a whole, so there are no separate handshape / place / movement stages.
       if (seqChecker && auto) {
         const r = seqChecker.update(hand, now);
         setMsg(r.message);
-        if (r.done) advance();
+        if (r.done) advance(true);
         return;
       }
       if (!checker || !auto) return;
@@ -79,7 +92,7 @@ export function TokenRunner(props: {
       const r = checker.update(hand, pred, now, face);
       setMsg(r.message);
       setStage(r.stage);
-      if (r.stage === "done") advance();
+      if (r.stage === "done") advance(true);
     },
   });
 
@@ -109,5 +122,5 @@ export function TokenRunner(props: {
   );
   // Whole signs get a picture guide (handshape + place + movement); fingerspelled letters already have the 3D hand.
   const guide = def ? <SignGuide def={def} templates={check.templates} leftHanded={props.leftHanded} stage={auto && !tpl ? stage : undefined} /> : null;
-  return <>{props.render({ camera, prompt, index: k, token: u.token, units, guide, selfCheck: auto ? undefined : advance })}</>;
+  return <>{props.render({ camera, prompt, index: k, token: u.token, units, guide, selfCheck: auto ? undefined : () => advance(), reward })}</>;
 }

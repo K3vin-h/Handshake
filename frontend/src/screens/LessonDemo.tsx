@@ -15,8 +15,10 @@ import {
   type HandFrame,
   type Prediction,
 } from "../cv";
-import { getCoachTip } from "../lib/api";
+import { getCoachTip, praise } from "../lib/api";
+import type { Praise } from "../lib/praise";
 import { Camera } from "../components/Camera";
+import { RewardLine } from "../components/RewardLine";
 
 // Three.js is ~200 KB+, so the 3D viewer loads only when a lesson opens.
 const HandModel3D = lazy(() => import("../components/HandModel3D"));
@@ -39,6 +41,7 @@ export function LessonDemo() {
   const [progress, setProgress] = useState(0);
   const [xp, setXp] = useState(0);
   const [tip, setTip] = useState("");
+  const [reward, setReward] = useState<Praise | undefined>();
   const [holdMs, setHoldMs] = useState(800);
   const [maxDist, setMaxDist] = useState(MAX_DISTANCE);
   const [restrict, setRestrict] = useState(true);
@@ -85,6 +88,8 @@ export function LessonDemo() {
       setXp((x) => x + 10);
       setTally((t) => ({ ...t, hits: t.hits + 1 }));
       setTip("");
+      setReward(undefined);
+      void praise("letter", target, { tries: misses.current + 1 }).then(setReward); // after the match; never gates the next letter
       misses.current = 0;
       hold.current.reset();
       votes.current.reset();
@@ -168,6 +173,7 @@ export function LessonDemo() {
           <Camera {...cam} progress={progress} />
         </section>
       </div>
+      <RewardLine reward={reward} />
       {tip && <div className="tip">Coach: {tip}</div>}
 
       <details className="debug" open>

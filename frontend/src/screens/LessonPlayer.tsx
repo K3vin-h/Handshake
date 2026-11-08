@@ -6,7 +6,8 @@ import { completeLesson, dueItems, isUnlocked, loadProgress, recordAttempt, reco
 import { reportAttempt, reportLessonComplete } from "../lib/track";
 import { loadMistakes, mistakeCount, recordMistake } from "../lib/mistakes";
 import { requireProfile } from "../lib/requireProfile";
-import { SEND_SNAPSHOT, getCoachTip, getHowTo } from "../lib/api";
+import { SEND_SNAPSHOT, getCoachTip, getHowTo, praise } from "../lib/api";
+import { streakAfter, type Praise } from "../lib/praise";
 import { LessonView } from "../components/LessonView";
 import { SceneView } from "../components/SceneView";
 import { Camera } from "../components/Camera";
@@ -132,7 +133,8 @@ function Player({ lessonId }: { lessonId: string }) {
   const [incomplete, setIncomplete] = useState(false);
   const after = useMemo(() => { const all = flatLessons(units); return all.slice(all.findIndex((l) => l.id === lessonId) + 1).find((l) => l.scope === "demo"); }, [units, lessonId]);
   const [resume, setResume] = useState<Item[] | null>(() => loadRedo<Item>(lessonId)); // left over from an earlier visit
-  const markSkipped = () => { if (items[i]) skipped.current.set(i, items[i]); };
+  const streak = useRef(0); // consecutive matched steps, for the praise line only (never affects passing)
+  const markSkipped = () => { streak.current = streakAfter(streak.current, "skip"); if (items[i]) skipped.current.set(i, items[i]); };
   function skip() {
     markSkipped();
     setTurn(0); // leaving a scene mid-way must not leave the next scene starting at a stale turn
@@ -206,7 +208,7 @@ function Player({ lessonId }: { lessonId: string }) {
             camera={<>{r.units.length > 1 && <PartProgress index={r.index} total={r.units.length} name={(() => { const u = r.units[r.index]; return u.kind === "sign" ? (SIGNS[u.id]?.english ?? u.id) : `spell ${u.letter}`; })()} />}{r.camera}</>}
             status={r.prompt} landmarkTip="" coachTip="" coachCached={false} sideBySide={false}
             stepLabel={`${stepLabel} · part ${r.index + 1} of ${r.units.length}`} lessonProgress={(i + r.index / r.units.length) / items.length}
-            actionLabel="Skip" onAction={skip} onSelfCheck={r.selfCheck} />
+            actionLabel="Skip" onAction={skip} onSelfCheck={r.selfCheck} reward={r.reward} />
         )} />
     );
   }
@@ -224,7 +226,7 @@ function Player({ lessonId }: { lessonId: string }) {
           next();
         }}
         onEmpty={() => { markSkipped(); if (turnNow + 1 < turns.length) setTurn(turnNow + 1); else { setTurn(0); next(); } }}
-        render={(r) => <SceneView title={lesson.title} turns={turns} turnIndex={turnNow} tokenIndex={r.token} camera={<>{r.guide}{r.camera}</>} prompt={r.prompt} onSelfCheck={r.selfCheck} onSkip={skip} />} />
+        render={(r) => <SceneView title={lesson.title} turns={turns} turnIndex={turnNow} tokenIndex={r.token} camera={<>{r.guide}{r.camera}</>} prompt={r.prompt} onSelfCheck={r.selfCheck} onSkip={skip} reward={r.reward} />} />
 
     );
   }
@@ -234,7 +236,7 @@ function Player({ lessonId }: { lessonId: string }) {
   if (item.kind === "identify")
     return <IdentifyItem key={i} item={item} leftHanded={profile.leftHanded} stepLabel={stepLabel} onNext={next}
       onMiss={() => { if (!item.again) setItems((xs) => [...xs, { ...item, again: true }]); }} />;
-  return <LetterItem index={i} item={item} lessonLetters={lessonLetters} leftHanded={profile.leftHanded} stepLabel={stepLabel} lessonProgress={i / items.length} stepSize={1 / items.length} progress={progress} onNext={next} onSkip={skip} />;
+  return <LetterItem index={i} item={item} lessonLetters={lessonLetters} leftHanded={profile.leftHanded} stepLabel={stepLabel} lessonProgress={i / items.length} stepSize={1 / items.length} progress={progress} streak={streak} onNext={next} onSkip={skip} />;
 }
 
 type LetterItemProps = {
@@ -246,11 +248,12 @@ type LetterItemProps = {
   lessonProgress: number; // fraction of steps finished before this one
   stepSize: number; // one step's share of the top bar, added once this step matches so the last step can fill the bar
   progress: { current: Progress };
+  streak: { current: number };
   onNext: () => void;
   onSkip: () => void;
 };
 
-function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonProgress, stepSize, progress, onNext, onSkip }: LetterItemProps) {
+function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonProgress, stepSize, progress, streak, onNext, onSkip }: LetterItemProps) {
   const [landmarkTip, setLandmarkTip] = useState("");
   const [coach, setCoach] = useState({ tip: "", cached: false });
   const [sideBySide, setSideBySide] = useState(false);
@@ -278,7 +281,13 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
   const [hintStage, setHintStage] = useState(0);
   const [rep, setRep] = useState(0); // matches so far in this step
   const relax = useRef(false); // after a rep the hand must leave the sign (or drop out) before the next one counts
+  // Praise line: fired after a confirmed match, never awaited. `gen` drops a reply that lands after the step changed.
+  const [reward, setReward] = useState<Praise | undefined>();
+  const gen = useRef(0);
+  const misses = useRef(0);
+  const clearReward = () => { gen.current++; misses.current = 0; setReward(undefined); };
   useEffect(() => {
+    clearReward();
     check.reset();
     setResult("");
     // Moving to the next rep/step: clear the last one's message so "Matches our recording: X" is not shown (or announced)
@@ -290,6 +299,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
   }, [index]);
 
   function retry() {
+    clearReward();
     queue.reset();
     setLandmarkTip("");
     setCoach({ tip: "", cached: false });
@@ -317,6 +327,9 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
       setResult("match");
       setStatus(`${MATCH_WORDING}: ${d.letter}`);
       celebrate();
+      streak.current = streakAfter(streak.current, "match");
+      const g = gen.current;
+      void praise("letter", d.letter, { streak: streak.current, tries: misses.current + 1 }).then((r) => { if (g === gen.current) setReward(r); });
     },
     onMiss: (feedback) => {
       if (item.kind !== "check") return;
@@ -325,6 +338,8 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
       // anyone the model misses often). Mastery still needs 3 in a row: recordAttempt resets the streak on a miss.
       progress.current = recordAttempt(progress.current, target, false);
       reportAttempt(target, false, feedback.map((f) => f.code));
+      misses.current++;
+      streak.current = streakAfter(streak.current, "miss");
       setCoach({ tip: "", cached: false });
       const first = feedback[0];
       setResult("miss");
@@ -405,7 +420,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     <LessonView {...common} title={item.word ? `Spell ${item.word.letters.join("")}` : `Sign ${item.letter}`} word={item.word}
       showReference={item.showReference || sideBySide || recall} progress={shownProgress}
       status={status || (recall ? `From memory: sign ${target}. The reference is hidden on purpose so you practice recalling it.` : `Hold the sign for ${target}${reps > 1 ? ` (${rep} of ${reps})` : ""}`)} feedback={result || undefined}
-      actionLabel="Continue" actionDisabled={result !== "match"} onAction={onNext}
+      actionLabel="Continue" actionDisabled={result !== "match"} onAction={onNext} reward={reward}
       onRetry={result === "match" ? retry : undefined} onSkip={result === "match" ? undefined : onSkip} />
   );
 }
