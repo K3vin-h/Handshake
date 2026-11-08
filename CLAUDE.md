@@ -51,8 +51,8 @@ Handshake/
 │   └── package.json     (frontend-only dependencies)
 ├── backend/             → Vultr VM (Express API; talks to Tiger Data Cloud)
 │   ├── index.mjs app.mjs gemini.mjs db.mjs integrations.mjs limit.mjs validate.mjs precache.mjs precache.json migrate.mjs
-│   ├── routes/          (attempts, notify, plan)
-│   ├── schema.sql, DATABASE.md, README.md
+│   ├── routes/          (attempts, notify, plan, auth, me)
+│   ├── schema.sql, schema.accounts.sql, DATABASE.md, README.md
 │   ├── deploy/          (setup.sh, preflight.sh, tests/, README.md; Caddy + systemd, API only)
 │   └── package.json
 ├── agent/               → Maritime (planner agent, own Dockerfile + package.json)
@@ -66,7 +66,7 @@ Handshake/
 Hosting notes:
 - The Vultr API host has no purchased domain: use any hostname that resolves to the VM IP with automatic HTTPS from Caddy, e.g. a free `<ip-with-dashes>.sslip.io` name. [NEEDS: verify Let's Encrypt works for the chosen hostname]
 - Rate limiting is per client IP; browsers call the API directly, so the production proxy chain is Caddy → Express and the Express `trust proxy` hop count is 1 (env `TRUST_PROXY_HOPS=1`). [NEEDS: verify with a real request that req.ip is the visitor's IP]
-- New backend env: `HOST` (bind address; `127.0.0.1` on the VM behind Caddy), `TRUST_PROXY_HOPS` (1 in production) and `ALLOWED_ORIGIN` (CORS allow-list; the Vercel URL). Frontend env: `VITE_API_BASE_URL` (public). n8n Cloud and Maritime hold their own secrets.
+- New backend env: `HOST` (bind address; `127.0.0.1` on the VM behind Caddy), `TRUST_PROXY_HOPS` (1 in production; accounts' Origin check needs it), `ALLOWED_ORIGIN` (CORS allow-list; the Vercel URL) and `COOKIE_SECURE` (1 on the VM). Account calls go through the Vercel `/api` rewrite in `frontend/vercel.json`, whose destination host is a manual step. Frontend env: `VITE_API_BASE_URL` (public). n8n Cloud and Maritime hold their own secrets.
 - `backend/schema.sql` uses TimescaleDB `create_hypertable`, so the database is a Tiger Data Cloud service (TimescaleDB), reached from the Vultr API through `DATABASE_URL` with `sslmode=require`.
 
 ## Ownership (only edit your own files; ask before touching others)
@@ -169,7 +169,7 @@ POST /api/words { knownLetters: string[], weakLetters: string[] }
 - Whole signs are "assisted": handshape + body zone + movement. Two-handed/facial signs are self-checked.
   Sign descriptions are simplified: verify against a Deaf-led source (Lifeprint) before the demo.
 - Record templates for every handshape `requiredHandshapes()` lists, including "5" (open hand).
-- Drop: Auth0. Stretch: everything marked stretch, rigged 3D hand.
+- Drop: Auth0 (still dropped: accounts use Google sign-in directly, see `docs/superpowers/specs/2026-11-07-accounts-spec.md`). Stretch: everything marked stretch, rigged 3D hand.
 
 ## 3D hand (lesson reference)
 - `frontend/src/components/HandModel3D.tsx`: React Three Fiber + drei OrbitControls (drag to spin, auto-rotate).
@@ -224,7 +224,7 @@ Problem Research · Technical Implementation · Design (UI/UX, accessibility) ·
 | n8n | Built behind the consent form and env vars (lesson-complete message to the person you learn for + weekly recap). Only demoed if the core works at H12. | Sponsor plan T3, T11 |
 
 ## Privacy rules
-- Learner profile, names and mistake history stay in the browser (localStorage). Two opt-in exceptions, both off unless env vars are set:
+- Guests keep everything (profile, names, mistake history) in the browser (localStorage). Signed-in users' profile and progress are saved to our server under their account and deleted with it (account deletion). Gemini still receives letters and error codes only, never names or video. Attempt rows in Tiger Data stay anonymous. Two opt-in exceptions, both off unless env vars are set:
   - Tiger Data receives per-attempt rows: letter or sign id, pass/fail, error codes, an anonymous random id. Never names or emails.
   - n8n receives email addresses only (names are not sent), and only after the user ticks the consent checkbox on #/stats, and can be stopped there. Names and emails never go to Gemini, Maritime or Tiger Data.
   - The Devpost must say both, plus the known risk: anyone holding a learner id could trigger emails to that learner's saved contact.
