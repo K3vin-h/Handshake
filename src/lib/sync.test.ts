@@ -56,3 +56,16 @@ test("(b) 409 then 200 is exactly 2 PUTs, no echo push", async () => {
   await wait(60);
   assert.equal(puts, 2);
 });
+
+test("(d) a debounce armed while signed in sends nothing after logout", async () => {
+  const { logOut } = await import("./auth.ts");
+  await syncNow();
+  assert.ok(getUser());
+  profile = prof;
+  const before = puts;
+  fire();
+  await logOut();
+  await wait(40);
+  assert.equal(getUser(), null);
+  assert.equal(puts, before);
+});
