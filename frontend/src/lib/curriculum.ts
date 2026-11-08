@@ -71,7 +71,7 @@ const unique = (xs: string[]) => [...new Set(xs)];
 function letterSteps(letters: string[], known: Set<string>): Step[] {
   const steps: Step[] = [];
   for (const l of letters) {
-    steps.push({ kind: "learn", letter: l }, { kind: "practice", letter: l, reps: 3 });
+    steps.push({ kind: "learn", letter: l }, { kind: "practice", letter: l, reps: 2 });
     known.add(l);
   }
   // Look-alike drills only between letters the learner already knows.
@@ -83,6 +83,7 @@ function letterSteps(letters: string[], known: Set<string>): Step[] {
 export function buildCurriculum(p: Personalization): Unit[] {
   const me = clean(p.userName) || "SAM";
   const them = clean(p.theirName) || "LILY";
+  const solo = !clean(p.theirName); // learning for yourself: no "their name" lesson and no named conversation
   const known = new Set<string>();
   const words = (id: string) => p.practiceWords?.[id] ?? [];
 
@@ -95,7 +96,7 @@ export function buildCurriculum(p: Personalization): Unit[] {
     lessons: [
       { id: "1.1", title: "Your letters", summary: myLetters.join(" "), scope: "demo", grading: "auto", xp: 10 * myLetters.length, teaches: myLetters, steps: letterSteps(myLetters, known) },
       { id: "1.2", title: `Spell ${me}`, summary: "Whole word, then without the reference", scope: "demo", grading: "auto", xp: 20, steps: [{ kind: "spell", word: me, showReference: true }, { kind: "spell", word: me, showReference: false }] },
-      { id: "1.3", title: "Checkpoint", summary: "Spell your name 3 times in a row", scope: "demo", grading: "auto", xp: 30, steps: [1, 2, 3].map(() => ({ kind: "spell", word: me, showReference: false }) as Step) },
+      { id: "1.3", title: "Checkpoint", summary: "Spell your name from memory", scope: "demo", grading: "auto", xp: 30, steps: [{ kind: "spell", word: me, showReference: false }] },
     ],
   };
   // Letters of the name that move (J/Z) are taught later; flag them in the summary.
@@ -118,7 +119,7 @@ export function buildCurriculum(p: Personalization): Unit[] {
       steps: [...letterSteps(letters, known), ...words(id).slice(0, 3).map((w) => ({ kind: "spell", word: w, showReference: false }) as Step), { kind: "review" }],
     });
     // Their name: one fixed place for everyone, right after the last demo family.
-    if (fam.id === "fist") {
+    if (fam.id === "fist" && !solo) {
       const nid = `2.${n++}`;
       unit2Lessons.push({
         id: nid,
@@ -167,7 +168,7 @@ export function buildCurriculum(p: Personalization): Unit[] {
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   const unit4: Unit = {
     id: "u4",
-    title: `A conversation with ${p.theirName || them}`,
+    title: solo ? "A conversation" : `A conversation with ${p.theirName || them}`,
     goal: "Hold a short conversation",
     lessons: [
       { id: "4.1", title: "First hello", summary: "Greet and introduce yourself", scope: "demo", grading: "assisted", xp: 60, steps: [{ kind: "scene", turns: [
@@ -184,7 +185,7 @@ export function buildCurriculum(p: Personalization): Unit[] {
         { them: T(["GOOD"], "Great."), you: T(["THANK-YOU"], "Thank you!") },
       ] }] },
       { id: "4.4", title: "The real conversation", summary: "Everything together", scope: "stretch", grading: "assisted", xp: 100, steps: [{ kind: "scene", turns: [
-        { them: T(["HELLO"], "Hi!"), you: T(["HELLO", `fs:${them}`], `Hi ${p.theirName || them}!`) },
+        { them: T(["HELLO"], "Hi!"), you: solo ? T(["HELLO"], "Hi!") : T(["HELLO", `fs:${them}`], `Hi ${p.theirName || them}!`) },
         { them: T(["HOW", "YOU"], "How are you?"), you: T(["GOOD", "YOU"], "Good, you?") },
         { them: T(["FINE"], "Fine."), you: T(["BYE"], "Bye!") },
       ] }] },

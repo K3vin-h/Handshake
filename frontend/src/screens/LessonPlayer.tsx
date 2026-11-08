@@ -23,7 +23,7 @@ export const MATCH_WORDING = "Matches our recording";
 // A lesson's steps flattened into one item per thing the learner does.
 export type Item =
   | { kind: "learn"; letter: string; referenceOnly: boolean }
-  | { kind: "check"; letter: string; showReference: boolean; practiceStart?: number; word?: { letters: string[]; index: number } }
+  | { kind: "check"; letter: string; showReference: boolean; reps?: number; word?: { letters: string[]; index: number } }
   | { kind: "other"; step: Step }; // sign / sentence / scene: group-1 Tasks 10 and 12
 
 export function expand(steps: Step[], _progress: Progress): Item[] {
@@ -32,8 +32,8 @@ export function expand(steps: Step[], _progress: Progress): Item[] {
     // Live letters: the practice step already shows the reference beside the camera, so no separate "learn" page.
     if (s.kind === "learn") { if (!isPracticeable(s.letter)) out.push({ kind: "learn", letter: s.letter, referenceOnly: true }); }
     else if (s.kind === "practice") {
-      const practiceStart = out.length;
-      if (isPracticeable(s.letter)) for (let i = 0; i < s.reps; i++) out.push({ kind: "check", letter: s.letter, showReference: true, practiceStart });
+      // One step per letter: LetterItem counts the reps (relax the hand between them).
+      if (isPracticeable(s.letter)) out.push({ kind: "check", letter: s.letter, showReference: true, reps: s.reps });
     } else if (s.kind === "spell") {
       const letters = [...s.word];
       letters.forEach((l, index) => out.push(isPracticeable(l)
@@ -144,7 +144,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     () => setStatus("Coach unavailable. Use the landmark tip above."),
   ), []);
   const target = item.letter;
-  const feedbackGroup = item.kind === "check" ? (item.practiceStart ?? index) : index;
+  const feedbackGroup = index;
   useEffect(() => () => { queue.reset(); }, []);
 
   useEffect(() => {
@@ -155,7 +155,12 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     setStatus("");
   }, [feedbackGroup]);
 
-  useEffect(() => { check.reset(); setResult(""); }, [index]);
+  const reps = item.kind === "check" ? (item.reps ?? 1) : 1;
+  // Steps that hide the reference on purpose (recall practice): 0 hidden, 1 written hint, 2 reference shown. Never changes the pass check.
+  const [hintStage, setHintStage] = useState(0);
+  const [rep, setRep] = useState(0); // matches so far in this step
+  const relax = useRef(false); // after a rep the hand must leave the sign (or drop out) before the next one counts
+  useEffect(() => { check.reset(); setResult(""); setRep(0); setHintStage(0); relax.current = false; }, [index]);
 
   function retry() {
     queue.reset();
@@ -163,17 +168,22 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     setCoach({ tip: "", cached: false });
     setStatus("");
     setResult("");
+    setRep(0);
+    relax.current = false;
     check.reset();
   }
 
   const check = useLetterCheck(target, lessonLetters, {
     leftHanded,
     enabled: (item.kind === "check" || !item.referenceOnly) && result !== "match", // stop checking once matched; "Try again" restarts
+    onFrame: (hand, pred) => { if (relax.current && (!hand || pred.letter !== target)) { relax.current = false; setStatus(`Sign ${target} again (${rep} of ${reps})`); } },
     onMatch: (d) => {
+      if (relax.current) return; // still holding the previous rep
       // Learn steps show the camera for trying the sign, but nothing is scored or advanced.
       if (item.kind !== "check") { setStatus(`Matches our recording: ${d.letter} (practice, not scored)`); return; }
       progress.current = recordAttempt(progress.current, d.letter, true);
       reportAttempt(d.letter, true);
+      if (rep + 1 < reps) { setRep(rep + 1); relax.current = true; setStatus(`Matches our recording: ${rep + 1} of ${reps}. Relax your hand, then sign ${target} again.`); return; }
       queue.reset();
       setLandmarkTip("");
       setCoach({ tip: "", cached: false });
@@ -215,6 +225,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
   const barProgress = Math.min(1, lessonProgress + (result === "match" ? stepSize : 0));
   const noLiveCheck = item.kind === "learn" && item.referenceOnly;
   const moving = target === "J" || target === "Z"; // these are drawn in the air, so a still camera frame can never check them
+  const recall = item.kind === "check" && !item.showReference && !sideBySide; // reference hidden on purpose
   const camera = noLiveCheck ? (
     <div className="card">
       {moving ? (
@@ -230,14 +241,26 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     <>
       <Camera {...check.cam} progress={shownProgress} />
       {check.hint && <p role="status">{check.hint}</p>}
+      {recall && hintStage === 1 && <p role="status">Hint: {howTo?.text ?? "no written hint is available right now, try Show answer."}</p>}
+      {recall && (
+        <button type="button" className={check.missCount >= 2 && hintStage === 0 ? "cta" : "secondary"} onClick={() => setHintStage((hintStage + 1) % 3)}>
+          {hintStage === 0 ? (check.missCount >= 2 ? "Struggling? Get a hint" : "Hint") : hintStage === 1 ? "Show answer" : "Hide answer"}
+        </button>
+      )}
     </>
   );
-  const reference = (
+  const hidden = recall && hintStage < 2;
+  // Placeholder keeps the reference slot visible so the learner knows the hand is hidden on purpose, and how to get it.
+  const reference = hidden ? (
+    <div className="hand3d empty" role="note" style={{ border: "2px dashed currentColor", display: "grid", placeItems: "center", textAlign: "center", padding: "1rem" }}>
+      <p><strong>Reference hidden on purpose</strong><br />Try {target} from memory. Stuck? Use Hint, then Show answer.</p>
+    </div>
+  ) : (
     <Suspense fallback={<div className="hand3d empty">Loading 3D hand…</div>}>
       <HandModel3D pose={meanPose3D(target, check.templates, leftHanded)} letter={target} />
     </Suspense>
   );
-  const common = { target, reference, camera, landmarkTip, coachTip: coach.tip, coachCached: coach.cached, sideBySide, stepLabel, lessonProgress: barProgress, howTo };
+  const common = { target, reference, camera, landmarkTip, coachTip: coach.tip, coachCached: coach.cached, sideBySide, stepLabel, lessonProgress: barProgress, howTo: recall && hintStage < 2 ? undefined : howTo };
 
   if (item.kind === "learn")
     return (
@@ -248,8 +271,8 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
 
   return (
     <LessonView {...common} title={item.word ? `Spell ${item.word.letters.join("")}` : `Sign ${item.letter}`} word={item.word}
-      showReference={item.showReference || sideBySide} progress={shownProgress}
-      status={status || `Hold the sign for ${target}`} feedback={result || undefined}
+      showReference={item.showReference || sideBySide || recall} progress={shownProgress}
+      status={status || (recall ? `From memory: sign ${target}. The reference is hidden on purpose so you practise recalling it.` : `Hold the sign for ${target}${reps > 1 ? ` (${rep} of ${reps})` : ""}`)} feedback={result || undefined}
       actionLabel="Continue" actionDisabled={result !== "match"} onAction={onNext}
       onRetry={result === "match" ? retry : undefined} onSkip={result === "match" ? undefined : onNext} />
   );

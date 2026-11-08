@@ -207,6 +207,11 @@ export function Onboarding() {
                   ))}
                 </div>
               </fieldset>
+              <p>
+                <button type="button" className="secondary" onClick={() => { setThem(""); setRelationship(undefined); go(3); }}>
+                  Skip: I&rsquo;m learning for myself
+                </button>
+              </p>
             </>
           )}
 
@@ -261,7 +266,7 @@ export function Onboarding() {
                 ))}
               </div>
               <p className="disclaimer">
-                Handshake teaches fingerspelling basics so you can meet {themLabel} partway. To learn ASL fully, learn from Deaf teachers.
+                Handshake teaches fingerspelling basics{signedLetters(them).length ? <> so you can meet {themLabel} partway</> : null}. To learn ASL fully, learn from Deaf teachers.
               </p>
             </>
           )}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactElement } from "react";
+import { useEffect, useReducer, useRef, useState, type ReactElement } from "react";
 import { LessonDemo } from "./screens/LessonDemo";
 import { RecordPage } from "./screens/RecordPage";
 import { CurriculumPreview } from "./screens/CurriculumPreview";
@@ -66,8 +66,10 @@ const DEV_NAV: [string, string][] = [
 
 export default function App() {
   const [hash, setHash] = useState(location.hash || "#/");
+  const [, rerender] = useReducer((n: number) => n + 1, 0);
   useEffect(() => {
-    const on = () => setHash(location.hash || "#/");
+    // rerender: Onboarding saves the profile while already at "#/", so the hash is unchanged but screen() must run again.
+    const on = () => { setHash(location.hash || "#/"); rerender(); };
     addEventListener("hashchange", on);
     return () => removeEventListener("hashchange", on);
   }, []);

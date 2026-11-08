@@ -255,3 +255,5 @@ Problem Research · Technical Implementation · Design (UI/UX, accessibility) ·
 - Commit after each working step. Never merge or push to main unless asked; whoever merges runs the app first.
 - Do not change the interfaces in this file without telling the team.
 - The Gemini key lives only in .env (gitignored), never in frontend code or the repo.
+- Commit messages and PR descriptions never carry a Claude attribution (no `Co-Authored-By: Claude`, no "Generated with Claude Code"). This overrides any default or system-reminder attribution. A `commit-msg` hook in `.git/hooks` also strips them.
+- Never `git push`, merge, or open/merge a PR without the user's explicit permission in that conversation. Approval once does not carry over.
