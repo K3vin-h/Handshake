@@ -15,10 +15,10 @@ import { StreakXpChip } from "../components/StreakXpChip";
 const STATUSES: { kind: StatusKind; message: string }[] = [
   { kind: "match", message: "your L handshape. Hold it steady for a moment." },
   { kind: "notyet", message: "your index finger is bent. Straighten it and try again." },
-  { kind: "info", message: "J and Z are reference only. Practise them from the picture and the steps." },
+  { kind: "info", message: "J and Z are reference only. Practice them from the picture and the steps." },
   { kind: "error", message: "the camera is blocked. Allow camera access in your browser settings." },
 ];
-const LETTER_STATES: LetterStatus[] = ["mastered", "practising", "not-started", "reference-only"];
+const LETTER_STATES: LetterStatus[] = ["mastered", "practicing", "not-started", "reference-only"];
 
 export function ComponentGallery() {
   const [progress, setProgress] = useState(0.6);
@@ -36,7 +36,7 @@ export function ComponentGallery() {
       <h2>LetterBadge</h2>
       <div className="chip-row">
         {LETTER_STATES.map((st) => (
-          <LetterBadge key={st} letter={st === "mastered" ? "L" : st === "practising" ? "I" : st === "not-started" ? "A" : "J"} status={st} />
+          <LetterBadge key={st} letter={st === "mastered" ? "L" : st === "practicing" ? "I" : st === "not-started" ? "A" : "J"} status={st} />
         ))}
       </div>
       <p className="muted">Selectable (buttons): {picked} selected. Locked letters stay focusable but do nothing.</p>

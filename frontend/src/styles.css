@@ -306,7 +306,7 @@ button:hover:not(:disabled), .link-button:hover { transform: translateY(-1px); b
 .badge-status { font-size: 13px; font-weight: 600; }
 .badge-status { display: inline-flex; align-items: center; gap: 6px; }
 .badge-mastered { border-color: var(--brand-2); }
-.badge-practising { border-color: var(--brand-2); }
+.badge-practicing { border-color: var(--brand-2); }
 .badge-not-started { border-color: var(--border-strong); }
 .badge-reference-only { background: var(--reference-bg); color: var(--reference); border-style: dashed; border-color: var(--reference); }
 /* StatusMark shapes: colour is decoration, the shape and the text label carry the meaning */
@@ -770,3 +770,56 @@ button.answer-wrong, button.answer-wrong:disabled { background: #fde8e8; border-
 .lp-partial-bar i { display: block; height: 100%; background: var(--match); }
 .map-partial .map-node::before { content: ""; position: absolute; inset: -7px; border-radius: 50%; background: conic-gradient(var(--match) var(--fill), var(--border) 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px)); }
 .map-partial-text { color: var(--muted); }
+
+/* Sign guide: three numbered parts, stacked on phones and side by side on wide screens. */
+.sign-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.sign-steps li { border: 2px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
+.sign-steps p { margin: var(--space-2) 0; }
+.sign-guide svg { max-width: 100%; height: auto; color: var(--text); }
+
+/* Your alphabet (#/alphabet): done = green + check, open = greyed, locked = translucent with a chain-lock. */
+.alpha-bar { height: 10px; max-width: 260px; margin-top: var(--space-2); border-radius: 99px; background: var(--raised); border: 1px solid var(--border-strong); overflow: hidden; }
+.alpha-bar i { display: block; height: 100%; background: var(--match); transition: width .6s ease; }
+.alpha-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+.alpha-box { position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border-strong); border-radius: 14px; font-size: 26px; font-weight: 800; overflow: hidden; }
+.alpha-done { background: var(--match-bg); border-color: var(--match); color: #0b2f1e; box-shadow: 0 0 0 3px var(--match-bg); }
+.alpha-check { position: absolute; top: 3px; right: 7px; font-size: 13px; color: var(--match); }
+.alpha-open { background: var(--raised); border-color: var(--border); color: var(--muted); }
+.alpha-locked { background: color-mix(in srgb, var(--muted) 14%, transparent); border-color: var(--border); border-style: dashed; color: var(--muted); backdrop-filter: blur(2px); }
+.alpha-locked::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, transparent 0 7px, rgba(0, 0, 0, .05) 7px 9px); }
+.alpha-lock { position: absolute; top: 3px; right: 4px; color: var(--muted); transform: rotate(8deg); }
+.alpha-new { animation: alpha-pop .7s cubic-bezier(.3, 1.6, .5, 1) both; animation-delay: calc(var(--i, 0) * 140ms); box-shadow: 0 0 0 4px var(--match-bg), 0 0 18px 4px color-mix(in srgb, var(--match) 45%, transparent); }
+@keyframes alpha-pop { 0% { transform: scale(.6); opacity: .2; } 100% { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .alpha-new { animation: none; } .alpha-bar i { transition: none; } }
+
+/* Dawn light: the reward screens (lesson complete, your alphabet) swap the blue sky for soft blue meeting warm peach.
+   Still, no animation. Unlayered so it beats the legacy-layer sky. Text colours are unchanged (muted stays 4.5:1 on both ends). */
+body:has(.reward-dawn)::before {
+  background:
+    radial-gradient(ellipse at 0% 100%, rgba(255, 205, 170, 0.75), transparent 55%),
+    radial-gradient(ellipse at 100% 0%, rgba(185, 214, 234, 0.95), transparent 55%),
+    linear-gradient(180deg, #eef4f9, #f6ece6);
+}
+body:has(.reward-dawn)::after { display: none; }
+
+/* Alphabet shown in place on the completion screen (components/AlphabetStrip). Same tiles as #/alphabet, smaller. */
+.alpha-strip-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.alpha-strip-head .small-title { margin: 0; }
+.alpha-strip .alpha-bar { max-width: none; margin: var(--space-2) 0 var(--space-3); }
+.alpha-fresh { margin: 0 0 var(--space-2); font-weight: 700; }
+.alpha-legend { margin: var(--space-2) 0 0; }
+.alpha-roomy .alpha-grid { grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 8px; }
+.alpha-roomy .alpha-box { border-radius: 12px; font-size: 22px; }
+.alpha-strip .alpha-check { top: 0; right: 4px; font-size: 10px; }
+.alpha-lock-text { position: absolute; top: 1px; right: 2px; font-size: 10px; line-height: 1; }
+.alpha-strip .alpha-done { box-shadow: none; }
+.complete-cols { display: grid; gap: var(--space-5); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .complete-cols { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; } .complete-cols aside { position: sticky; top: var(--space-4); } }
+
+/* Progress journal: the pastel purple/blue "silent voice" sky instead of the peach dawn used on the other reward screens. Still, no animation. */
+body:has(.progress-page.reward-dawn)::before {
+  background:
+    radial-gradient(ellipse at 0% 100%, rgba(203, 190, 236, 0.8), transparent 58%),
+    radial-gradient(ellipse at 100% 0%, rgba(176, 205, 238, 0.95), transparent 55%),
+    linear-gradient(180deg, #eef3fb, #efeaf8);
+}

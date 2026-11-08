@@ -13,6 +13,7 @@ export type { SignDetection, FingerFeedback, HandFrame, Prediction } from "./typ
 export { PRACTICEABLE, isPracticeable } from "./practiceable";
 export { useLetterCheck, inFrame, type LetterCheckOptions } from "./useLetterCheck";
 export type { ErrorCode, Finger } from "./types";
-export { SIGNS, SignChecker, zoneOf, classifyMovement, ZONES, type SignDef } from "./signs";
+export { SIGNS, SignChecker, zoneOf, classifyMovement, ZONES, shapeTip, type SignDef, type SignStage } from "./signs";
+export type { FaceAnchors } from "./faceTracker";
 export { SequenceChecker } from "./signSequence";
 export { getSignTemplate } from "./signStore";

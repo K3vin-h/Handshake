@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { SIGNS, SequenceChecker, SignChecker, getSignTemplate, isPracticeable, useLetterCheck, zoneOf } from "../cv";
+import { SIGNS, SequenceChecker, SignChecker, getSignTemplate, isPracticeable, useLetterCheck, zoneOf, type SignStage } from "../cv";
 import { Camera } from "../components/Camera";
 import { SignGuide } from "./SignGuide";
 
@@ -41,6 +41,7 @@ export function TokenRunner(props: {
   const [k, setK] = useState(0);
   const [msg, setMsg] = useState("");
   const [zone, setZone] = useState("");
+  const [stage, setStage] = useState<SignStage>("handshape");
   useEffect(() => setK(0), [tokensKey]); // the same runner (and camera) is reused for the next step
   const u = units[k];
   const def = u?.kind === "sign" ? SIGNS[u.id] : undefined;
@@ -51,6 +52,7 @@ export function TokenRunner(props: {
   const seqChecker = useMemo(() => (tpl ? new SequenceChecker(tpl) : null), [tpl]);
   const advance = () => {
     setMsg("");
+    setStage("handshape");
     checker?.reset();
     seqChecker?.reset(); // the same sign can come up again (e.g. YOU in consecutive scene turns)
     if (k + 1 < units.length) setK(k + 1);
@@ -64,7 +66,8 @@ export function TokenRunner(props: {
     leftHanded: props.leftHanded,
     enabled: !!u && auto,
     onMatch: () => u?.kind === "letter" && advance(),
-    onFrame: (hand, pred, now) => {
+    onFrame: (hand, pred, now, face) => {
+      // Recorded takes (#/record-signs): matched as a whole, so there are no separate handshape / place / movement stages.
       if (seqChecker && auto) {
         const r = seqChecker.update(hand, now);
         setMsg(r.message);
@@ -72,9 +75,10 @@ export function TokenRunner(props: {
         return;
       }
       if (!checker || !auto) return;
-      if (hand) setZone(zoneOf(hand));
-      const r = checker.update(hand, pred, now);
+      if (hand) setZone(`${zoneOf(hand, face)}${face ? " (face found)" : " (no face, fixed zones)"}`);
+      const r = checker.update(hand, pred, now, face);
       setMsg(r.message);
+      setStage(r.stage);
       if (r.stage === "done") advance();
     },
   });
@@ -84,7 +88,7 @@ export function TokenRunner(props: {
     return (
       <div className="page">
         <p role="status">
-          {movers.length ? `${movers.join(" and ")} move${movers.length === 1 ? "s" : ""}, so the camera can't check ${movers.length === 1 ? "it" : "them"}. Practise by watching and copying.` : "There is nothing for the camera to check in this step."}
+          {movers.length ? `${movers.join(" and ")} move${movers.length === 1 ? "s" : ""}, so the camera can't check ${movers.length === 1 ? "it" : "them"}. Practice by watching and copying.` : "There is nothing for the camera to check in this step."}
         </p>
         <button type="button" onClick={props.onEmpty}>Continue</button>
       </div>
@@ -104,6 +108,6 @@ export function TokenRunner(props: {
     </>
   );
   // Whole signs get a picture guide (handshape + place + movement); fingerspelled letters already have the 3D hand.
-  const guide = def ? <SignGuide def={def} templates={check.templates} leftHanded={props.leftHanded} /> : null;
+  const guide = def ? <SignGuide def={def} templates={check.templates} leftHanded={props.leftHanded} stage={auto && !tpl ? stage : undefined} /> : null;
   return <>{props.render({ camera, prompt, index: k, token: u.token, units, guide, selfCheck: auto ? undefined : advance })}</>;
 }
