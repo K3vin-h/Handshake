@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { SIGNS, SignChecker, isPracticeable, useLetterCheck, zoneOf } from "../cv";
 import { Camera } from "../components/Camera";
+import { SignGuide } from "./SignGuide";
 
 /** Cut rule (H14): false → every sign is self-checked with "I signed it". */
 export const SIGNS_AUTO = true;
@@ -14,7 +15,7 @@ export const unitsOf = (tokens: string[]): RunUnit[] =>
     t.startsWith("fs:") ? [...t.slice(3)].filter(isPracticeable).map((letter) => ({ kind: "letter", letter, token })) : [{ kind: "sign", id: t, token }],
   );
 
-type RenderArgs = { camera: ReactNode; prompt: string; index: number; token: number; units: RunUnit[]; selfCheck?: () => void };
+type RenderArgs = { camera: ReactNode; prompt: string; index: number; token: number; units: RunUnit[]; guide: ReactNode; selfCheck?: () => void };
 
 /**
  * Walks a list of tokens (signs and fingerspelled words) one part at a time on ONE camera.
@@ -64,5 +65,7 @@ export function TokenRunner(props: { tokens: string[]; leftHanded: boolean; onDo
       <p className="muted">debug: zone {zone || "–"} · seeing {check.prediction?.letter ?? "–"}</p>
     </>
   );
-  return <>{props.render({ camera, prompt, index: k, token: u.token, units, selfCheck: auto ? undefined : advance })}</>;
+  // Whole signs get a picture guide (handshape + place + movement); fingerspelled letters already have the 3D hand.
+  const guide = def ? <SignGuide def={def} templates={check.templates} leftHanded={props.leftHanded} /> : null;
+  return <>{props.render({ camera, prompt, index: k, token: u.token, units, guide, selfCheck: auto ? undefined : advance })}</>;
 }

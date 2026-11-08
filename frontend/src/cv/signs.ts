@@ -18,6 +18,8 @@ export type SignDef = {
   handshape: string;
   zone: Zone;
   movement: Movement;
+  /** Other movements that also count (a camera sees the same real motion as different directions). */
+  alsoMovement?: Movement[];
   howTo: string;
   /** "assisted" = auto-checked as above; "self" = two-handed / needs the face: learner confirms. */
   grading: "assisted" | "self";
@@ -27,7 +29,7 @@ export type SignDef = {
 };
 
 export const SIGNS: Record<string, SignDef> = {
-  HELLO: { id: "HELLO", english: "hello", handshape: "B", zone: "forehead", movement: "away", grading: "assisted", howTo: "Flat hand at the side of your forehead, then move it outward, like a small salute." },
+  HELLO: { id: "HELLO", english: "hello", handshape: "B", zone: "forehead", movement: "away", alsoMovement: ["side"], grading: "assisted", howTo: "Flat hand at the side of your forehead, then move it outward, like a small salute." },
   BYE: { id: "BYE", english: "bye", handshape: "5", zone: "side", movement: "side", grading: "assisted", howTo: "Open hand, palm out, and wave." },
   MY: { id: "MY", english: "my", handshape: "B", zone: "chest", movement: "none", grading: "assisted", howTo: "Flat palm placed on your chest." },
   NAME: { id: "NAME", english: "name", handshape: "H", zone: "chest", movement: "tap", grading: "assisted", howTo: "Both hands in the H shape; tap the top fingers on the bottom fingers twice." },
@@ -135,7 +137,10 @@ export class SignChecker {
   private samples: Sample[] = [];
   private moveStart = 0;
 
-  constructor(public sign: SignDef) {}
+  sign: SignDef;
+  constructor(sign: SignDef) {
+    this.sign = sign; // explicit (not a parameter property) so `node --test` can strip types
+  }
 
   reset() {
     this.stage = "handshape";
@@ -173,7 +178,7 @@ export class SignChecker {
     const c = handCenter(hand);
     this.samples.push({ t: now, ...c });
     const move = classifyMovement(this.samples);
-    if (move === s.movement) {
+    if (move === s.movement || s.alsoMovement?.includes(move)) {
       this.stage = "done";
       return { stage: "done", message: `${s.english}: nice!` };
     }
