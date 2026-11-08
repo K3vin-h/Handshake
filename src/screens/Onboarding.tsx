@@ -20,6 +20,9 @@ const RELATIONSHIPS: [NonNullable<Personalization["relationship"]>, string][] = 
 
 const hasLetter = (s: string) => /[a-z]/i.test(s);
 
+// Onboarding is often shown AT "#/" (no profile yet). Setting the same hash fires no hashchange, so the router would never re-render.
+const goHome = () => (location.hash === "#/" ? dispatchEvent(new HashChangeEvent("hashchange")) : (location.hash = "#/"));
+
 export function Onboarding() {
   const saved = loadProfile();
   const [you, setYou] = useState(saved?.userName ?? "");
@@ -57,7 +60,7 @@ export function Onboarding() {
     setError("");
     setFieldErr({ you: "", them: "" });
     saveProfile({ userName: you.trim(), theirName: them.trim(), relationship, leftHanded });
-    location.hash = "#/";
+    goHome();
     void refreshPracticeWords();
   }
 
@@ -110,7 +113,7 @@ export function Onboarding() {
 
           <div className="row">
             <button type="submit">Build my path</button>
-            <button type="button" className="secondary" onClick={() => { saveProfile(DEMO_PROFILE); location.hash = "#/"; void refreshPracticeWords(); }}>
+            <button type="button" className="secondary" onClick={() => { saveProfile(DEMO_PROFILE); goHome(); void refreshPracticeWords(); }}>
               Use demo profile (Ryan → Lily)
             </button>
           </div>
