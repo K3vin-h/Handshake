@@ -36,11 +36,11 @@ export function Home() {
 
   return (
     <div className="page home">
-      <section className="focus stagger" style={{ "--i": 0 } as React.CSSProperties} aria-labelledby="focus-title">
-        <p className="focus-eyebrow">Your path</p>
-        <h1 id="focus-title">
-          Start with your name, {profile.userName}. Then {profile.theirName}&rsquo;s.
-        </h1>
+      <h1 className="greet-title stagger" style={{ "--i": 0 } as React.CSSProperties}>
+        Start with your name, {profile.userName}. Then {profile.theirName}&rsquo;s.
+      </h1>
+
+      <section className="focus stagger" style={{ "--i": 1 } as React.CSSProperties} aria-labelledby="focus-title">
         {next ? (
           <div className="focus-next">
             <div className="focus-lesson">
@@ -52,27 +52,25 @@ export function Home() {
                 </div>
               )}
               <div>
-                <p className="focus-kicker">Up next · Lesson {next.id} · {next.xp} XP</p>
-                <h2>{next.title}</h2>
+                <p className="focus-eyebrow">Up next · Lesson {next.id} · {next.xp} XP</p>
+                <h2 id="focus-title">{next.title}</h2>
               </div>
             </div>
             <button type="button" className="focus-cta" onClick={() => open(next.id)}>
-              Continue lesson {next.id}
-              <span aria-hidden="true"> →</span>
+              Start
+              <span className="sr-only"> lesson {next.id}</span>
             </button>
           </div>
         ) : (
-          <div className="focus-next">
-            <div>
-              <p className="focus-kicker">All caught up</p>
-              <h2>Every available lesson is finished</h2>
-              <p className="focus-note">More lessons are coming later.</p>
-            </div>
+          <div>
+            <p className="focus-eyebrow">All caught up</p>
+            <h2 id="focus-title">Every available lesson is finished</h2>
+            <p className="focus-note">More lessons are coming later.</p>
           </div>
         )}
       </section>
 
-      <ul className="shortcuts stagger" style={{ "--i": 1 } as React.CSSProperties} aria-label="Shortcuts">
+      <ul className="shortcuts stagger" style={{ "--i": 2 } as React.CSSProperties} aria-label="Shortcuts">
         <li><a href="#/progress">Progress</a></li>
         <li><a href="#/camera-demo">Camera demo</a></li>
         {spellThem && (
