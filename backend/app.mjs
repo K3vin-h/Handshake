@@ -2,6 +2,8 @@
 import express from "express";
 import { DEFAULT_GEMINI_MODEL, generateWithRetry } from "./gemini.mjs";
 import { Type } from "@google/genai";
+import { rateLimit } from "./limit.mjs";
+import { STYLES, cleanPraise, pickCanned, praiseBody, praisePrompt } from "./praise.mjs";
 
 const FINGERS = ["thumb", "index", "middle", "ring", "pinky"];
 const MOCK_WORDS = ["LILY", "BOY", "DOLL", "WILD", "COLD", "BOLD", "FOIL", "CLAY", "BODY", "IDOL", "FOLD", "VOID", "COW", "LAW", "DAY", "BAY", "OIL"];
@@ -35,7 +37,7 @@ function cuesFor(first, target, repeat) {
 
 const letters = (xs) => [...new Set((Array.isArray(xs) ? xs : []).filter((s) => typeof s === "string").map((s) => s.toUpperCase()).filter((s) => /^[A-Z]$/.test(s)))];
 
-export function createApp({ ai = null, model = DEFAULT_GEMINI_MODEL, precache = {}, snapshot = false, cacheExport = false } = {}) {
+export function createApp({ ai = null, model = DEFAULT_GEMINI_MODEL, precache = {}, snapshot = false, cacheExport = false, random = Math.random } = {}) {
   const app = express();
   app.use(express.json({ limit: "300kb" })); // fits one snapshot, nothing bigger
   const cache = new Map(Object.entries(precache && typeof precache === "object" && !Array.isArray(precache) ? precache : {}).slice(-256));
@@ -43,7 +45,7 @@ export function createApp({ ai = null, model = DEFAULT_GEMINI_MODEL, precache = 
   let activeGenerations = 0;
   let windowStart = Date.now();
   let windowCalls = 0;
-  async function askJson(prompt, schema, image) {
+  async function askJson(prompt, schema, image, { temperature = 0.7, timeoutMs } = {}) {
     if (Date.now() - windowStart >= 60_000) { windowStart = Date.now(); windowCalls = 0; }
     if (activeGenerations >= 4 || windowCalls >= 30) throw new Error("generation budget reached");
     activeGenerations++;
@@ -53,8 +55,8 @@ export function createApp({ ai = null, model = DEFAULT_GEMINI_MODEL, precache = 
     try {
       res = await generateWithRetry(ai, {
         model, contents: [{ role: "user", parts }],
-        config: { responseMimeType: "application/json", responseSchema: schema, temperature: 0.7 },
-      }, { beforeAttempt: () => {
+        config: { responseMimeType: "application/json", responseSchema: schema, temperature },
+      }, { ...(timeoutMs && { timeoutMs, attemptTimeoutMs: timeoutMs }), beforeAttempt: () => {
         if (Date.now() - windowStart >= 60_000) { windowStart = Date.now(); windowCalls = 0; }
         if (windowCalls >= 30) throw new Error("generation budget reached");
         windowCalls++;
@@ -177,6 +179,32 @@ If you are not sure how this handshape is formed, set confident to false and lea
     }
   });
 
+  // 4. Praise: ONE varied line after the app has already confirmed a match. Never cached by key (that would repeat it);
+  //    only the canned pool is labelled cached. `recent` reaches the prompt only if this server issued that text.
+  const issued = new Set();
+  const issue = (message) => {
+    if (issued.size >= 500) issued.delete(issued.values().next().value);
+    issued.add(message);
+    return message;
+  };
+  app.post("/api/praise", rateLimit({ windowMs: 60_000, max: 40 }), async (req, res) => {
+    const body = praiseBody(req.body);
+    if (!body) return res.status(400).json({ error: "bad_request" });
+    const canned = () => ({ message: issue(pickCanned(body.kind, body.target, body.recent, random)), cached: true });
+    if (!ai) return res.json(canned());
+    try {
+      const style = STYLES[Math.min(STYLES.length - 1, Math.floor(random() * STYLES.length))];
+      const out = await askJson(praisePrompt(body, style, body.recent.filter((m) => issued.has(m))),
+        { type: Type.OBJECT, properties: { message: { type: Type.STRING } }, required: ["message"] }, undefined,
+        { temperature: 1.0, timeoutMs: 2500 });
+      const message = cleanPraise(out?.message, body.recent);
+      res.json(message ? { message: issue(message) } : canned());
+    } catch {
+      console.warn("Praise generation failed; using a canned line.");
+      res.json(canned());
+    }
+  });
+
   // Dev: dump the cache to pre-generate demo replies → backend/precache.json (contains no names).
   if (cacheExport) app.get("/api/cache", (_req, res) => res.json(Object.fromEntries(cache)));
 
@@ -184,6 +212,7 @@ If you are not sure how this handshape is formed, set confident to false and lea
     if (req.path === "/api/coach") return res.json({ tip: "Compare your hand with the reference and hold still.", cached: true });
     if (req.path === "/api/words") return res.json({ words: [], cached: true });
     if (req.path === "/api/explain") return res.json({ text: "", cached: true });
+    if (req.path === "/api/praise") return res.status(400).json({ error: "bad_request" });
     next(error);
   });
   return app;
