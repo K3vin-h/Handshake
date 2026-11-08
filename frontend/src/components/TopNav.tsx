@@ -45,9 +45,11 @@ export function TopNav({ hash }: { hash: string }) {
         </div>
       </div>
       <div className="nav-right">
-        {loadProfile() && <StreakXpChip streakDays={progress.streakDays} xp={progress.xp} />}
-        <AccountChip />
-        <ReduceMotionToggle />
+        <div className="nav-status">
+          {loadProfile() && <StreakXpChip streakDays={progress.streakDays} xp={progress.xp} />}
+          <AccountChip />
+          <ReduceMotionToggle />
+        </div>
         <a href={SETTINGS[0]} aria-current={navActive(SETTINGS[0], hash) ? "page" : undefined}>{SETTINGS[1]}</a>
       </div>
     </nav>

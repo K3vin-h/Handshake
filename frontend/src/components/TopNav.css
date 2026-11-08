@@ -11,5 +11,14 @@ nav.top-nav { position: sticky; top: 0; z-index: 10; display: grid; grid-templat
 .nav-right > a[aria-current="page"] { color: var(--text); background: var(--raised); }
 .brand { color: var(--text); font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; }
 @media (hover: hover) and (pointer: fine) { .nav-links a:hover, .nav-right > a:hover { color: var(--text); } }
-@media (max-width: 1100px) { nav.top-nav { grid-template-columns: 1fr auto; grid-template-areas: "l r" "c c"; } .nav-left { grid-area: l; } .nav-right { grid-area: r; } .nav-center { grid-area: c; } }
+.nav-status { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); min-width: 0; }
+/* Narrow: row 1 brand + Settings, row 2 pill, row 3 status. .nav-right dissolves so its children join the nav grid (DOM order stays brand, links, status, Settings). */
+@media (max-width: 1100px) {
+  nav.top-nav { grid-template-columns: minmax(0,1fr) auto; grid-template-areas: "l s" "c c" "t t"; row-gap: var(--space-2); }
+  .nav-right { display: contents; }
+  .nav-left { grid-area: l; }
+  .nav-right > a { grid-area: s; justify-self: end; }
+  .nav-center { grid-area: c; }
+  .nav-status { grid-area: t; justify-content: center; }
+}
 @media (max-width: 600px) { nav.top-nav { position: static; padding: var(--space-2) var(--space-3); } }
