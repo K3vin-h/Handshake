@@ -1,16 +1,16 @@
 # Training the recognizer
 
 Optional upgrade from kNN to a neural network trained on thousands of hands.
-The app works without it: if `public/model/model.json` is missing, it uses kNN.
+The app works without it: if `frontend/public/model/model.json` is missing, it uses kNN.
 
 ## Pipeline
 
 ```
 Kaggle ASL Alphabet photos ──► Albumentations (dark, bright, warm, cool, blur, noise, angle)
                            ──► MediaPipe hand landmarks (same model as the browser)
-                           ──► features.py (88 numbers, identical to src/cv/features.ts)
+                           ──► features.py (88 numbers, identical to frontend/src/cv/features.ts)
 your #/record exports     ──┘
-                           ──► scikit-learn MLP ──► public/model/model.json ──► TensorFlow.js in the app
+                           ──► scikit-learn MLP ──► frontend/public/model/model.json ──► TensorFlow.js in the app
 ```
 
 ## Run it
@@ -66,7 +66,7 @@ labelled optimistic; use at least two people's recordings for a held-out person.
 4. Run all cells. Confirm **three finished runs** in the notebook experiment, with
    `hidden`, `evaluation`, `holdout_accuracy`, `recall_<letter>`, and both artifacts.
 5. Review `report.txt` and `model.json` in the volume. Download the model to
-   `public/model/model.json` only when the evaluation is acceptable. Keep the
+   `frontend/public/model/model.json` only when the evaluation is acceptable. Keep the
    MLflow experiment screenshot and report for the submission. A local synthetic
    test is not evidence of real-hand accuracy or a completed Databricks run.
 

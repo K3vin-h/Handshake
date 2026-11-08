@@ -66,3 +66,16 @@ test("tool fetches and model generations share the request deadline", async () =
   assert.equal(modelSignal, signal);
   assert.equal(fetchSignal, signal);
 });
+
+test('a stalled model request rejects at the shared abort deadline', async () => {
+  const signal = AbortSignal.timeout(30);
+  const keepAlive = setInterval(() => {}, 1000);
+  const ai = { models: { generateContent: ({ config }) => new Promise((_resolve, reject) => {
+    config.abortSignal.addEventListener('abort', () => reject(config.abortSignal.reason), { once: true });
+  }) } };
+  const start = performance.now();
+  try {
+    await assert.rejects(planSession({ ...base, ai, model: 'm', signal }), { name: 'TimeoutError' });
+    assert.ok(performance.now() - start < 1000);
+  } finally { clearInterval(keepAlive); }
+});
