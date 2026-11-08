@@ -76,7 +76,7 @@ function CardArt({ unit }: { unit: DeckUnit }) {
   );
 }
 
-/** One card in the swipe deck. Its tilt, scale and fade come from how far it sits from the centre. */
+/** One card in the swipe deck. Its scale and fade come from how far it sits from the centre. */
 function DeckCard(props: {
   unit: DeckUnit;
   index: number;
@@ -91,14 +91,14 @@ function DeckCard(props: {
 }) {
   const { unit, index, slot, restX, x, active, flat, width, onSelect, onOpen } = props;
   const d = useTransform(x, (v) => (v - restX) / slot); // 0 = centred, +1 = one card to the right
-  const rotateY = useTransform(d, [-1, 0, 1], flat ? [0, 0, 0] : [32, 0, -32]);
-  const scale = useTransform(d, [-1, 0, 1], flat ? [1, 1, 1] : [0.9, 1, 0.9]);
-  const opacity = useTransform(d, [-2, -1, 0, 1, 2], [0.3, 0.78, 1, 0.78, 0.3]);
+  // No 3D tilt: rotateY squeezed the side cards sideways and made their text look stretched. They shrink evenly and fade instead.
+  const scale = useTransform(d, [-2, -1, 0, 1, 2], flat ? [1, 1, 1, 1, 1] : [0.74, 0.84, 1, 0.84, 0.74]);
+  const opacity = useTransform(d, [-2, -1, 0, 1, 2], [0.22, 0.5, 1, 0.5, 0.22]);
   const pct = unit.lessons.length ? unit.done / unit.lessons.length : 0;
   return (
     <motion.li
       className={`lp-card lp-card-u${unit.number}${active ? " is-active" : ""}`}
-      style={{ width, rotateY, scale, opacity }}
+      style={{ width, scale, opacity }}
       // Side cards are only a preview. Clicking one centres it; keyboard users use the arrows or the dots.
       onClick={() => !active && onSelect()}
       // inert keeps the preview cards out of the tab order and the accessibility tree until they are centred.
