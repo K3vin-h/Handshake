@@ -13,6 +13,7 @@ export function setCameraOn(v: boolean) {
 }
 
 export function useCameraOn(): [boolean, (v: boolean) => void] {
-  const v = useSyncExternalStore((f) => (subs.add(f), () => void subs.delete(f)), () => on);
+  // The third argument is the server-render value (camera on). Without it React throws when a screen with a camera is rendered on the server (the tests do this).
+  const v = useSyncExternalStore((f) => (subs.add(f), () => void subs.delete(f)), () => on, () => true);
   return [v, setCameraOn];
 }
