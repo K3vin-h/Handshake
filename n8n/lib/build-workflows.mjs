@@ -1,4 +1,5 @@
 import { writeFile } from 'node:fs/promises';
+import { confirmEmailHtml } from './email-template.mjs';
 const settings={executionOrder:'v1',saveDataErrorExecution:'none',saveDataSuccessExecution:'none',saveManualExecutions:false,saveExecutionProgress:false,executionTimeout:30};
 const node=(name,type,parameters,x=0,y=0,version=1)=>({id:name.toLowerCase().replaceAll(' ','-'),name,type:'n8n-nodes-base.'+type,typeVersion:version,position:[x,y],parameters});
 const webhook=(name,path,method='GET',auth=false,y=0)=>node(name,'webhook',{path,httpMethod:method,responseMode:'responseNode',...(auth?{authentication:'headerAuth'}:{}),options:{}},0,y,2);
@@ -9,7 +10,7 @@ const persist=sql('Persist subscription','SELECT handshake.subscribe($1::jsonb) 
 const subscribe=workflow('Handshake v1 - subscribe',[
  webhook('Subscribe','handshake-subscribe','POST',true),persist,
  node('Send confirmation required','if',{conditions:{options:{caseSensitive:true,typeValidation:'strict',version:2},conditions:[{id:'send',leftValue:'={{ $json.result.send }}',rightValue:true,operator:{type:'boolean',operation:'true',singleValue:true}}],combinator:'and'},options:{}},450,0,2.2),
- node('Send confirmation','emailSend',{fromEmail:'={{ $vars.HANDSHAKE_FROM_EMAIL }}',toEmail:'={{ $json.result.email }}',subject:'Confirm Handshake lesson updates',emailFormat:'text',text:"={{ 'Someone entered your address to get updates when they finish ASL lessons. Confirm: ' + $vars.HANDSHAKE_LINK_ORIGIN + '/webhook/handshake-confirm?token=' + $json.result.token + '. Ignore this email to receive nothing.' }}",options:{appendAttribution:false}},670,-100,2.1),
+ node('Send confirmation','emailSend',{fromEmail:'={{ $vars.HANDSHAKE_FROM_EMAIL }}',toEmail:'={{ $json.result.email }}',subject:'Allow practice reminders?',emailFormat:'both',text:"={{ 'Allow practice reminders?\\n\\nSomeone entered your email so Handshake can send friendly reminders to get back into ASL practice. Confirm: ' + $vars.HANDSHAKE_LINK_ORIGIN + '/webhook/handshake-confirm?token=' + $json.result.token + '. You can opt out anytime after confirming. Ignore this email to receive nothing.' }}",html:confirmEmailHtml(),options:{appendAttribution:false}},670,-100,2.1),
  sql('Acknowledge confirmation','SELECT handshake.confirmation_sent($1) AS result',"={{ [ $('Persist subscription').first().json.result.token ] }}",880,-100),
  response('Saved',"={{ {ok:true} }}",'200',1100,-100),
  response('Subscription result',"={{ {ok:$json.result.ok, ...($json.result.ok ? {} : {reason: 'Subscription request could not be completed.'})} }}",'$json.result.status',700,150),
