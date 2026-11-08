@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { SIGNS, isPracticeable, meanPose3D, useLetterCheck } from "../cv";
 import { TokenRunner } from "./TokenRunner";
 import { buildCurriculum, flatLessons, type Step } from "../lib/curriculum";
-import { completeLesson, dueItems, isUnlocked, loadProgress, recordAttempt, type Progress } from "../lib/progress";
+import { completeLesson, dueItems, isUnlocked, loadProgress, recordAttempt, recordPartial, type Progress } from "../lib/progress";
 import { reportAttempt, reportLessonComplete } from "../lib/track";
 import { loadMistakes, mistakeCount, recordMistake } from "../lib/mistakes";
 import { requireProfile } from "../lib/requireProfile";
@@ -14,6 +14,7 @@ import { createCoachQueue } from "../lib/coachQueue";
 import type { FingerFeedback } from "../cv/types";
 import { loadTemplates } from "../cv/classifier";
 import { celebrate } from "../components/celebrate";
+import { clearRedo, loadRedo, saveRedo } from "./lessonRedo";
 
 const HandModel3D = lazy(() => import("../components/HandModel3D"));
 
@@ -33,30 +34,43 @@ const shuffle = <T,>(xs: T[]): T[] => {
   return a;
 };
 
-export function expand(steps: Step[], _progress: Progress): Item[] {
+/**
+ * `names` = the learner's and their person's names (letters only, upper case). Repeats are trimmed, not removed:
+ * a word is spelled once per lesson, the review step skips letters this lesson just asked, and a name that already
+ * has its own lesson is not used again as a drill word. Practice, mix and look-alike drills still repeat on purpose.
+ */
+export function expand(steps: Step[], _progress: Progress, names: string[] = []): Item[] {
   const out: Item[] = [];
+  const asked = new Set<string>(); // letters already asked earlier in this lesson
+  const spelled = new Set<string>();
   for (const s of steps) {
     // Live letters: the practice step already shows the reference beside the camera, so no separate "learn" page.
     if (s.kind === "learn") { if (!isPracticeable(s.letter)) out.push({ kind: "learn", letter: s.letter, referenceOnly: true }); }
     else if (s.kind === "practice") {
       // One step per letter: LetterItem counts the reps (relax the hand between them).
-      if (isPracticeable(s.letter)) out.push({ kind: "check", letter: s.letter, showReference: true, reps: s.reps });
+      if (isPracticeable(s.letter)) { out.push({ kind: "check", letter: s.letter, showReference: true, reps: s.reps }); asked.add(s.letter); }
     } else if (s.kind === "identify") {
       if (isPracticeable(s.letter)) out.push({ kind: "identify", letter: s.letter, options: s.options }); // needs a recorded 3D pose
     } else if (s.kind === "mix") {
       // Sign again from memory, random order, reference hidden (hint ladder available).
-      for (const l of shuffle(s.letters.filter(isPracticeable))) out.push({ kind: "check", letter: l, showReference: false });
+      for (const l of shuffle(s.letters.filter(isPracticeable))) { out.push({ kind: "check", letter: l, showReference: false }); asked.add(l); }
     } else if (s.kind === "spell") {
+      if (spelled.has(s.word)) continue;
+      if (steps.length > 1 && !s.showReference && names.includes(s.word)) continue; // a drill that is just a name: that has its own lessons
+      spelled.add(s.word);
       const letters = [...s.word];
       letters.forEach((l, index) => out.push(isPracticeable(l)
         ? { kind: "check", letter: l, showReference: s.showReference, word: { letters, index } }
         : { kind: "learn", letter: l, referenceOnly: true }));
     } else if (s.kind === "contrast" || s.kind === "review") {
-      const letters = s.kind === "contrast" ? s.letters : dueItems(_progress).filter((l) => /^[A-Z]$/.test(l));
+      const letters = s.kind === "contrast" ? s.letters : dueItems(_progress).filter((l) => /^[A-Z]$/.test(l) && !asked.has(l));
       const graded = s.kind === "review" || letters.every(isPracticeable);
-      for (const letter of letters) out.push(graded && isPracticeable(letter)
-        ? { kind: "check", letter, showReference: true }
-        : { kind: "learn", letter, referenceOnly: true });
+      for (const letter of letters) {
+        out.push(graded && isPracticeable(letter)
+          ? { kind: "check", letter, showReference: true }
+          : { kind: "learn", letter, referenceOnly: true });
+        asked.add(letter);
+      }
     }
     else out.push({ kind: "other", step: s });
   }
@@ -69,36 +83,53 @@ export function LessonPlayer({ lessonId }: { lessonId: string }) {
 function Player({ lessonId }: { lessonId: string }) {
   const profile = requireProfile();
   const units = useMemo(() => buildCurriculum(profile).filter((u) => ["u1", "u2", "u3", "u4"].includes(u.id)), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const names = [profile.userName, profile.theirName].map((n) => n.toUpperCase().replace(/[^A-Z]/g, "")).filter(Boolean);
   const lesson = useMemo(() => flatLessons(units).find((l) => l.id === lessonId), [units, lessonId]);
   const progress = useRef(loadProgress()); // a ref, not state: recordAttempt mutates, and StrictMode would double-apply updaters
-  const [items, setItems] = useState<Item[]>(() => (lesson ? expand(lesson.steps, progress.current) : [])); // state: a missed "which letter" comes back once at the end
+  const [items, setItems] = useState<Item[]>(() => (lesson ? expand(lesson.steps, progress.current, names) : [])); // state: a missed "which letter" comes back once at the end
   const [i, setI] = useState(0);
   const [turn, setTurn] = useState(0); // which exchange of a conversation scene (hooks stay above the early returns)
   const lessonLetters = useMemo(() => [...new Set(items.flatMap((x) => (x.kind === "check" ? [x.letter] : [])))], [items]);
 
+  useEffect(() => { lessonLetters.forEach((l) => getHowTo(l).catch(() => {})); }, [lessonLetters]); // warm the server cache; a first Gemini call takes 4-6 s
+
   const finishing = useRef(false);
   // A skipped step is passed without a match. The lesson can then be walked to the end, but it is NOT completed:
   // no XP, no unlock. Otherwise Skip would be a way round the pass rule (mastery needs real matches).
-  const skipped = useRef(false);
+  // Steps already matched stay done: only the skipped ones (and any not reached) are offered again, and that list is saved.
+  const total = useRef(Math.max(1, items.length)); // steps in a full run, for the "partly done" share
+  const skipped = useRef(new Map<number, Item>()); // index in `items` -> the skipped item
   const [incomplete, setIncomplete] = useState(false);
+  const after = useMemo(() => { const all = flatLessons(units); return all.slice(all.findIndex((l) => l.id === lessonId) + 1).find((l) => l.scope === "demo"); }, [units, lessonId]);
+  const [resume, setResume] = useState<Item[] | null>(() => loadRedo<Item>(lessonId)); // left over from an earlier visit
+  const markSkipped = () => { if (items[i]) skipped.current.set(i, items[i]); };
   function skip() {
-    skipped.current = true;
+    markSkipped();
     setTurn(0); // leaving a scene mid-way must not leave the next scene starting at a stale turn
     next();
   }
-  function startAgain() {
-    skipped.current = false;
+  function restart(list: Item[]) {
+    skipped.current = new Map();
     finishing.current = false;
     setIncomplete(false);
+    setResume(null);
     setTurn(0);
     setI(0);
-    if (lesson) setItems(expand(lesson.steps, progress.current)); // fresh order, and no leftover "again" items from the last go
+    setItems(list);
   }
+  const startAgain = () => { clearRedo(lessonId); if (lesson) { const list = expand(lesson.steps, progress.current, names); total.current = Math.max(1, list.length); restart(list); } }; // fresh order, no leftover "again" items
+  const redoSkipped = () => restart([...skipped.current.values()]);
   function next() {
     if (finishing.current) return;
-    if (i + 1 < items.length) return setI(i + 1);
-    if (skipped.current) return setIncomplete(true);
+    const left = [...skipped.current.values(), ...items.slice(i + 1)];
+    if (i + 1 < items.length) { saveRedo(lessonId, left); return setI(i + 1); }
+    if (skipped.current.size) {
+      saveRedo(lessonId, left);
+      progress.current = recordPartial(progress.current, lessonId, 1 - skipped.current.size / total.current); // opens the next lesson, shows as partly filled
+      return setIncomplete(true);
+    }
     finishing.current = true;
+    clearRedo(lessonId);
     if (!progress.current.completed.includes(lesson!.id)) {
       progress.current = completeLesson(progress.current, lesson!.id, lesson!.xp);
       reportLessonComplete(lesson!.id, lesson!.xp);
@@ -113,8 +144,18 @@ function Player({ lessonId }: { lessonId: string }) {
     return (
       <div className="page">
         <h1>Lesson not finished yet</h1>
-        <p role="status">You skipped some steps, so this lesson is not complete and no XP was added. Go through it again and match each sign to finish it.</p>
-        <p><button onClick={startAgain}>Start this lesson again</button> <a href="#/">Back to your path</a></p>
+        <p role="status">You skipped {skipped.current.size} {skipped.current.size === 1 ? "step" : "steps"}, so this lesson is not complete and no XP was added. Everything you matched is saved: you only need to redo the skipped {skipped.current.size === 1 ? "step" : "steps"}.</p>
+        <p><button onClick={redoSkipped}>Redo the skipped {skipped.current.size === 1 ? "step" : "steps"}</button> <button onClick={startAgain}>Start the whole lesson over</button></p>
+        <p>{after && <a href={`#/lesson/${after.id}`}>Go on to {after.id} {after.title}</a>} {after && "· "}<a href="#/">Back to your path</a></p>
+        {after && <p className="muted small">This lesson stays partly filled on your path until the skipped steps are matched.</p>}
+      </div>
+    );
+  if (resume)
+    return (
+      <div className="page">
+        <h1>Pick up where you left off</h1>
+        <p role="status">{resume.length} {resume.length === 1 ? "step is" : "steps are"} left in this lesson. The ones you already matched are saved.</p>
+        <p><button onClick={() => restart(resume)}>Continue ({resume.length} left)</button> <button onClick={startAgain}>Start the whole lesson over</button> <a href="#/">Back to your path</a></p>
       </div>
     );
   const item = items[i];
@@ -150,7 +191,7 @@ function Player({ lessonId }: { lessonId: string }) {
           setTurn(0);
           next();
         }}
-        onEmpty={() => { skipped.current = true; if (turnNow + 1 < turns.length) setTurn(turnNow + 1); else { setTurn(0); next(); } }}
+        onEmpty={() => { markSkipped(); if (turnNow + 1 < turns.length) setTurn(turnNow + 1); else { setTurn(0); next(); } }}
         render={(r) => <SceneView title={lesson.title} turns={turns} turnIndex={turnNow} tokenIndex={r.token} camera={<>{r.guide}{r.camera}</>} prompt={r.prompt} onSelfCheck={r.selfCheck} onSkip={skip} />} />
 
     );
@@ -267,10 +308,12 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
 
   // How to form the letter (Gemini, general ASL knowledge). Hidden until it arrives, and when Gemini is unsure or down.
   const [howTo, setHowTo] = useState<{ text: string; cached: boolean } | undefined>();
+  const [howToLoading, setHowToLoading] = useState(true);
   useEffect(() => {
     setHowTo(undefined);
+    setHowToLoading(true);
     let live = true;
-    getHowTo(target).then((r) => live && r.text && setHowTo({ text: r.text, cached: !!r.cached })).catch(() => {});
+    getHowTo(target).then((r) => live && r.text && setHowTo({ text: r.text, cached: !!r.cached })).catch(() => {}).finally(() => live && setHowToLoading(false));
     return () => { live = false; };
   }, [target]);
 
@@ -296,7 +339,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     <>
       <Camera {...check.cam} progress={shownProgress} />
       {check.hint && <p role="status">{check.hint}</p>}
-      {recall && hintStage === 1 && <p role="status">Hint: {howTo?.text ?? "no written hint is available right now, try Show answer."}</p>}
+      {recall && hintStage === 1 && <p role="status">Hint: {howTo?.text ?? (howToLoading ? "loading…" : "no written hint is available for this letter, try Show answer.")}</p>}
       {recall && (
         <button type="button" className={check.missCount >= 2 && hintStage === 0 ? "cta" : "secondary"} onClick={() => setHintStage((hintStage + 1) % 3)}>
           {hintStage === 0 ? (check.missCount >= 2 ? "Struggling? Get a hint" : "Hint") : hintStage === 1 ? "Show answer" : "Hide answer"}
@@ -367,7 +410,7 @@ function IdentifyItem({ item, leftHanded, stepLabel, onNext, onMiss }: { item: E
       </Suspense>
       <div className="choices big-choices" role="group" aria-label="Answer choices">
         {item.options.map((l) => (
-          <button key={l} type="button" className="secondary" disabled={done || picked.includes(l)} onClick={() => pick(l)}>
+          <button key={l} type="button" className={`secondary ${done && l === item.letter ? "answer-right" : picked.includes(l) ? "answer-wrong" : ""}`} disabled={done || picked.includes(l)} onClick={() => pick(l)}>
             {l}{picked.includes(l) && l !== item.letter ? " (not this one)" : ""}{done && l === item.letter ? " ✓" : ""}
           </button>
         ))}

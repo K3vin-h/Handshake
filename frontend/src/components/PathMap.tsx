@@ -11,7 +11,7 @@ import { AnimatedProgress } from "./motion/AnimatedProgress";
 
 export type MapLetter = { letter: string; status: MarkState; due?: boolean };
 /** letters: the letters this lesson teaches, each with its status (small, under the lesson). note: optional small line, e.g. "RYAN: 2 of 4 live". */
-export type MapLesson = { id: string; title: string; summary: string; xp: number; state: PathNodeState; letters?: MapLetter[]; note?: string };
+export type MapLesson = { id: string; title: string; summary: string; xp: number; state: PathNodeState; partial?: number; letters?: MapLetter[]; note?: string };
 
 const STATE_TEXT: Record<PathNodeState, string> = { locked: "Locked", available: "Ready", current: "Up next", done: "Done" };
 // Horizontal wiggle (px) per row, so the path winds like a trail instead of a straight list.
@@ -90,9 +90,10 @@ export function UnitSection(props: { index: number; title: string; goal: string;
           {lessons.map((l, i) => {
             const shift = WIGGLE[i % WIGGLE.length];
             const nextShift = WIGGLE[(i + 1) % WIGGLE.length];
-            const label = `${l.id} ${l.title}, ${STATE_TEXT[l.state].toLowerCase()}, ${l.xp} XP`;
+            const part = l.state !== "done" && l.partial !== undefined ? Math.round(l.partial * 100) : undefined;
+            const label = `${l.id} ${l.title}, ${STATE_TEXT[l.state].toLowerCase()}${part !== undefined ? `, partly done ${part}%` : ""}, ${l.xp} XP`;
             return (
-              <li key={l.id} className={`map-row map-${l.state} reveal`} style={{ ["--shift" as string]: `${shift}px`, ["--link-shift" as string]: `${(shift + nextShift) / 2}px` }}>
+              <li key={l.id} className={`map-row map-${l.state}${part !== undefined ? " map-partial" : ""} reveal`} style={{ ["--fill" as string]: `${part ?? 0}%`, ["--shift" as string]: `${shift}px`, ["--link-shift" as string]: `${(shift + nextShift) / 2}px` }}>
                 <div className="map-stage">
                   <button
                     type="button"
@@ -112,6 +113,7 @@ export function UnitSection(props: { index: number; title: string; goal: string;
                     <span className="muted small">
                       {STATE_TEXT[l.state]} · {l.xp} XP
                     </span>
+                    {part !== undefined && <span className="small map-partial-text">Partly done · {part}%: redo the skipped steps to finish</span>}
                     {l.letters && l.letters.length > 0 && (
                       <ul className="mini-letters" aria-label={`Letters in ${l.title}`}>
                         {l.letters.map((m) => (

@@ -18,6 +18,8 @@ export type Progress = {
   lastActiveDay: string | null;
   completed: string[]; // lesson ids
   items: Record<string, ItemState>;
+  /** lesson id -> share (0..1) of its steps matched, for a lesson walked to the end with skipped steps. Not completed: no XP. */
+  partial?: Record<string, number>;
 };
 
 const empty = (): Progress => ({ xp: 0, streakDays: 0, lastActiveDay: null, completed: [], items: {} });
@@ -66,8 +68,16 @@ export function addXp(p: Progress, amount: number): Progress {
   return next;
 }
 
+/** A lesson walked to the end with skipped steps: remembered as partly done. It stays incomplete, but the next lesson opens. */
+export function recordPartial(p: Progress, lessonId: string, share: number): Progress {
+  const next = { ...p, partial: { ...p.partial, [lessonId]: Math.max(0, Math.min(1, share)) } };
+  saveProgress(next);
+  return next;
+}
+
 export function completeLesson(p: Progress, lessonId: string, xp: number): Progress {
-  const next = { ...p, xp: p.xp + xp, completed: p.completed.includes(lessonId) ? p.completed : [...p.completed, lessonId] };
+  const { [lessonId]: _gone, ...partial } = p.partial ?? {};
+  const next = { ...p, partial, xp: p.xp + xp, completed: p.completed.includes(lessonId) ? p.completed : [...p.completed, lessonId] };
   saveProgress(next);
   return next;
 }
@@ -81,12 +91,12 @@ export function dueItems(p: Progress, now = Date.now(), limit = 5): string[] {
     .map(([id]) => id);
 }
 
-/** A lesson is unlocked when the previous DEMO lesson (in path order) is completed. Stretch lessons never gate. */
+/** A lesson is unlocked when the previous DEMO lesson (in path order) is completed, or was walked to the end with some steps skipped. Stretch lessons never gate. */
 export function isUnlocked(units: Unit[], p: Progress, lessonId: string): boolean {
   const all = flatLessons(units);
   const i = all.findIndex((l) => l.id === lessonId);
   const prev = all.slice(0, Math.max(0, i)).filter((l) => l.scope === "demo").at(-1);
-  return !prev || p.completed.includes(prev.id);
+  return !prev || p.completed.includes(prev.id) || (p.partial?.[prev.id] ?? 0) > 0;
 }
 
 /** Next lesson to do (first demo lesson not completed). */

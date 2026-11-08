@@ -129,7 +129,7 @@ function PathPageInner({ profile }: { profile: Profile }) {
               index={i + 1}
               title={u.title}
               goal={u.goal}
-              lessons={u.lessons.filter((l) => l.scope === "demo").map((l) => ({ id: l.id, title: l.title, summary: l.summary, xp: l.xp, state: stateOf(l.id), ...lessonExtras(l) }))}
+              lessons={u.lessons.filter((l) => l.scope === "demo").map((l) => ({ id: l.id, title: l.title, summary: l.summary, xp: l.xp, state: stateOf(l.id), partial: progress.completed.includes(l.id) ? undefined : progress.partial?.[l.id], ...lessonExtras(l) }))}
               onOpen={open}
               showStart={false}
             />

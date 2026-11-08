@@ -45,6 +45,7 @@ function HomeInner({ profile }: { profile: Profile }) {
     if (next?.id === id) return "current";
     return isUnlocked(units, progress, id) ? "available" : "locked";
   };
+  const partialOf = (id: string) => (progress.completed.includes(id) ? undefined : progress.partial?.[id]);
   const open = (id: string) => (location.hash = `#/lesson/${id}`);
 
   // Only demo lessons are shown (stretch lessons stay out of the path, as before).
@@ -61,6 +62,7 @@ function HomeInner({ profile }: { profile: Profile }) {
           summary: c && c.total > 0 ? `${l.summary} ${spell!.toUpperCase()}: ${c.liveCount} of ${c.total} letters have a camera check.` : l.summary,
           xp: l.xp,
           state: stateOf(l.id),
+          partial: partialOf(l.id),
           letters,
         };
       });
