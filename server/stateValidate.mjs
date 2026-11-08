@@ -5,10 +5,11 @@ const BANNED = new Set(["__proto__", "constructor", "prototype"]);
 const isObj = (o) => o !== null && typeof o === "object" && !Array.isArray(o);
 const int = (n, max) => Number.isInteger(n) && n >= 0 && n <= max;
 const strs = (a, max, re) => Array.isArray(a) && a.length <= max && a.every((s) => typeof s === "string" && re.test(s));
+const name = (s) => typeof s === "string" && NAME_RE.test(s);
 const KEYS = (o) => Object.keys(o); // own enumerable keys only
 
 function profile(p) {
-  if (!isObj(p) || !NAME_RE.test(p.userName) || !NAME_RE.test(p.theirName) || typeof p.leftHanded !== "boolean") return null;
+  if (!isObj(p) || !name(p.userName) || !name(p.theirName) || typeof p.leftHanded !== "boolean") return null;
   const out = { userName: p.userName, theirName: p.theirName, leftHanded: p.leftHanded };
   if (p.relationship !== undefined) {
     if (!RELATIONSHIPS.includes(p.relationship)) return null;
@@ -31,7 +32,7 @@ function profile(p) {
 
 function progress(g) {
   if (!isObj(g) || !int(g.xp, 1_000_000) || !int(g.streakDays, 10_000) || !isObj(g.items)) return null;
-  if (!(g.lastActiveDay === null || (typeof g.lastActiveDay === "string" && /^\d{4}-\d{2}-\d{2}$/.test(g.lastActiveDay)))) return null;
+  if (!(g.lastActiveDay === null || (typeof g.lastActiveDay === "string" && /^\d{4}-\d{2}-\d{2}$/.test(g.lastActiveDay) && !Number.isNaN(Date.parse(g.lastActiveDay))))) return null;
   if (!strs(g.completed, 60, /^[0-9A-Za-z._:-]{1,30}$/)) return null;
   const keys = KEYS(g.items);
   if (keys.length > 200) return null;

@@ -49,6 +49,25 @@ test("rejects each rule", () => {
     baseRevBig: (b) => { b.baseRev = 1_000_001; },
   })) assert.equal(bad(m), null, n);
 });
+test("names must be real strings", () => {
+  for (const f of ["userName", "theirName"]) {
+    for (const v of [undefined, null, ["Ryan"], 5, { toString: () => "Ryan" }]) {
+      assert.equal(bad((b) => { b.profile[f] = v; }), null, `${f}=${JSON.stringify(v)}`);
+    }
+  }
+});
+test("non-string values in string fields rejected", () => {
+  assert.equal(bad((b) => { b.profile.relationship = ["friend"]; }), null);
+  assert.equal(bad((b) => { b.profile.wordPack = [["HELLO"]]; }), null);
+  assert.equal(bad((b) => { b.profile.practiceWords = { "1.1": [["LILY"]] }; }), null);
+  assert.equal(bad((b) => { b.progress.completed = [["1.1"]]; }), null);
+  assert.equal(bad((b) => { b.progress.lastActiveDay = ["2026-11-07"]; }), null);
+  assert.equal(bad((b) => { b.baseRev = "1"; }), null);
+});
+test("impossible dates rejected", () => {
+  assert.equal(bad((b) => { b.progress.lastActiveDay = "2026-99-99"; }), null);
+  assert.equal(bad((b) => { b.progress.lastActiveDay = "2026-13-01"; }), null);
+});
 test("201st item key rejected, 200 ok", () => {
   const mk = (n) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`k${i}`, item()]));
   assert.ok(bad((b) => { b.progress.items = mk(200); }));

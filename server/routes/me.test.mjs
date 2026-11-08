@@ -22,7 +22,14 @@ function fakeDb() {
   };
 }
 async function withApp(fn, db = fakeDb()) {
-  const s = await serve((app) => register(app, { db }));
+  const s = await serve((app) => {
+    register(app, { db });
+    app.use((error, _req, res, _next) => { // mirrors server/index.mjs
+      if (error.type === "entity.parse.failed") return res.status(400).json({ error: "bad_request" });
+      if (error.type === "entity.too.large") return res.status(413).json({ error: "body_too_large" });
+      res.status(error.status || 500).json({ error: "server_error" });
+    });
+  });
   try { return await fn(s, db); } finally { await s.close(); }
 }
 const cookie = { Cookie: `${COOKIE}=tok` };
@@ -61,7 +68,9 @@ test("invalid body 400", () => withApp(async (s) => {
 }));
 test("oversize body 413", () => withApp(async (s) => {
   const b = body(0); b.pad = "x".repeat(110_000);
-  assert.equal((await s.request("PUT", "/api/me/state", { body: b, headers: cookie })).status, 413);
+  const r = await s.request("PUT", "/api/me/state", { body: b, headers: cookie });
+  assert.equal(r.status, 413);
+  assert.deepEqual(r.body, { error: "body_too_large" });
 }));
 test("cross-origin PUT 403", () => withApp(async (s) => {
   const r = await s.request("PUT", "/api/me/state", { body: body(0), headers: { ...cookie, Origin: "https://evil.example" } });
