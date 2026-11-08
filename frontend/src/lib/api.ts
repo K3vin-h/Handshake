@@ -1,9 +1,10 @@
+import { apiUrl } from "./apiBase";
 import type { FingerFeedback } from "../cv";
 
 // Frontend → backend. Keep these shapes in sync with CLAUDE.md and backend/index.mjs.
 
 async function post<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
+  const res = await fetch(apiUrl(url), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -30,7 +31,7 @@ export const getPracticeWords = (knownLetters: string[], weakLetters: string[]) 
   post<{ words: string[] } & Cached>("/api/words", { knownLetters, weakLetters });
 
 async function get<T>(url: string): Promise<T> {
-  const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+  const res = await fetch(apiUrl(url), { signal: AbortSignal.timeout(10000) });
   if (!res.ok) throw new Error(`${url} failed: ${res.status}`);
   return res.json();
 }

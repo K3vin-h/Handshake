@@ -71,7 +71,7 @@ function Player({ lessonId }: { lessonId: string }) {
     finishing.current = true;
     if (!progress.current.completed.includes(lesson!.id)) {
       progress.current = completeLesson(progress.current, lesson!.id, lesson!.xp);
-      reportLessonComplete(lesson!.id, lesson!.title, lesson!.xp);
+      reportLessonComplete(lesson!.id, lesson!.xp);
     }
     location.hash = `#/complete/${lesson!.id}`;
   }

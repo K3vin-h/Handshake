@@ -1,6 +1,6 @@
 # Vultr API deployment
 
-The backend (Express API) runs on one Vultr VM; the database is Tiger Data Cloud. The frontend is **not** here: it is hosted on Vercel and reaches this API through a rewrite (`frontend/vercel.json`). No domain purchase is needed.
+The backend (Express API) runs on one Vultr VM; the database is Tiger Data Cloud. The frontend is **not** here: it is hosted on Vercel and calls this API directly from the browser over HTTPS (no Vercel rewrite, so per-IP rate limits see each visitor's IP; CORS allows only the origins in `ALLOWED_ORIGIN`). No domain purchase is needed.
 
 `setup.sh` targets a dedicated fresh Ubuntu 24.04 VM, run as root. It installs Node 24 and Caddy, installs the backend's production dependencies, runs Express as `handshake` on loopback port 8787, and configures automatic HTTPS in Caddy. It changes Caddy and the firewall; review before running on an existing server. VM provisioning is not automated.
 
@@ -9,7 +9,7 @@ The backend (Express API) runs on one Vultr VM; the database is Tiger Data Cloud
 - Authorized Vultr account, spending limit, region/plan, SSH access and verified VM host key.
 - An **API hostname** that resolves to the VM IP. No purchase needed: a free `<ip-with-dashes>.sslip.io` name works (VM `203.0.113.10` → `203-0-113-10.sslip.io`). `[NEEDS: verify Let's Encrypt issues a certificate for the chosen hostname]`. Any hostname you control also works.
 - The reviewed release's full 40-character Git SHA, available to the VM's origin; uncommitted worktree changes cannot deploy. Coordinate any push through the lead.
-- A minimal `.env` prepared securely (start from the repo-root `.env.example`). Do not copy the entire developer `.env`. Include only what the backend needs: `GEMINI_API_KEY`, `GEMINI_MODEL`, `DATABASE_URL` (the Tiger Data Cloud connection string). Omit all `N8N_*` and `MARITIME_*` settings until those services are deployed and verified. `SNAPSHOT_ENABLED`, `CACHE_EXPORT_ENABLED`, `HOST` and `TRUST_PROXY_HOPS` are pinned by the service command.
+- A minimal `.env` prepared securely (start from the repo-root `.env.example`). Do not copy the entire developer `.env`. Include only what the backend needs: `GEMINI_API_KEY`, `GEMINI_MODEL`, `DATABASE_URL` (the Tiger Data Cloud connection string). Omit all `N8N_*` and `MARITIME_*` settings until those services are deployed and verified. `SNAPSHOT_ENABLED`, `CACHE_EXPORT_ENABLED`, `HOST` and `TRUST_PROXY_HOPS` are pinned by the service command. Set `ALLOWED_ORIGIN` to the Vercel URL once it exists (step 6).
 - A Tiger Data Cloud service (TimescaleDB 2.13+). The database is not on this VM; `schema.sql` is applied to it with `npm run db:migrate`. Never include database admin passwords in `.env`.
 
 ## Initial deployment
@@ -25,7 +25,7 @@ The backend (Express API) runs on one Vultr VM; the database is Tiger Data Cloud
 
    Private repos need a separately provisioned read-only Git credential; never embed it in the URL. The script fetches the pinned SHA, refuses tracked local edits or a mismatched origin, and checks out detached HEAD. Reruns use the supplied revision, never an implicit branch tip.
 5. Apply the schema with `npm run db:migrate` as documented in `../DATABASE.md`. Add n8n and Maritime settings later in one coordinated pass, then restart `handshake`.
-6. In Vercel: import the repo, set **Root Directory = `frontend`**, edit the rewrite destination in `frontend/vercel.json` to `https://<api-hostname>/api/:path*`, and deploy. The camera needs the Vercel HTTPS origin.
+6. In Vercel: import the repo, set **Root Directory = `frontend`**, set the Environment Variable `VITE_API_BASE_URL=https://<api-hostname>` (public, not a secret), and deploy. Then set `ALLOWED_ORIGIN=<exact Vercel URL>` (comma-separated for several origins) in the VM `.env` and restart `handshake`. The camera needs the Vercel HTTPS origin.
 
 ## Verification and handoff
 
@@ -36,12 +36,12 @@ From a separate machine:
 ```sh
 curl --fail --show-error https://<api-hostname>/api/features
 curl --connect-timeout 5 http://<vm-ip>:8787/api/features   # must fail
-curl --fail --show-error https://<vercel-url>/api/features  # same answer through the Vercel rewrite
+curl -i -X OPTIONS -H 'Origin: https://<vercel-url>' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: Content-Type' https://<api-hostname>/api/subscribe   # CORS preflight
 ```
 
-Require valid public TLS, expected feature states (n8n/Maritime initially disabled), failure to connect to port 8787 externally, and the same response through the Vercel URL. A successful service restart alone is not HTTPS evidence.
+Require valid public TLS, expected feature states (n8n/Maritime initially disabled), failure to connect to port 8787 externally, and a CORS preflight from the Vercel origin that returns 204 with `Access-Control-Allow-Origin` set to that origin (an origin not in `ALLOWED_ORIGIN` must get no CORS headers). A successful service restart alone is not HTTPS evidence.
 
-Rate limits are per visitor IP. Behind Vercel and Caddy the service sets `TRUST_PROXY_HOPS=2`. `[NEEDS: verify with a real request that req.ip is the visitor's IP, not Vercel's]`; if all visitors share one IP, adjust the hop count.
+Rate limits are per visitor IP. Browsers call the API directly, so the chain is Caddy then Express and the service sets `TRUST_PROXY_HOPS=1`. `[NEEDS: verify with a real request that req.ip is the visitor's IP]`; if all visitors share one IP, check the hop count.
 
 Open the Vercel HTTPS URL on a physical phone and record camera permission/feed/denial recovery; this remains human verification. Do not enable unvalidated letters to produce a camera screenshot. Use the existing camera demo route if live letters are unavailable.
 

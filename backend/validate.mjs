@@ -3,7 +3,8 @@ export const ITEM_RE = /^[A-Z][A-Z0-9_-]{0,19}$/; // letters and sign ids; "fs:L
 export const CODE_RE = /^[a-z]+:[a-z]+$/;
 export const LESSON_RE = /^\d+\.\d+$/;
 export const NAME_RE = /^[\p{L} '-]{1,40}$/u;
-const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]+\.[^\s@]+$/;
+// Plain addresses only: no commas, angle brackets, quotes or semicolons (n8n splits recipients on commas).
+const EMAIL_RE = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
 export const isEmail = (s) => typeof s === "string" && s.length <= 254 && EMAIL_RE.test(s);
 export const isLetters = (a, max) => Array.isArray(a) && a.length <= max && a.every((c) => typeof c === "string" && /^[A-Z]$/.test(c));

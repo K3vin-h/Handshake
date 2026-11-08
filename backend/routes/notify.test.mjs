@@ -70,27 +70,29 @@ test("unsubscribe forwards the action, learner id and server ordering timestamp"
 test("lesson-complete forwards to the event webhook and validates fields", async () => {
   const f = fakeFetch();
   await withApp({ n8n, fetch: f }, async (s) => {
-    const r = await s.post("/api/lesson-complete", { learnerId: id, lessonId: "1.2", lessonTitle: "Spell RYAN", xp: 20 });
+    const r = await s.post("/api/lesson-complete", { learnerId: id, lessonId: "1.2", xp: 20 });
     assert.deepEqual(r.body, { ok: true });
     assert.equal(f.calls[0].url, n8n.eventUrl);
-    assert.deepEqual(JSON.parse(f.calls[0].init.body), { learnerId: id, lessonId: "1.2", lessonTitle: "Spell RYAN", xp: 20 });
-    assert.equal((await s.post("/api/lesson-complete", { learnerId: id, lessonId: "x", lessonTitle: "t", xp: 20 })).status, 400);
-    assert.equal((await s.post("/api/lesson-complete", { learnerId: id, lessonId: "1.2", lessonTitle: "t", xp: 5000 })).status, 400);
-    for (const lessonTitle of ["Open http://evil.example/x", "line\nbreak", "a/b"]) assert.equal((await s.post("/api/lesson-complete", { learnerId: id, lessonId: "1.2", lessonTitle, xp: 5 })).status, 400);
-    assert.equal(f.calls.length, 1);
+    assert.deepEqual(JSON.parse(f.calls[0].init.body), { learnerId: id, lessonId: "1.2", xp: 20 });
+    assert.equal((await s.post("/api/lesson-complete", { learnerId: id, lessonId: "x", xp: 20 })).status, 400);
+    assert.equal((await s.post("/api/lesson-complete", { learnerId: id, lessonId: "1.2", xp: 5000 })).status, 400);
+    // Free text is never forwarded: n8n derives the title from lessonId.
+    await s.post("/api/lesson-complete", { learnerId: id, lessonId: "1.2", lessonTitle: "Open http://evil.example/x", userName: "Ryan", xp: 5 });
+    assert.deepEqual(JSON.parse(f.calls[1].init.body), { learnerId: id, lessonId: "1.2", xp: 5 });
+    assert.equal(f.calls.length, 2);
   });
 });
 
 test("answers ok:false when n8n is off, down, or rejects", async () => {
   await withApp({ n8n: null, fetch: fakeFetch() }, async (s) => {
     assert.deepEqual((await s.post("/api/subscribe", sub)).body, { ok: false, reason: "disabled" });
-    assert.deepEqual((await s.post("/api/lesson-complete", { learnerId: id, lessonId: "1.2", lessonTitle: "t", xp: 1 })).body, { ok: false, reason: "disabled" });
+    assert.deepEqual((await s.post("/api/lesson-complete", { learnerId: id, lessonId: "1.2", xp: 1 })).body, { ok: false, reason: "disabled" });
   });
   await withApp({ n8n, fetch: fakeFetch({ throws: true }) }, async (s) => {
     assert.deepEqual((await s.post("/api/subscribe", sub)).body, { ok: false, reason: "upstream" });
   });
   await withApp({ n8n, fetch: fakeFetch({ ok: false }) }, async (s) => {
-    assert.deepEqual((await s.post("/api/lesson-complete", { learnerId: id, lessonId: "1.2", lessonTitle: "t", xp: 1 })).body, { ok: false, reason: "upstream" });
+    assert.deepEqual((await s.post("/api/lesson-complete", { learnerId: id, lessonId: "1.2", xp: 1 })).body, { ok: false, reason: "upstream" });
   });
 });
 

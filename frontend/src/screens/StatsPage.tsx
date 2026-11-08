@@ -57,7 +57,7 @@ export function StatsPage() {
           </>
         )}
       </section>
-      <NotifySettings enabled={features ? features.notify : undefined} userName={profile.userName} theirName={profile.theirName} />
+      <NotifySettings enabled={features ? features.notify : undefined} />
     </div>
   );
 }

@@ -1,8 +1,9 @@
+import { apiUrl } from "./apiBase.ts";
 import { learnerId } from "./learner.ts";
 
 type Send = (url: string, body: unknown) => Promise<unknown>;
 const ITEM_RE = /^[A-Z][A-Z0-9_-]{0,19}$/;
-const defaultSend: Send = (url, body) => fetch(url, {
+const defaultSend: Send = (url, body) => fetch(apiUrl(url), {
   method: "POST", headers: { "Content-Type": "application/json" },
   body: JSON.stringify(body), keepalive: true, signal: AbortSignal.timeout(8000),
 });
@@ -27,11 +28,11 @@ export function setNotifyOn(on: boolean) {
     else localStorage.removeItem(NOTIFY_KEY);
   } catch { /* reporting defaults off if storage is unavailable */ }
 }
-export function reportLessonComplete(lessonId: string, lessonTitle: string, xp: number,
+export function reportLessonComplete(lessonId: string, xp: number,
   send: Send = defaultSend, id?: string, on = isNotifyOn()) {
   if (!on) return;
   try {
-    void send("/api/lesson-complete", { learnerId: id ?? learnerId(), lessonId, lessonTitle, xp })
+    void send("/api/lesson-complete", { learnerId: id ?? learnerId(), lessonId, xp })
       .catch(() => { /* notifications never interrupt local progress */ });
   } catch { /* storage or network unavailable */ }
 }

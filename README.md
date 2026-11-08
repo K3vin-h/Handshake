@@ -4,12 +4,12 @@ Learn ASL fingerspelling with live webcam feedback and an AI coach.
 
 ## Run
 ```bash
-npm install
+npm run install:all
 cp .env.example .env   # add GEMINI_API_KEY (optional — mock mode without it)
 npm run dev            # http://localhost:5173
 ```
 
-Layout: `frontend/` (Vercel), `backend/` (Vultr API), Tiger Data Cloud (database), `agent/` (Maritime), `n8n/` (n8n Cloud), `training/`. Root `npm run dev` starts web :5173 + API :8787; `npm run build` builds the frontend; `npm test` runs frontend, backend, agent and deploy tests.
+Layout: `frontend/` (Vercel), `backend/` (Vultr API), Tiger Data Cloud (database), `agent/` (Maritime), `n8n/` (n8n Cloud), `training/`. In production the browser calls the Vultr HTTPS API directly: set `VITE_API_BASE_URL` (public) on Vercel and `ALLOWED_ORIGIN` (CORS) on the API; no Vercel rewrite. Root `npm run dev` starts web :5173 + API :8787; `npm run build` builds the frontend; `npm test` runs frontend, backend, agent and deploy tests.
 
 - `#/record`: record letter templates (do this first)
 - `#/`: lesson demo: sign L-I-L-Y, earn XP, get coached after two misses

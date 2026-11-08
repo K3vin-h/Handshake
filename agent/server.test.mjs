@@ -2,17 +2,24 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { createServer } from 'node:net';
 
 // A separate process exercises the actual production entry point and injected port.
 test('production server exposes health and rejects missing/wrong bearer tokens', async (t) => {
+  const probe = createServer().listen(0); // ask the OS for a free port instead of hardcoding one
+  await once(probe, 'listening');
+  const port = probe.address().port;
+  probe.close();
+  await once(probe, 'close');
   const child = spawn(process.execPath, ['server.mjs'], {
     cwd: new URL('.', import.meta.url),
-    env: { ...process.env, PORT: '19876', AGENT_TOKEN: 'test-only-secret', GEMINI_API_KEY: 'not-a-live-key', APP_URL: 'https://app.invalid' },
+    env: { ...process.env, PORT: String(port), AGENT_TOKEN: 'test-only-secret', GEMINI_API_KEY: 'not-a-live-key', APP_URL: 'https://app.invalid' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   t.after(() => child.kill());
-  await Promise.race([once(child.stdout, 'data'), once(child, 'exit').then(() => { throw new Error('server exited before listening'); })]);
-  const origin = 'http://127.0.0.1:19876';
+  const listening = new Promise((resolve) => child.stdout.on('data', (d) => /planner agent on :/.test(String(d)) && resolve()));
+  await Promise.race([listening, once(child, 'exit').then(() => { throw new Error('server exited before listening'); })]);
+  const origin = `http://127.0.0.1:${port}`;
   assert.equal((await fetch(`${origin}/health`)).status, 200);
   for (const authorization of ['', 'Bearer wrong']) {
     const response = await fetch(`${origin}/plan`, { method: 'POST', headers: { authorization } });

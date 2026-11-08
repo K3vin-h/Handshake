@@ -2,8 +2,6 @@ import express from "express";
 import { rateLimit } from "../limit.mjs";
 import { UUID_RE, LESSON_RE, NAME_RE, isEmail } from "../validate.mjs";
 
-// Lesson titles end up in emails: letters, digits and light punctuation only (no URLs, no line breaks).
-const TITLE_RE = /^[\p{L}\p{N} '.,:-]{1,80}$/u;
 const bad = (res) => res.status(400).json({ error: "bad_request" });
 const limit = () => rateLimit({ windowMs: 60_000, max: 10 });
 
@@ -50,13 +48,12 @@ export function register(app, { n8n, fetch: f = fetch }) {
   });
 
   app.post("/api/lesson-complete", limit(), express.json({ limit: "16kb" }), async (req, res) => {
-    const { learnerId, lessonId, lessonTitle, xp } = req.body ?? {};
+    const { learnerId, lessonId, xp } = req.body ?? {}; // no free text: n8n maps lessonId to a fixed title
     const valid =
       UUID_RE.test(learnerId) && LESSON_RE.test(lessonId) &&
-      typeof lessonTitle === "string" && TITLE_RE.test(lessonTitle) &&
       Number.isInteger(xp) && xp >= 0 && xp <= 1000;
     if (!valid) return bad(res);
     if (!n8n) return res.json({ ok: false, reason: "disabled" });
-    res.json(await forward(n8n.eventUrl, { learnerId, lessonId, lessonTitle, xp }));
+    res.json(await forward(n8n.eventUrl, { learnerId, lessonId, xp }));
   });
 }

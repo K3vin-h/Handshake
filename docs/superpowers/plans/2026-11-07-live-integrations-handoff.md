@@ -55,9 +55,9 @@ The lead owns merging, shared schema decisions, release revision selection and f
 
 **Owner/files:** Agent B: `n8n/lesson-complete.json`, `n8n/tests/lesson-complete.test.mjs`, lesson-only helpers under `n8n/lib/lesson-*`. Read Task 1's schema; do not edit it.
 
-**Consumes:** authenticated event `{learnerId,lessonId,lessonTitle,xp}`, subscription/confirmation state, unsubscribe URL and throttle contract from Task 1.
+**Consumes:** authenticated event `{learnerId,lessonId,xp}`, subscription/confirmation state, unsubscribe URL and throttle contract from Task 1.
 
-**Produces:** importable workflow and tested email template. Canonical lesson titles come from a fixed server-controlled ID map; unknown IDs send nothing. Ignore event `lessonTitle` for email content.
+**Produces:** importable workflow and tested email template. Canonical lesson titles come from a fixed server-controlled ID map; unknown IDs send nothing. The event no longer carries `lessonTitle`.
 
 - [ ] Test unconfirmed/missing contact sends nothing; confirmed contact sends fixed plain text with a working unsubscribe link; malformed or unauthenticated request is rejected.
 - [ ] Implement ten-minute per-learner throttling, duplicate-event handling and state recheck immediately before sending. Test concurrent events and SMTP failure. Update `lastSentAt` only after send success; document best-effort delivery limits rather than promising exactly-once email.
@@ -102,8 +102,8 @@ The lead owns merging, shared schema decisions, release revision selection and f
 - [ ] Create a fresh Ubuntu 24.04 VM, review `backend/deploy/setup.sh`, confirm the hostname resolves to its IP. Review any published AAAA record so it cannot break HTTPS.
 - [ ] Select a reviewed release revision actually available to the VM; `git clone`/`git pull` cannot deploy uncommitted worktree changes. Check the deployed revision explicitly. Coordinate any authorized push through the lead.
 - [ ] Transfer secrets securely to `/root/handshake.env`, mode 600; never commit, print or screenshot its contents. Keep snapshots/cache export off. Initially leave n8n/Maritime off until their verified endpoints exist.
-- [ ] Run the reviewed setup script on the fresh VM. Verify services, HTTPS certificate, `/api/features` (the API no longer serves the frontend), and port 8787 inaccessible externally. Set `HOST=127.0.0.1` and `TRUST_PROXY_HOPS=2`. Preserve SSH access when setting firewall rules. The database is the Tiger Data Cloud service (`DATABASE_URL`, `sslmode=require`); apply `backend/schema.sql` with `npm run db:migrate`.
-- [ ] **Vercel frontend:** connect the repository to a Vercel project, set Root Directory to `frontend`, edit the destination in `frontend/vercel.json` (`/api/:path*` → `https://<api-hostname>/api/:path*`; currently a placeholder), and deploy. Check `https://<vercel-url>/api/features` returns JSON through the rewrite. [NEEDS: verify with a real request that `req.ip` seen by Express is the visitor's IP, not a proxy's]
+- [ ] Run the reviewed setup script on the fresh VM. Verify services, HTTPS certificate, `/api/features` (the API no longer serves the frontend), and port 8787 inaccessible externally. Set `HOST=127.0.0.1` and `TRUST_PROXY_HOPS=1`. Preserve SSH access when setting firewall rules. The database is the Tiger Data Cloud service (`DATABASE_URL`, `sslmode=require`); apply `backend/schema.sql` with `npm run db:migrate`.
+- [ ] **Vercel frontend:** connect the repository to a Vercel project, set Root Directory to `frontend`, set the Environment Variable `VITE_API_BASE_URL=https://<api-hostname>` (public), and deploy. Then set `ALLOWED_ORIGIN=<Vercel URL>` in the VM `.env` and restart `handshake`. Check a CORS preflight (`curl -i -X OPTIONS -H 'Origin: https://<vercel-url>' -H 'Access-Control-Request-Method: POST' https://<api-hostname>/api/subscribe`) returns 204 with `Access-Control-Allow-Origin`. [NEEDS: verify with a real request that `req.ip` seen by Express is the visitor's IP, not a proxy's]
 - [ ] Record URL, revision, checks and redacted screenshots. Give Task 4 the public API origin and Task 7 access through the existing secure mechanism.
 
 ## Task 6 — Notification UI matches confirmation state

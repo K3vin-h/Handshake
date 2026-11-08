@@ -8,7 +8,7 @@ each through a real user-facing use, not a logo:
 
 | Track | What it does in Handshake |
 |---|---|
-| Vercel (frontend) + Vultr (backend) | The React app is a static build on Vercel; the Express API runs on a Vultr VM over HTTPS (Caddy); the database is Tiger Data Cloud. Vercel rewrites `/api/*` to the Vultr API; the webcam needs HTTPS off localhost, which Vercel provides. GoDaddy and a purchased domain are not used. |
+| Vercel (frontend) + Vultr (backend) | The React app is a static build on Vercel; the Express API runs on a Vultr VM over HTTPS (Caddy); the database is Tiger Data Cloud. The browser calls the Vultr HTTPS API directly (`VITE_API_BASE_URL`; CORS limited to `ALLOWED_ORIGIN`; no Vercel rewrite, which would collapse per-IP rate limits into Vercel's IP); the webcam needs HTTPS off localhost, which Vercel provides. GoDaddy and a purchased domain are not used. |
 | Tiger Data | Every practice attempt goes into a TimescaleDB hypertable (hosted on Tiger Data Cloud). `time_bucket` gives the daily accuracy chart and weakest letters. |
 | Databricks | The recognizer is trained as a Databricks job with MLflow tracking (three MLP sizes compared, per-letter recall) and exports `model.json`. |
 | Maritime | A "practice planner" agent on Maritime (Gemini function calling) reads your Tiger Data stats and plans today's session. |
@@ -76,16 +76,16 @@ Out-of-scope rows can be pulled in later as their own spec. Don't claim a track 
    (≤3), no words, a fixed tip, `source: "local"`. The card looks the same, and a small "planned by: agent | local" label is shown for honesty.
 4. **Notify (n8n).** On `#/stats` → "Notifications" form: optional email for the person you're learning for, optional
 
-   own email for the weekly recap, and a **required** consent checkbox ("Send my first name, their first name and these emails to
+   own email for the weekly recap, and a **required** consent checkbox ("Send these email addresses to
     our n8n automation"). Submit → `POST /api/subscribe { action: "subscribe", … }` → n8n **upserts** the row by `learnerId`
     (resubmitting replaces it, never duplicates) → on success the client stores `notify.v1 = true` locally.
    - "Stop notifications" button → `POST /api/subscribe { action: "unsubscribe", learnerId }` → n8n deletes the row → the client
    clears `notify.v1`.
-   - Lesson completed → `reportLessonComplete` → **only if** `notify.v1` **is true** → `POST /api/lesson-complete { learnerId, lessonId, lessonTitle, xp }` →
-   n8n looks up the learner. No row → drop. Throttle: at most 1 email per learner per 10 min → email: "Ryan just finished 'Spell LILY' on Handshake."
+   - Lesson completed → `reportLessonComplete` → **only if** `notify.v1` **is true** → `POST /api/lesson-complete { learnerId, lessonId, xp }` →
+   n8n looks up the learner. No row → drop. Throttle: at most 1 email per learner per 10 min → email: "Someone just finished a lesson on Handshake" (title derived in n8n from `lessonId`; no names are sent)
    - Weekly cron in n8n → for each row with a learner email → `GET /api/stats/<learnerId>` → recap email.
    - n8n unset → the form shows "Notifications aren't set up on this server" and is disabled (from `GET /api/features`).
-5. **Deploy.** The Vercel URL serves the built SPA (`frontend/`); Vercel rewrites `/api/:path*` to the Vultr API origin (`frontend/vercel.json`); the API (`backend/`) runs as one Express process on the VM behind Caddy (auto TLS on a hostname that resolves to the VM IP, e.g. `<ip-with-dashes>.sslip.io`). [NEEDS: verify Let's Encrypt works for the chosen hostname]
+5. **Deploy.** The Vercel URL serves the built SPA (`frontend/`); the frontend build reads `VITE_API_BASE_URL` and calls the Vultr API origin directly, and the API enables CORS only for `ALLOWED_ORIGIN`; the API (`backend/`) runs as one Express process on the VM behind Caddy (auto TLS on a hostname that resolves to the VM IP, e.g. `<ip-with-dashes>.sslip.io`). [NEEDS: verify Let's Encrypt works for the chosen hostname]
 6. **Training (Databricks).** A teammate uploads `kaggle_features.npz` and `recorded/*.json` to a UC Volume and runs the
 
    job. MLflow logs the params, test accuracy, per-letter recall and `report.txt`, and `model.json` is written to the volume →
@@ -148,18 +148,18 @@ CREATE INDEX IF NOT EXISTS attempts_learner_ts ON attempts (learner_id, ts DESC)
 | `POST /api/attempts` | `{ learnerId: uuid, attempts: { item, correct, codes?, ts? }[] }` (1–50) | `204` | `204` (no-op) |
 | `GET /api/stats/:learnerId` | uuid | `{ daily: {day, attempts, accuracy}[], items: {item, attempts, accuracy}[] }` (14 days; 5 weakest items with ≥3 attempts) | `{ daily: [], items: [] }` |
 | `POST /api/plan` | `{ learnerId, candidates: { id, letters }[] (1–20), knownLetters: string[], weakLetters?: string[] }` | `{ lessonId, focus: string[], words: string[], tip, source: "agent" \| "local" }` | `source: "local"` |
-| `POST /api/subscribe` | `{ action: "subscribe", learnerId, consent: true, userName?, theirName?, learnerEmail?, contactEmail? }` (at least one email) or `{ action: "unsubscribe", learnerId }` | `{ ok: boolean, reason? }` | `{ ok: false, reason: "disabled" }` |
-| `POST /api/lesson-complete` | `{ learnerId, lessonId, lessonTitle, xp }` | `{ ok: boolean }` (always 200) | `{ ok: false, reason: "disabled" }` |
+| `POST /api/subscribe` | `{ action: "subscribe", learnerId, consent: true, learnerEmail?, contactEmail? }` (at least one email) or `{ action: "unsubscribe", learnerId }` | `{ ok: boolean, reason? }` | `{ ok: false, reason: "disabled" }` |
+| `POST /api/lesson-complete` | `{ learnerId, lessonId, xp }` | `{ ok: boolean }` (always 200) | `{ ok: false, reason: "disabled" }` |
 | `GET /api/features` | — | `{ stats, notify, agent }` | all false |
 
 Validation (server, every field): `learnerId` must match a UUID regex. `item` must match `/^[A-Z][A-Z0-9_-]{0,19}$/`: letters and sign ids
 like `THANK-YOU`, so `fs:*` word items (which can be names) are **rejected**. The client (`reportAttempt`) never sends `fs:`* items, so a
 batch never mixes them in. `codes`: ≤5 strings matching `/^[a-z]+:[a-z]+$/`. `ts` is
 accepted only within the last 24 h, otherwise `now()`. Emails: ≤254 chars with a basic `x@y.z` check. Names: ≤40 chars matching `/^[\p{L} '-]+$/u`.
-`lessonId`: `/^\d+\.\d+$/`. `lessonTitle` ≤80 chars. `xp` an integer 0–1000. `candidates[].letters` ⊆ A–Z. Bad input → `400 {error:"bad_request"}`.
+`lessonId`: `/^\d+\.\d+$/`. `xp` an integer 0–1000. `candidates[].letters` ⊆ A–Z. Bad input → `400 {error:"bad_request"}`.
 
 Env (`.env.example`): `DATABASE_URL`, `N8N_SUBSCRIBE_URL`, `N8N_EVENT_URL`, `N8N_SECRET`, `MARITIME_AGENT_URL`,
-`MARITIME_AGENT_TOKEN`, `HOST`, `TRUST_PROXY_HOPS` (`SERVE_STATIC` is removed). Agent env: `GEMINI_API_KEY`, `GEMINI_MODEL`, `APP_URL`, `AGENT_TOKEN`.
+`MARITIME_AGENT_TOKEN`, `HOST`, `TRUST_PROXY_HOPS` (1 in production), `ALLOWED_ORIGIN` (CORS allow-list; `SERVE_STATIC` is removed). Frontend build env: `VITE_API_BASE_URL` (public). Emails are validated as plain `local@domain.tld` (no commas or angle brackets). Agent env: `GEMINI_API_KEY`, `GEMINI_MODEL`, `APP_URL`, `AGENT_TOKEN`.
 
 ## Security
 
@@ -175,11 +175,11 @@ on the agent. `DATABASE_URL` uses `sslmode=require`. Everything lives in `.env` 
 - The agent's reply is guarded: `lessonId` must be one of `candidates`, `focus`/`words` must use only `knownLetters`, and
 `tip` is capped at 200 chars. Otherwise → local fallback.
 - SQL is always parameterized (`pg` `$1` placeholders).
-- In production Express binds `HOST=127.0.0.1` and sets `trust proxy` to `TRUST_PROXY_HOPS=2` (Vercel + Caddy), so the rate limit sees the visitor's IP [NEEDS: verify with a real request that req.ip is the visitor's IP] and
+- In production Express binds `HOST=127.0.0.1` and sets `trust proxy` to `TRUST_PROXY_HOPS=1` (Caddy only; browsers call the API directly), so the rate limit sees the visitor's IP [NEEDS: verify with a real request that req.ip is the visitor's IP] and
 forwarded headers can't be spoofed by direct requests. The Vultr firewall (ufw) allows only ports 22, 80 and 443.
 - Known risk (no auth, accepted for a hackathon, stated on Devpost): anyone holding a learner UUID could change that learner's
 subscription or trigger completion emails. Mitigations: UUIDs never leave the learner's browser except to our server; email content is
-a fixed template (only validated names and the lesson title are inserted); each learner stores one row in n8n (upsert); n8n sends at most
+a fixed template (no names or user text are inserted; the lesson title is derived in n8n from `lessonId`); each learner stores one row in n8n (upsert); n8n sends at most
 1 completion email per learner per 10 min (best-effort: not atomic if two requests land at once) and 1 recap per week; and the IP rate limit applies.
 
 ## Testing

@@ -67,9 +67,9 @@ test("disabled sponsor endpoints retain local planning and reject missing consen
   } finally { await s.close(); }
 });
 
-test("TRUST_PROXY_HOPS sets Express trust proxy so req.ip is the visitor behind Vercel + Caddy", () => {
+test("TRUST_PROXY_HOPS sets Express trust proxy; a malformed value fails at startup", () => {
   const settings = (env) => { const app = { set: (k, v) => (app[k] = v), get: () => {}, post: () => {}, use: () => {} }; registerIntegrations(app, env); return app["trust proxy"]; };
   assert.equal(settings({ TRUST_PROXY_HOPS: "2" }), 2);
   assert.equal(settings({}), undefined);
-  assert.equal(settings({ TRUST_PROXY_HOPS: "x" }), undefined);
+  assert.throws(() => settings({ TRUST_PROXY_HOPS: "x" }), /positive integer/);
 });

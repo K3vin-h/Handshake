@@ -1,4 +1,4 @@
-// Fixed-window per-IP limiter. In production Express trusts one proxy hop (Caddy), so req.ip is the real client.
+// Fixed-window per-IP limiter. Behind proxies Express trusts TRUST_PROXY_HOPS hops (see backend/integrations.mjs); verify req.ip is the visitor.
 export function rateLimit({ windowMs, max, now = Date.now }) {
   const hits = new Map();
   return (req, res, next) => {

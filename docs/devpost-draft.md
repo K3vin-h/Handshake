@@ -56,7 +56,7 @@ The sponsor stats chart includes a text table, and notification status is announ
 
 ## Privacy and limitations
 
-Use the privacy note in [devpost-tracks.md](devpost-tracks.md), updated to the final enabled features. Names/emails go only to n8n after explicit consent; opted-in lesson titles can also contain names. Anonymous UUIDs are not authentication, and someone holding an id could trigger emails to its saved contact. [NEEDS: confirm final snapshot setting and disclose Google photo transfer if enabled].
+Use the privacy note in [devpost-tracks.md](devpost-tracks.md), updated to the final enabled features. Only email addresses go to n8n, after explicit consent (names and lesson titles are not sent; lessons are identified by id). Anonymous UUIDs are not authentication, and someone holding an id could trigger emails to its saved contact. [NEEDS: confirm final snapshot setting and disclose Google photo transfer if enabled].
 
 References match our recordings unless reviewed by an ASL-fluent person. [NEEDS: reviewer and verification record, or retain that limitation]. No measured learning improvement or community endorsement is claimed.
 

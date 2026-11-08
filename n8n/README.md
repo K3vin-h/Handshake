@@ -17,6 +17,8 @@ Official references checked: [Postgres parameters](https://docs.n8n.io/integrati
 
 ## Subscription and contact flows
 
+Note (2026-11-07 review): the backend no longer sends `userName`, `theirName` or `lessonTitle`; the name columns may stay unused, and n8n derives lesson titles from `lessonId`. Lesson events carry only `learnerId`, `lessonId` and `xp`; the backend validates emails as plain `local@domain.tld`.
+
 Authenticated `POST /webhook/handshake-subscribe` accepts `{action:"subscribe",learnerId,userName?,theirName?,learnerEmail?,contactEmail?,requestedAt}`. The API adds `requestedAt` itself, ignoring client input; timestamps order concurrent Save/Stop requests. Omitted email/name fields replace stored fields with empty strings. Changed contact clears confirmation and rotates separate cryptographically random confirmation and unsubscribe tokens. No user-supplied subject/title/body is used. Response is deferred until persistence and any required confirmation SMTP attempt/acknowledgement finish.
 
 The fixed plain-text confirmation says: “Someone entered your address to get updates when they finish ASL lessons. Confirm: <link>. Ignore this email to receive nothing.” At most one attempt per normalized address per 24 hours and twenty attempts globally in a rolling hour are atomically reserved under the shared PostgreSQL transaction lock. Failed SMTP consumes a reservation; unchanged unacknowledged Save returns 503 until the 24-hour retry window, then generates a fresh token. This prevents false success after SMTP failure, at the cost of delayed retry. Once SMTP is acknowledged, repeated Save can succeed without another email; it reports settings saved, not inbox delivery.
@@ -32,3 +34,19 @@ See schema.md for timestamp ordering/clock assumptions and unavoidable already-i
 Use two consenting operator-owned inboxes and a controlled SMTP sink for caps/concurrency tests. Verify missing/wrong secret, unchecked consent, Save sends only confirmation, lesson before confirmation sends nothing, explicit POST confirm enables one lesson, duplicate within ten minutes sends none, changed address revokes old tokens, replay/expiry changes nothing, both unsubscribe variants and app Stop suppress subsequent queued sends. Test SMTP outage and webhook failure return non-2xx without UI enabling reporting; check timeout/retry behavior. Verify weighted 14-day recap figures, zero/malformed/unavailable stats, and queued recap after Stop. Record actual n8n version, node validity, sink concurrency results and redacted delivered mail. Local tests alone prove none of those remote steps.
 
 Known prototype limitation: anonymous learner UUIDs are bearer identifiers, not accounts. Anyone holding an ID can alter its subscription, trigger an event or read its aggregate stats. Names/emails go only to this opt-in notification store; never to Gemini, Maritime or attempts analytics. Never use sensitive contacts or claim identity verification. Consent stays in the browser; remote data stays until Stop succeeds (address budget reservations last at least 24h, anonymous revocation watermarks remain).
+
+## Open follow-ups from the 2026-11-07 review
+
+Not done yet:
+
+- Purge job for unconfirmed contacts, expired tokens and old reservations.
+- Suppression list for addresses that unsubscribed.
+- Per-learner (or per-IP) cap so one caller cannot use up the global 20 confirmations per hour.
+- Unsubscribe links should use a landing page plus POST like confirm (mail scanners can trigger GET), and add List-Unsubscribe headers.
+- Hash contact confirmation tokens at rest.
+- Strip `+tag` when keying the per-address throttle.
+- Move the token format check above the advisory lock.
+- Dedupe lesson emails per (learner, lessonId).
+- Pin the NodeSource apt repo instead of a piped download-to-shell install in `setup.sh`.
+- Pin the agent Docker base image by digest.
+- Add CSP and Permissions-Policy (`camera=(self)`) headers for the Vercel frontend.

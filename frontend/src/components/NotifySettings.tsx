@@ -3,12 +3,9 @@ import { subscribe } from "../lib/api";
 import { learnerId } from "../lib/learner";
 import { isNotifyOn, setNotifyOn } from "../lib/track";
 
-type Props = { enabled?: boolean; userName: string; theirName: string }; // enabled undefined = still loading
+type Props = { enabled?: boolean }; // undefined = still loading
 
-/** First word of a name, letters only, as the server accepts it; undefined if nothing is left. */
-const firstName = (s: string) => s.replace(/[^\p{L} '-]/gu, " ").trim().split(/\s+/)[0]?.slice(0, 40) || undefined;
-
-export function NotifySettings({ enabled, userName, theirName }: Props) {
+export function NotifySettings({ enabled }: Props) {
   const [contactEmail, setContactEmail] = useState("");
   const [learnerEmail, setLearnerEmail] = useState("");
   const [consent, setConsent] = useState(false);
@@ -25,7 +22,7 @@ export function NotifySettings({ enabled, userName, theirName }: Props) {
     setBusy(true);
     try {
       const r = await subscribe({
-        action: "subscribe", learnerId: learnerId(), consent: true, userName: firstName(userName), theirName: firstName(theirName),
+        action: "subscribe", learnerId: learnerId(), consent: true,
         ...(contactEmail && { contactEmail }), ...(learnerEmail && { learnerEmail }),
       });
       if (!r.ok) throw new Error(r.reason);
@@ -69,7 +66,7 @@ export function NotifySettings({ enabled, userName, theirName }: Props) {
         </label>
         <label className="check">
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-          Send my first name, their first name and these emails to our n8n automation
+          Send these email addresses to our n8n automation (no names are sent)
         </label>
         <button type="submit" disabled={busy || !consent || !(contactEmail || learnerEmail)} aria-describedby="notify-hint">Save</button>
         <span id="notify-hint" className="muted"> Tick the box and enter at least one email.</span></>}

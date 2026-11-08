@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-const run = (...args) => spawnSync('bash', ['deploy/preflight.sh', ...args], { encoding: 'utf8' });
+import { fileURLToPath } from 'node:url';
+const script = fileURLToPath(new URL('../preflight.sh', import.meta.url));
+const run = (...args) => spawnSync('bash', [script, ...args], { encoding: 'utf8' });
 const revision = 'a'.repeat(40);
 test('requires an immutable full revision', () => {
   assert.notEqual(run('demo.example.org', 'https://github.com/org/repo.git', 'main').status, 0);

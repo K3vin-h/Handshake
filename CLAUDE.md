@@ -26,7 +26,7 @@ docs/superpowers/specs/2026-11-07-sponsor-tracks-spec.md. Plan: docs/superpowers
   notifications (`backend/routes/notify.mjs`, `n8n/README.md`; consent first, double opt-in for the contact is
   specified but not built), `#/stats` page, Vultr API-only Caddy + systemd deploy in `backend/deploy/`.
 - Run everything: `npm run dev` (repo root) → web on :5173, API on :8787 (Vite proxies `/api` to http://localhost:8787). `npm run build` builds the frontend; `npm test` runs frontend + backend + agent + deploy tests; `npm run test:n8n` runs the n8n tests.
-- Frontend calls relative `/api/*`. In production Vercel rewrites `/api/:path*` to the Vultr API origin (`frontend/vercel.json`, destination is a placeholder until the VM exists), so no CORS. Frontend needs no env vars.
+- The browser calls the Vultr HTTPS API **directly** (no Vercel rewrite: behind a rewrite every visitor would share Vercel's IP at the API, collapsing per-IP rate limits into one bucket). The frontend build reads `VITE_API_BASE_URL` (e.g. `https://203-0-113-10.sslip.io`, set in the Vercel project's Environment Variables); when unset it uses relative `/api/*` (local dev, where Vite proxies `/api`). `VITE_API_BASE_URL` is public (browser-visible), never a secret. The API enables CORS only for origins listed in env `ALLOWED_ORIGIN` (comma-separated exact origins, e.g. the production Vercel URL; unset = no CORS headers; methods GET/POST/OPTIONS, header Content-Type). Status: implemented in code, not yet verified against a live deployment.
 
 ## Architecture (target layout; the folder move is being implemented, see `docs/superpowers/plans/2026-11-07-vercel-vultr-architecture.md`)
 | Service | Purpose |
@@ -48,7 +48,6 @@ Handshake/
 │   ├── public/          (model/model.json when trained)
 │   ├── tests/           (React SSR tests: complete.test.mjs, profile.test.mjs)
 │   ├── index.html, vite.config.ts, tsconfig.json, components.json
-│   ├── vercel.json      (rewrites /api/* → Vultr API)
 │   └── package.json     (frontend-only dependencies)
 ├── backend/             → Vultr VM (Express API; talks to Tiger Data Cloud)
 │   ├── index.mjs app.mjs gemini.mjs db.mjs integrations.mjs limit.mjs validate.mjs precache.mjs precache.json migrate.mjs
@@ -66,8 +65,8 @@ Handshake/
 ```
 Hosting notes:
 - The Vultr API host has no purchased domain: use any hostname that resolves to the VM IP with automatic HTTPS from Caddy, e.g. a free `<ip-with-dashes>.sslip.io` name. [NEEDS: verify Let's Encrypt works for the chosen hostname]
-- Rate limiting is per client IP; behind Vercel + Caddy the Express `trust proxy` hop count is 2 (env `TRUST_PROXY_HOPS`). [NEEDS: verify with a real request that req.ip is the visitor's IP]
-- New backend env: `HOST` (bind address; `127.0.0.1` on the VM behind Caddy) and `TRUST_PROXY_HOPS` (2 in production). n8n Cloud and Maritime hold their own secrets.
+- Rate limiting is per client IP; browsers call the API directly, so the production proxy chain is Caddy → Express and the Express `trust proxy` hop count is 1 (env `TRUST_PROXY_HOPS=1`). [NEEDS: verify with a real request that req.ip is the visitor's IP]
+- New backend env: `HOST` (bind address; `127.0.0.1` on the VM behind Caddy), `TRUST_PROXY_HOPS` (1 in production) and `ALLOWED_ORIGIN` (CORS allow-list; the Vercel URL). Frontend env: `VITE_API_BASE_URL` (public). n8n Cloud and Maritime hold their own secrets.
 - `backend/schema.sql` uses TimescaleDB `create_hypertable`, so the database is a Tiger Data Cloud service (TimescaleDB), reached from the Vultr API through `DATABASE_URL` with `sslmode=require`.
 
 ## Ownership (only edit your own files; ask before touching others)
@@ -227,7 +226,7 @@ Problem Research · Technical Implementation · Design (UI/UX, accessibility) ·
 ## Privacy rules
 - Learner profile, names and mistake history stay in the browser (localStorage). Two opt-in exceptions, both off unless env vars are set:
   - Tiger Data receives per-attempt rows: letter or sign id, pass/fail, error codes, an anonymous random id. Never names or emails.
-  - n8n receives first names and emails ONLY after the user ticks the consent checkbox on #/stats, and can be stopped there. Names and emails never go to Gemini, Maritime or Tiger Data.
+  - n8n receives email addresses only (names are not sent), and only after the user ticks the consent checkbox on #/stats, and can be stopped there. Names and emails never go to Gemini, Maritime or Tiger Data.
   - The Devpost must say both, plus the known risk: anyone holding a learner id could trigger emails to that learner's saved contact.
 - Gemini receives letters and error codes only. Never names, never video.
 - A webcam snapshot goes to Gemini ONLY if it passed the H4 test (names the intended letter in 8/10, contradicts the landmarks at most 1/10). If kept, the Devpost says a photo is sent to Google's API.

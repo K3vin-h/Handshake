@@ -87,8 +87,9 @@ omit driver messages and credentials. No accounts/auth were added: as accepted
 by the spec, anyone holding a learner UUID can read or submit their stats.
 
 By default Express does not trust forwarded IP headers. In production set
-`HOST=127.0.0.1` (bind to loopback behind Caddy) and `TRUST_PROXY_HOPS=2` (Vercel
-rewrite, then Caddy) so the rate limiter keys on the visitor's IP. The API serves
+`HOST=127.0.0.1` (bind to loopback behind Caddy) and `TRUST_PROXY_HOPS=1` (Caddy
+only; the browser calls the API directly) so the rate limiter keys on the visitor's IP.
+`ALLOWED_ORIGIN` lists the exact origins (e.g. the Vercel URL) allowed by CORS. The API serves
 no static files: the frontend is hosted on Vercel.
 
 ## Verification

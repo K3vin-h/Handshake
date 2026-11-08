@@ -56,9 +56,12 @@ git fetch origin "$REVISION"
 git checkout --detach "$REVISION"
 [[ "$(git rev-parse HEAD)" == "${REVISION,,}" ]] || exit 1
 cd "$APP/backend"
-npm ci --omit=dev
+npm ci --omit=dev --ignore-scripts
 cd "$APP"
-chown -R handshake:handshake "$APP"
+# Code stays root-owned so a compromised app cannot rewrite itself; only .env is group-readable by the service user.
+chown -R root:root "$APP"
+chgrp handshake "$APP/.env"
+chmod 640 "$APP/.env"
 
 cat > /etc/systemd/system/handshake.service <<UNIT
 [Unit]
@@ -70,7 +73,11 @@ User=handshake
 WorkingDirectory=$APP/backend
 EnvironmentFile=$APP/.env
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/env HOST=127.0.0.1 TRUST_PROXY_HOPS=2 PORT=8787 SNAPSHOT_ENABLED=0 CACHE_EXPORT_ENABLED=0 /usr/bin/node index.mjs
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ExecStart=/usr/bin/env HOST=127.0.0.1 TRUST_PROXY_HOPS=1 PORT=8787 SNAPSHOT_ENABLED=0 CACHE_EXPORT_ENABLED=0 /usr/bin/node index.mjs
 Restart=on-failure
 
 [Install]
