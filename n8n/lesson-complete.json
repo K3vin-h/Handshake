@@ -1,0 +1,352 @@
+{
+  "name": "Handshake lesson complete",
+  "active": false,
+  "nodes": [
+    {
+      "id": "Lesson-webhook",
+      "name": "Lesson webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "handshake-lesson-complete",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "Claim-lesson",
+      "name": "Claim lesson",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select handshake.lesson_claim($1::jsonb) as result",
+        "options": {
+          "queryReplacement": "={{ [JSON.stringify($json.body)] }}"
+        }
+      }
+    },
+    {
+      "id": "Lesson-eligible",
+      "name": "Lesson eligible",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "send",
+              "leftValue": "={{ $json.result.send === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "Recheck-lesson",
+      "name": "Recheck lesson",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select handshake.lesson_recheck($1,$2::uuid) as result",
+        "options": {
+          "queryReplacement": "={{ [$('Claim lesson').item.json.result.learnerId, $('Claim lesson').item.json.result.lease] }}"
+        }
+      }
+    },
+    {
+      "id": "Contact-still-subscribed",
+      "name": "Contact still subscribed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "send",
+              "leftValue": "={{ $json.result.send === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "Send-lesson",
+      "name": "Send lesson",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1200,
+        0
+      ],
+      "parameters": {
+        "fromEmail": "={{ $vars.HANDSHAKE_FROM_EMAIL }}",
+        "toEmail": "={{ $json.result.email }}",
+        "subject": "={{ \"Handshake: \" + $(\"Claim lesson\").item.json.result.title }}",
+        "emailFormat": "text",
+        "text": "={{ \"An ASL lesson was completed: \" + $(\"Claim lesson\").item.json.result.title + \".\\n\\nStop contact updates: \" + $vars.HANDSHAKE_LINK_ORIGIN + \"/webhook/handshake-unsubscribe?token=\" + encodeURIComponent($json.result.unsubscribeToken) }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "Lesson-sent",
+      "name": "Lesson sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        240
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select handshake.lesson_finish($1,$2::uuid,true)",
+        "options": {
+          "queryReplacement": "={{ [$('Claim lesson').item.json.result.learnerId, $('Claim lesson').item.json.result.lease] }}"
+        }
+      }
+    },
+    {
+      "id": "Lesson-failed",
+      "name": "Lesson failed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        240
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select handshake.lesson_finish($1,$2::uuid,false)",
+        "options": {
+          "queryReplacement": "={{ [$('Claim lesson').item.json.result.learnerId, $('Claim lesson').item.json.result.lease] }}"
+        }
+      }
+    },
+    {
+      "id": "Lesson-response",
+      "name": "Lesson response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        480,
+        240
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {ok:true} }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "Claim-response",
+      "name": "Claim response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        720,
+        240
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {ok:$json.result.status < 400} }}",
+        "options": {
+          "responseCode": "={{ $json.result.status }}"
+        }
+      }
+    },
+    {
+      "id": "SMTP-failure",
+      "name": "SMTP failure",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        960,
+        240
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {ok:false,reason:\"delivery_failed\"} }}",
+        "options": {
+          "responseCode": 503
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Lesson webhook": {
+      "main": [
+        [
+          {
+            "node": "Claim lesson",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim lesson": {
+      "main": [
+        [
+          {
+            "node": "Lesson eligible",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lesson eligible": {
+      "main": [
+        [
+          {
+            "node": "Recheck lesson",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Claim response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recheck lesson": {
+      "main": [
+        [
+          {
+            "node": "Contact still subscribed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contact still subscribed": {
+      "main": [
+        [
+          {
+            "node": "Send lesson",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lesson response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send lesson": {
+      "main": [
+        [
+          {
+            "node": "Lesson sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lesson failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lesson sent": {
+      "main": [
+        [
+          {
+            "node": "Lesson response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lesson failed": {
+      "main": [
+        [
+          {
+            "node": "SMTP failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC",
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false,
+    "saveExecutionProgress": false,
+    "executionTimeout": 60
+  },
+  "pinData": {}
+}

@@ -1,0 +1,242 @@
+{
+  "name": "Handshake v1 - subscribe",
+  "nodes": [
+    {
+      "id": "subscribe",
+      "name": "Subscribe",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "path": "handshake-subscribe",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "authentication": "headerAuth",
+        "options": {}
+      }
+    },
+    {
+      "id": "persist-subscription",
+      "name": "Persist subscription",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT handshake.subscribe($1::jsonb) AS result",
+        "options": {
+          "queryReplacement": "={{ [JSON.stringify($json.body)] }}"
+        }
+      }
+    },
+    {
+      "id": "send-confirmation-required",
+      "name": "Send confirmation required",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        450,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "send",
+              "leftValue": "={{ $json.result.send }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "send-confirmation",
+      "name": "Send confirmation",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        670,
+        -100
+      ],
+      "parameters": {
+        "fromEmail": "={{ $vars.HANDSHAKE_FROM_EMAIL }}",
+        "toEmail": "={{ $json.result.email }}",
+        "subject": "Confirm Handshake lesson updates",
+        "emailFormat": "text",
+        "text": "={{ 'Someone entered your address to get updates when they finish ASL lessons. Confirm: ' + $vars.HANDSHAKE_LINK_ORIGIN + '/webhook/handshake-confirm?token=' + $json.result.token + '. Ignore this email to receive nothing.' }}",
+        "options": {
+          "appendAttribution": false
+        }
+      }
+    },
+    {
+      "id": "acknowledge-confirmation",
+      "name": "Acknowledge confirmation",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        880,
+        -100
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT handshake.confirmation_sent($1) AS result",
+        "options": {
+          "queryReplacement": "={{ [ $('Persist subscription').first().json.result.token ] }}"
+        }
+      }
+    },
+    {
+      "id": "saved",
+      "name": "Saved",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1100,
+        -100
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {ok:true} }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              },
+              {
+                "name": "Referrer-Policy",
+                "value": "no-referrer"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "subscription-result",
+      "name": "Subscription result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        700,
+        150
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {ok:$json.result.ok, ...($json.result.ok ? {} : {reason: 'Subscription request could not be completed.'})} }}",
+        "options": {
+          "responseCode": "={{ $json.result.status }}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              },
+              {
+                "name": "Referrer-Policy",
+                "value": "no-referrer"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Subscribe": {
+      "main": [
+        [
+          {
+            "node": "Persist subscription",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist subscription": {
+      "main": [
+        [
+          {
+            "node": "Send confirmation required",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send confirmation required": {
+      "main": [
+        [
+          {
+            "node": "Send confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Subscription result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send confirmation": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acknowledge confirmation": {
+      "main": [
+        [
+          {
+            "node": "Saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false,
+    "saveExecutionProgress": false,
+    "executionTimeout": 30
+  },
+  "active": false,
+  "pinData": {},
+  "tags": []
+}

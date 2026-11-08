@@ -1,0 +1,12 @@
+{
+  "name": "handshake-notification-workflows",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-concurrency=1 tests/*.test.mjs",
+    "generate": "node lib/build-workflows.mjs && node build-delivery.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.15"
+  }
+}

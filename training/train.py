@@ -7,7 +7,7 @@ Combines:
 Evaluation is honest: one recorded person is held out entirely (never seen in training),
 because judges' hands won't be in your training data either.
 
-Exports public/model/model.json, which src/cv/mlpModel.ts loads with TensorFlow.js.
+Exports frontend/public/model/model.json, which frontend/src/cv/mlpModel.ts loads with TensorFlow.js.
 If the file is absent the app uses kNN, so a bad model can just be deleted.
 
 Usage:
@@ -73,7 +73,7 @@ def main(argv=None):
     ap.add_argument("--letters", help="restrict to these letters, e.g. ABCDFILOVWY")
     ap.add_argument("--recorded-weight", type=int, default=3, help="repeat recorded samples N times (they match real webcam conditions)")
     ap.add_argument("--hidden", default="128,64")
-    ap.add_argument("--out", default=str(ROOT / "public" / "model" / "model.json"))
+    ap.add_argument("--out", default=str(ROOT / "frontend" / "public" / "model" / "model.json"))
     ap.add_argument("--report", default=str(HERE / "report.txt"))
     args = ap.parse_args(argv)
     try:

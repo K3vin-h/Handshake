@@ -1,40 +1,42 @@
 # Sponsor Tracks Implementation Plan
 
+> **Architecture update (supersedes the code blocks below where they differ):** frontend on Vercel, API on Vultr, database on Tiger Data Cloud, n8n Cloud (Gmail SMTP credential configured inside n8n Cloud), Maritime for the agent. No GoDaddy/domain purchase, no Figma. `SERVE_STATIC` and static serving are removed from the API; use `HOST`, `TRUST_PROXY_HOPS` (1 in production: Caddy only) and `ALLOWED_ORIGIN`. The Vercel `/api` rewrite was removed: the browser calls the Vultr API directly via `VITE_API_BASE_URL`. Lesson-complete events send only `lessonId` and `xp`, and names are no longer sent to n8n (only emails, after consent); code blocks below that show `lessonTitle`, `userName`/`theirName` or hop count 2 are historical. The API hostname is any name that resolves to the VM IP with Caddy automatic HTTPS (e.g. `<ip-with-dashes>.sslip.io`) [NEEDS: verify Let's Encrypt works for the chosen hostname]. Paths use the new `frontend/`, `backend/` layout. See `2026-11-07-vercel-vultr-architecture.md`. The Task 5 Step 5 / Task 9 steps below are the original text; the current deploy steps are in the live-integrations handoff.
+
 > **For agentic workers:** execute with superpowers:subagent-driven-development (recommended) or superpowers:executing-plans, task by task, in a worktree (`sponsor-tracks`). Steps use `- [ ]` checkboxes for tracking. Commit via `git-manager`.
 
 **Spec:** docs/superpowers/specs/2026-11-07-sponsor-tracks-spec.md
-**Goal:** Add Tiger Data, Maritime, n8n, Vultr + GoDaddy, Databricks and Entire to Handshake, each off until its env vars are set.
-**Architecture:** One server module per integration (`register(app, deps)`), wired by `server/integrations.mjs` from env. A separate `agent/` package runs on Maritime. The client gets a `#/stats` page and two fire-and-forget reporters. Deploy, training and n8n live in their own folders.
+**Goal:** Add Tiger Data, Maritime, n8n, Vercel + Vultr, Databricks and Entire to Handshake, each off until its env vars are set.
+**Architecture:** One server module per integration (`register(app, deps)`), wired by `backend/integrations.mjs` from env. A separate `agent/` package runs on Maritime. The client gets a `#/stats` page and two fire-and-forget reporters. Deploy, training and n8n live in their own folders.
 **Tech stack:** Express 5, `pg`, Node 26 `node --test`, `@google/genai`, React 19 + TypeScript, Caddy + systemd, Databricks + MLflow, n8n.
 
 ## Context
-- **Merged and working today:** Vite + React app, `server/index.mjs` with `/api/path|coach|words` (`/api/path` is removed by the starter plan and group-3 Task 2), `src/lib/{api,curriculum,progress}.ts`, `training/train.py`.
-- **Hard prerequisite (Task 0 checks it):** the starter plan and group-3 Task 2 are merged: `server/app.mjs` exports `createApp`, `src/lib/profile.ts` exports `loadProfile` and `DEMO_PROFILE`, `package.json` has `"test": "node --test ..."`, and `/api/path` is removed (names never reach Gemini).
+- **Merged and working today:** Vite + React app, `backend/index.mjs` with `/api/path|coach|words` (`/api/path` is removed by the starter plan and group-3 Task 2), `frontend/src/lib/{api,curriculum,progress}.ts`, `training/train.py`.
+- **Hard prerequisite (Task 0 checks it):** the starter plan and group-3 Task 2 are merged: `backend/app.mjs` exports `createApp`, `frontend/src/lib/profile.ts` exports `loadProfile` and `DEMO_PROFILE`, `package.json` has `"test": "node --test ..."`, and `/api/path` is removed (names never reach Gemini).
 - **Delivers:** the six units in the spec (U0–U11).
 - **Out of scope:** Auth0, Solana, Lovable, DeepSpace, Freebuff, hardware (spec → Track Coverage). `LessonPlayer` itself (plan 2).
-- **Real chain for every mutation here:** per-IP `rateLimit` (first, so junk requests can't flood us) → JSON body shape/regex validation (`server/validate.mjs`) → write/forward. There is no auth and no ownership check; the spec's Security section accepts that.
+- **Real chain for every mutation here:** per-IP `rateLimit` (first, so junk requests can't flood us) → JSON body shape/regex validation (`backend/validate.mjs`) → write/forward. There is no auth and no ownership check; the spec's Security section accepts that.
 
 ## File Map
 | File | Responsibility |
 |---|---|
-| `server/limit.mjs` | Fixed-window per-IP rate limit middleware |
-| `server/validate.mjs` | Shared regexes and small validators |
-| `server/testutil.mjs` | `serve(setup)` test helper: bare Express app on a free port |
-| `server/db.mjs`, `server/schema.sql`, `server/migrate.mjs` | Tiger Data pool, queries, schema, one-shot migration |
-| `server/db.smoke.mjs` | Manual check against the real Tiger Cloud DB |
-| `server/routes/attempts.mjs` | `POST /api/attempts`, `GET /api/stats/:learnerId` |
-| `server/routes/notify.mjs` | `POST /api/subscribe`, `POST /api/lesson-complete` → n8n |
-| `server/routes/plan.mjs` | `POST /api/plan` → Maritime agent, guard, local fallback |
-| `server/integrations.mjs` | Reads env, builds clients, registers all routes + `GET /api/features` |
-| `server/index.mjs` (modify) | Call `registerIntegrations`, serve `dist/` in production |
+| `backend/limit.mjs` | Fixed-window per-IP rate limit middleware |
+| `backend/validate.mjs` | Shared regexes and small validators |
+| `backend/testutil.mjs` | `serve(setup)` test helper: bare Express app on a free port |
+| `backend/db.mjs`, `backend/schema.sql`, `backend/migrate.mjs` | Tiger Data pool, queries, schema, one-shot migration |
+| `backend/db.smoke.mjs` | Manual check against the real database (Tiger Data Cloud) |
+| `backend/routes/attempts.mjs` | `POST /api/attempts`, `GET /api/stats/:learnerId` |
+| `backend/routes/notify.mjs` | `POST /api/subscribe`, `POST /api/lesson-complete` → n8n |
+| `backend/routes/plan.mjs` | `POST /api/plan` → Maritime agent, guard, local fallback |
+| `backend/integrations.mjs` | Reads env, builds clients, registers all routes + `GET /api/features` |
+| `backend/index.mjs` (modify) | Call `registerIntegrations`, serve `dist/` in production |
 | `agent/plan.mjs`, `agent/server.mjs`, `agent/package.json`, `agent/Dockerfile` | Maritime planner agent |
-| `src/lib/learner.ts` | Anonymous learner UUID |
-| `src/lib/track.ts` | `reportAttempt`, `reportLessonComplete`, notify flag |
-| `src/lib/planInput.ts` | `buildPlanRequest` (candidates, known/weak letters) |
-| `src/lib/api.ts` (modify) | `getFeatures`, `getStats`, `planToday`, `subscribe` |
-| `src/screens/StatsPage.tsx`, `src/components/{AccuracyChart,NotifySettings,PlanCard}.tsx` | `#/stats` UI |
-| `src/App.tsx`, `src/styles.css` (modify) | Route, nav link, `.visually-hidden` |
-| `deploy/setup.sh` | Vultr VM bootstrap: Node, Caddy, systemd, ufw |
+| `frontend/src/lib/learner.ts` | Anonymous learner UUID |
+| `frontend/src/lib/track.ts` | `reportAttempt`, `reportLessonComplete`, notify flag |
+| `frontend/src/lib/planInput.ts` | `buildPlanRequest` (candidates, known/weak letters) |
+| `frontend/src/lib/api.ts` (modify) | `getFeatures`, `getStats`, `planToday`, `subscribe` |
+| `frontend/src/screens/StatsPage.tsx`, `frontend/src/components/{AccuracyChart,NotifySettings,PlanCard}.tsx` | `#/stats` UI |
+| `frontend/src/App.tsx`, `frontend/src/styles.css` (modify) | Route, nav link, `.visually-hidden` |
+| `backend/deploy/setup.sh` | Vultr VM bootstrap: Node, Caddy, systemd, ufw |
 | `training/train.py` (modify), `training/test_train_smoke.py`, `training/databricks/train_job.py` | `main(argv)` refactor, smoke test, Databricks notebook |
 | `n8n/README.md` (+ exported workflow JSON) | Workflow build notes and exports |
 | `docs/devpost-tracks.md` | Per-track Devpost evidence checklist |
@@ -53,10 +55,10 @@
 ## Parallel agent split
 | Agent | Tasks | Exclusive files | Verify |
 |---|---|---|---|
-| S | 1 → (2, 3, 4) → 5 | `server/**` (except `index.mjs` which only Task 5 touches), `.env.example` | `npm test` |
-| C | 6 → 7 | `src/lib/{learner,track,planInput,api}.ts`, `src/screens/StatsPage.tsx`, `src/components/{AccuracyChart,NotifySettings,PlanCard}.tsx`, `src/App.tsx`, `src/styles.css` | `npm test && npm run build` |
+| S | 1 → (2, 3, 4) → 5 | `backend/**` (except `index.mjs` which only Task 5 touches), `.env.example` | `npm test` |
+| C | 6 → 7 | `frontend/src/lib/{learner,track,planInput,api}.ts`, `frontend/src/screens/StatsPage.tsx`, `frontend/src/components/{AccuracyChart,NotifySettings,PlanCard}.tsx`, `frontend/src/App.tsx`, `frontend/src/styles.css` | `npm test && npm run build` |
 | A | 8 | `agent/**` | `node --test agent/plan.test.mjs` |
-| D | 9 | `deploy/**` | `bash -n deploy/setup.sh` |
+| D | 9 | `backend/deploy/**` | `bash -n backend/deploy/setup.sh` |
 | M | 10 | `training/train.py`, `training/test_train_smoke.py`, `training/databricks/**` | `python3 training/test_train_smoke.py` |
 
 `package.json` is only edited in Task 0, before the split.
@@ -70,15 +72,15 @@
 - [ ] **Step 1: Check prerequisites** (all must pass, otherwise stop and finish the starter/group-3 work first)
 ```bash
 cd "/Users/shibah/Documents/VS Code/hackcamp/Handshake"
-test -f server/app.mjs && grep -q "export function createApp" server/app.mjs && echo "createApp ok"
-grep -q "export function loadProfile" src/lib/profile.ts && grep -q "DEMO_PROFILE" src/lib/profile.ts && echo "profile ok"
+test -f backend/app.mjs && grep -q "export function createApp" backend/app.mjs && echo "createApp ok"
+grep -q "export function loadProfile" frontend/src/lib/profile.ts && grep -q "DEMO_PROFILE" frontend/src/lib/profile.ts && echo "profile ok"
 grep -q '"test"' package.json && echo "test script ok"
-! grep -n "userName" server/index.mjs server/app.mjs && echo "no names on the server"
+! grep -n "userName" backend/index.mjs backend/app.mjs && echo "no names on the server"
 ```
 Expected: four `ok`/message lines, no grep match output for `userName`.
 - [ ] **Step 2: Install `pg`** — `npm install pg`
 - [ ] **Step 3: Add the agent test glob.** In `package.json` change the `test` script so it ends with the agent glob, e.g.
-`"test": "node --test \"src/**/*.test.ts\" \"server/**/*.test.mjs\" \"agent/**/*.test.mjs\""`
+`"test": "node --test \"frontend/src/**/*.test.ts\" \"backend/**/*.test.mjs\" \"agent/**/*.test.mjs\""`
 (keep whatever globs the starter already put there, add only the last one).
 - [ ] **Step 4: Verify** — `npm test` → still passes (the new glob matches nothing yet).
 - [ ] **Step 5: Commit** — `chore: add pg and agent test glob`
@@ -87,11 +89,11 @@ Expected: four `ok`/message lines, no grep match output for `userName`.
 
 ## Task 1 — Rate limit, validators, test helper (U0)
 
-**Files:** Create `server/limit.mjs`, `server/validate.mjs`, `server/testutil.mjs` · Test `server/limit.test.mjs`, `server/validate.test.mjs`
+**Files:** Create `backend/limit.mjs`, `backend/validate.mjs`, `backend/testutil.mjs` · Test `backend/limit.test.mjs`, `backend/validate.test.mjs`
 
 - [ ] **Step 1: Write the failing tests**
 
-`server/limit.test.mjs`
+`backend/limit.test.mjs`
 ```js
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -142,7 +144,7 @@ test("counts each IP separately", () => {
   assert.ok(run(mw, "2.2.2.2").nexted);
 });
 ```
-`server/validate.test.mjs`
+`backend/validate.test.mjs`
 ```js
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -181,10 +183,10 @@ test("isEmail and isLetters", () => {
   assert.equal(isLetters("A", 26), false);
 });
 ```
-- [ ] **Step 2: Run, confirm FAIL** — `node --test server/limit.test.mjs server/validate.test.mjs` → FAIL: `Cannot find module './limit.mjs'`
+- [ ] **Step 2: Run, confirm FAIL** — `node --test backend/limit.test.mjs backend/validate.test.mjs` → FAIL: `Cannot find module './limit.mjs'`
 - [ ] **Step 3: Implement**
 
-`server/limit.mjs`
+`backend/limit.mjs`
 ```js
 // Fixed-window per-IP limiter. In production Express trusts one proxy hop (Caddy), so req.ip is the real client.
 export function rateLimit({ windowMs, max, now = Date.now }) {
@@ -202,7 +204,7 @@ export function rateLimit({ windowMs, max, now = Date.now }) {
   };
 }
 ```
-`server/validate.mjs`
+`backend/validate.mjs`
 ```js
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const ITEM_RE = /^[A-Z][A-Z0-9_-]{0,19}$/; // letters and sign ids; "fs:LILY" (may be a name) never matches
@@ -214,7 +216,7 @@ const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]+\.[^\s@]+$/;
 export const isEmail = (s) => typeof s === "string" && s.length <= 254 && EMAIL_RE.test(s);
 export const isLetters = (a, max) => Array.isArray(a) && a.length <= max && a.every((c) => typeof c === "string" && /^[A-Z]$/.test(c));
 ```
-`server/testutil.mjs`
+`backend/testutil.mjs`
 ```js
 import express from "express";
 
@@ -247,9 +249,9 @@ export async function serve(setup) {
 
 ## Task 2 — Tiger Data: schema, db, attempts routes (U1, U2)
 
-**Files:** Create `server/schema.sql`, `server/migrate.mjs`, `server/db.mjs`, `server/db.smoke.mjs`, `server/routes/attempts.mjs` · Test `server/routes/attempts.test.mjs`
+**Files:** Create `backend/schema.sql`, `backend/migrate.mjs`, `backend/db.mjs`, `backend/db.smoke.mjs`, `backend/routes/attempts.mjs` · Test `backend/routes/attempts.test.mjs`
 
-- [ ] **Step 1: Write the failing test** `server/routes/attempts.test.mjs`
+- [ ] **Step 1: Write the failing test** `backend/routes/attempts.test.mjs`
 ```js
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -348,10 +350,10 @@ test("stats returns the db result, or empty lists without a db", async () => {
   });
 });
 ```
-- [ ] **Step 2: Run, confirm FAIL** — `node --test server/routes/attempts.test.mjs` → FAIL: `Cannot find module './attempts.mjs'`
+- [ ] **Step 2: Run, confirm FAIL** — `node --test backend/routes/attempts.test.mjs` → FAIL: `Cannot find module './attempts.mjs'`
 - [ ] **Step 3: Implement**
 
-`server/schema.sql`
+`backend/schema.sql`
 ```sql
 CREATE TABLE IF NOT EXISTS attempts (
   ts         timestamptz NOT NULL DEFAULT now(),
@@ -363,9 +365,9 @@ CREATE TABLE IF NOT EXISTS attempts (
 SELECT create_hypertable('attempts', by_range('ts'), if_not_exists => TRUE);
 CREATE INDEX IF NOT EXISTS attempts_learner_ts ON attempts (learner_id, ts DESC);
 ```
-`server/migrate.mjs`
+`backend/migrate.mjs`
 ```js
-// One-shot: node server/migrate.mjs  (needs DATABASE_URL in .env)
+// One-shot: node backend/migrate.mjs  (needs DATABASE_URL in .env)
 import "dotenv/config";
 import { readFileSync } from "node:fs";
 import pg from "pg";
@@ -382,7 +384,7 @@ try {
   await pool.end();
 }
 ```
-`server/db.mjs`
+`backend/db.mjs`
 ```js
 import pg from "pg";
 
@@ -420,7 +422,7 @@ export function createDb(url) {
   };
 }
 ```
-`server/routes/attempts.mjs`
+`backend/routes/attempts.mjs`
 ```js
 import { rateLimit } from "../limit.mjs";
 import { UUID_RE, ITEM_RE, CODE_RE } from "../validate.mjs";
@@ -465,9 +467,9 @@ export function register(app, { db, now = Date.now }) {
   });
 }
 ```
-`server/db.smoke.mjs`
+`backend/db.smoke.mjs`
 ```js
-// Manual check: node server/db.smoke.mjs  (after node server/migrate.mjs). Exits 1 on failure.
+// Manual check: node backend/db.smoke.mjs  (after node backend/migrate.mjs). Exits 1 on failure.
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { createDb } from "./db.mjs";
@@ -493,17 +495,17 @@ try {
   await db.close();
 }
 ```
-- [ ] **Step 4: Run, confirm PASS** — `node --test server/routes/attempts.test.mjs` → PASS (6 tests)
-- [ ] **Step 5 (human, needs a Tiger Cloud free service): real DB.** Create the service, put its connection string in `.env` as `DATABASE_URL`, then `node server/migrate.mjs && node server/db.smoke.mjs` → prints `schema applied`, a JSON line with `"attempts":3`, and `db smoke ok`.
+- [ ] **Step 4: Run, confirm PASS** — `node --test backend/routes/attempts.test.mjs` → PASS (6 tests)
+- [ ] **Step 5 (human, needs a Tiger Data Cloud service): real DB.** Create the database, put its connection string in `.env` as `DATABASE_URL`, then `node backend/migrate.mjs && node backend/db.smoke.mjs` → prints `schema applied`, a JSON line with `"attempts":3`, and `db smoke ok`.
 - [ ] **Step 6: Commit** — `feat: tiger data attempts and stats`
 
 ---
 
 ## Task 3 — n8n forwarding routes (U3)
 
-**Files:** Create `server/routes/notify.mjs` · Test `server/routes/notify.test.mjs`
+**Files:** Create `backend/routes/notify.mjs` · Test `backend/routes/notify.test.mjs`
 
-- [ ] **Step 1: Write the failing test** `server/routes/notify.test.mjs`
+- [ ] **Step 1: Write the failing test** `backend/routes/notify.test.mjs`
 ```js
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -595,8 +597,8 @@ test("answers ok:false when n8n is off, down, or rejects", async () => {
   });
 });
 ```
-- [ ] **Step 2: Run, confirm FAIL** — `node --test server/routes/notify.test.mjs` → FAIL: `Cannot find module './notify.mjs'`
-- [ ] **Step 3: Implement** `server/routes/notify.mjs`
+- [ ] **Step 2: Run, confirm FAIL** — `node --test backend/routes/notify.test.mjs` → FAIL: `Cannot find module './notify.mjs'`
+- [ ] **Step 3: Implement** `backend/routes/notify.mjs`
 ```js
 import { rateLimit } from "../limit.mjs";
 import { UUID_RE, LESSON_RE, NAME_RE, isEmail } from "../validate.mjs";
@@ -662,9 +664,9 @@ export function register(app, { n8n, fetch: f = fetch }) {
 
 ## Task 4 — Plan route with Maritime agent proxy (U4)
 
-**Files:** Create `server/routes/plan.mjs` · Test `server/routes/plan.test.mjs`
+**Files:** Create `backend/routes/plan.mjs` · Test `backend/routes/plan.test.mjs`
 
-- [ ] **Step 1: Write the failing test** `server/routes/plan.test.mjs`
+- [ ] **Step 1: Write the failing test** `backend/routes/plan.test.mjs`
 ```js
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -752,8 +754,8 @@ test("rejects bad input with 400", async () => {
   assert.equal((await plan({ agent: null }, { ...body, candidates: [{ id: "x", letters: [] }] })).status, 400);
 });
 ```
-- [ ] **Step 2: Run, confirm FAIL** — `node --test server/routes/plan.test.mjs` → FAIL: `Cannot find module './plan.mjs'`
-- [ ] **Step 3: Implement** `server/routes/plan.mjs`
+- [ ] **Step 2: Run, confirm FAIL** — `node --test backend/routes/plan.test.mjs` → FAIL: `Cannot find module './plan.mjs'`
+- [ ] **Step 3: Implement** `backend/routes/plan.mjs`
 ```js
 import { rateLimit } from "../limit.mjs";
 import { UUID_RE, LESSON_RE, isLetters } from "../validate.mjs";
@@ -815,9 +817,9 @@ export function register(app, { agent, fetch: f = fetch }) {
 
 ## Task 5 — Wire integrations, features endpoint, static serving (U5)
 
-**Files:** Create `server/integrations.mjs` · Modify `server/index.mjs`, `.env.example` · Test `server/integrations.test.mjs`
+**Files:** Create `backend/integrations.mjs` · Modify `backend/index.mjs`, `.env.example` · Test `backend/integrations.test.mjs`
 
-- [ ] **Step 1: Write the failing test** `server/integrations.test.mjs`
+- [ ] **Step 1: Write the failing test** `backend/integrations.test.mjs`
 ```js
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -862,8 +864,8 @@ test("with env set: every feature is on", async () => {
   }
 });
 ```
-- [ ] **Step 2: Run, confirm FAIL** — `node --test server/integrations.test.mjs` → FAIL: `Cannot find module './integrations.mjs'`
-- [ ] **Step 3: Implement** `server/integrations.mjs`
+- [ ] **Step 2: Run, confirm FAIL** — `node --test backend/integrations.test.mjs` → FAIL: `Cannot find module './integrations.mjs'`
+- [ ] **Step 3: Implement** `backend/integrations.mjs`
 ```js
 import { createDb } from "./db.mjs";
 import { register as registerAttempts } from "./routes/attempts.mjs";
@@ -879,7 +881,7 @@ export function registerIntegrations(app, env = process.env) {
       : null;
   const agent = env.MARITIME_AGENT_URL && env.MARITIME_AGENT_TOKEN ? { url: env.MARITIME_AGENT_URL, token: env.MARITIME_AGENT_TOKEN } : null;
 
-  if (env.SERVE_STATIC) app.set("trust proxy", 1); // one hop: Caddy
+  if (env.TRUST_PROXY_HOPS) app.set("trust proxy", Number(env.TRUST_PROXY_HOPS)); // 2 in production: Vercel + Caddy
   registerAttempts(app, { db });
   registerNotify(app, { n8n });
   registerPlan(app, { agent });
@@ -888,7 +890,7 @@ export function registerIntegrations(app, env = process.env) {
 }
 ```
 - [ ] **Step 4: Run, confirm PASS** — same command → PASS (2 tests)
-- [ ] **Step 5: Edit `server/index.mjs`.** It currently builds the app with group-3's `createApp(...)` and then calls `app.listen`. Make these changes (keep every existing line otherwise):
+- [ ] **Step 5: Edit `backend/index.mjs`.** It currently builds the app with group-3's `createApp(...)` and then calls `app.listen`. Make these changes (keep every existing line otherwise):
   1. Add imports at the top: `import express from "express";`, `import path from "node:path";`, `import { fileURLToPath } from "node:url";`, `import { registerIntegrations } from "./integrations.mjs";`
   2. Directly after the `const app = createApp(...)` line add:
 ```js
@@ -903,18 +905,19 @@ if (process.env.SERVE_STATIC) {
 - [ ] **Step 6: Append to `.env.example`**
 ```
 # Optional integrations. Each is off until its variables are set.
-DATABASE_URL=            # Tiger Data (Tiger Cloud) connection string, sslmode=require
+DATABASE_URL=            # TimescaleDB connection string (Tiger Data Cloud), sslmode=require
 N8N_SUBSCRIBE_URL=       # n8n production webhook: subscribe/unsubscribe
 N8N_EVENT_URL=           # n8n production webhook: lesson complete
 N8N_SECRET=              # shared secret sent as X-Handshake-Secret
 MARITIME_AGENT_URL=      # https://<your-agent>/plan
 MARITIME_AGENT_TOKEN=    # bearer token the agent expects
-SERVE_STATIC=            # set to 1 in production: serve dist/, bind 127.0.0.1, trust one proxy
+HOST=                    # bind address; 127.0.0.1 on the VM behind Caddy
+TRUST_PROXY_HOPS=        # 2 in production (Vercel + Caddy); SERVE_STATIC is removed
 ```
 - [ ] **Step 7: Verify** —
   - `npm test` → PASS.
-  - Dev still works with no env: `node server/index.mjs` prints the API line; `curl -s localhost:8787/api/features` → `{"stats":false,"notify":false,"agent":false}`; stop it.
-  - Production mode: `npm run build && SERVE_STATIC=1 node server/index.mjs`; `curl -sI localhost:8787/` → `200`, and `curl -s localhost:8787/#/stats -o /dev/null -w "%{http_code}"` → `200`; stop it.
+  - Dev still works with no env: `node backend/index.mjs` prints the API line; `curl -s localhost:8787/api/features` → `{"stats":false,"notify":false,"agent":false}`; stop it.
+  - Production mode: `npm run build && SERVE_STATIC=1 node backend/index.mjs`; `curl -sI localhost:8787/` → `200`, and `curl -s localhost:8787/#/stats -o /dev/null -w "%{http_code}"` → `200`; stop it.
 - [ ] **Step 8: Commit** — `feat: wire integrations, features endpoint and static serving`
 - [ ] **Step 9: `/check`** (server unit) with `security-reviewer` on Tasks 3, 4, 5 (`model: "opus"`: emails and names).
 
@@ -922,13 +925,13 @@ SERVE_STATIC=            # set to 1 in production: serve dist/, bind 127.0.0.1, 
 
 ## Task 6 — Client libs (U7)
 
-**Files:** Create `src/lib/learner.ts`, `src/lib/track.ts`, `src/lib/planInput.ts` · Modify `src/lib/api.ts` · Test `src/lib/track.test.ts`, `src/lib/planInput.test.ts`
+**Files:** Create `frontend/src/lib/learner.ts`, `frontend/src/lib/track.ts`, `frontend/src/lib/planInput.ts` · Modify `frontend/src/lib/api.ts` · Test `frontend/src/lib/track.test.ts`, `frontend/src/lib/planInput.test.ts`
 
 Note: under `node --test`, relative imports need `.ts` extensions, and `progress.ts`/`curriculum.ts` can't be imported at runtime, so these files only use type imports from them.
 
 - [ ] **Step 1: Write the failing tests**
 
-`src/lib/track.test.ts`
+`frontend/src/lib/track.test.ts`
 ```ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -977,7 +980,7 @@ test("lesson complete is sent only when notifications are on", () => {
   assert.deepEqual(on.calls[0].body, { learnerId: ID, lessonId: "1.2", lessonTitle: "Spell RYAN", xp: 20 });
 });
 ```
-`src/lib/planInput.test.ts`
+`frontend/src/lib/planInput.test.ts`
 ```ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -1035,10 +1038,10 @@ test("returns at most 4 review lessons, never titles, and null with no lessons",
   assert.equal(buildPlanRequest([], { completed: [], items: {} }, [], ID), null);
 });
 ```
-- [ ] **Step 2: Run, confirm FAIL** — `node --test src/lib/track.test.ts src/lib/planInput.test.ts` → FAIL: `Cannot find module` for `track.ts` / `planInput.ts`
+- [ ] **Step 2: Run, confirm FAIL** — `node --test frontend/src/lib/track.test.ts frontend/src/lib/planInput.test.ts` → FAIL: `Cannot find module` for `track.ts` / `planInput.ts`
 - [ ] **Step 3: Implement**
 
-`src/lib/learner.ts`
+`frontend/src/lib/learner.ts`
 ```ts
 const KEY = "handshake.learner.v1";
 let memory: string | null = null; // used when localStorage is blocked
@@ -1056,7 +1059,7 @@ export function learnerId(): string {
   }
 }
 ```
-`src/lib/track.ts`
+`frontend/src/lib/track.ts`
 ```ts
 import { learnerId } from "./learner.ts";
 
@@ -1106,7 +1109,7 @@ export function reportLessonComplete(
   fire(send, "/api/lesson-complete", { learnerId: id, lessonId, lessonTitle, xp });
 }
 ```
-`src/lib/planInput.ts`
+`frontend/src/lib/planInput.ts`
 ```ts
 import type { Lesson, Unit } from "./curriculum.ts";
 
@@ -1157,7 +1160,7 @@ export function buildPlanRequest(units: Unit[], p: ProgressLike, weak: string[],
 }
 ```
 - [ ] **Step 4: Run, confirm PASS** — same command → PASS (9 tests)
-- [ ] **Step 5: Extend `src/lib/api.ts`.** Append (the existing `post` stays):
+- [ ] **Step 5: Extend `frontend/src/lib/api.ts`.** Append (the existing `post` stays):
 ```ts
 async function get<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -1188,9 +1191,9 @@ export const subscribe = (body: SubscribeBody) => post<{ ok: boolean; reason?: s
 
 ## Task 7 — Stats page UI (U8)
 
-**Files:** Create `src/components/AccuracyChart.tsx`, `src/components/PlanCard.tsx`, `src/components/NotifySettings.tsx`, `src/screens/StatsPage.tsx` · Modify `src/App.tsx`, `src/styles.css`
+**Files:** Create `frontend/src/components/AccuracyChart.tsx`, `frontend/src/components/PlanCard.tsx`, `frontend/src/components/NotifySettings.tsx`, `frontend/src/screens/StatsPage.tsx` · Modify `frontend/src/App.tsx`, `frontend/src/styles.css`
 
-- [ ] **Step 1: `src/components/AccuracyChart.tsx`**
+- [ ] **Step 1: `frontend/src/components/AccuracyChart.tsx`**
 ```tsx
 import type { Stats } from "../lib/api";
 
@@ -1230,7 +1233,7 @@ export function AccuracyChart({ daily }: { daily: Stats["daily"] }) {
   );
 }
 ```
-- [ ] **Step 2: `src/components/PlanCard.tsx`**
+- [ ] **Step 2: `frontend/src/components/PlanCard.tsx`**
 ```tsx
 import type { Plan } from "../lib/api";
 
@@ -1255,7 +1258,7 @@ export function PlanCard({ plan, hasCandidates, failed }: Props) {
   );
 }
 ```
-- [ ] **Step 3: `src/components/NotifySettings.tsx`**
+- [ ] **Step 3: `frontend/src/components/NotifySettings.tsx`**
 ```tsx
 import { useState } from "react";
 import { subscribe } from "../lib/api";
@@ -1325,7 +1328,7 @@ export function NotifySettings({ enabled, userName, theirName }: Props) {
   );
 }
 ```
-- [ ] **Step 4: `src/screens/StatsPage.tsx`**
+- [ ] **Step 4: `frontend/src/screens/StatsPage.tsx`**
 ```tsx
 import { useEffect, useMemo, useState } from "react";
 import { AccuracyChart } from "../components/AccuracyChart";
@@ -1387,8 +1390,8 @@ export function StatsPage() {
   );
 }
 ```
-- [ ] **Step 5: Route + nav in `src/App.tsx`.** Add `import { StatsPage } from "./screens/StatsPage";`, add `"#/stats": StatsPage,` to `routes`, and add `<a href="#/stats">Stats</a>` after the Curriculum link in `<nav>`.
-- [ ] **Step 6: Append to `src/styles.css`**
+- [ ] **Step 5: Route + nav in `frontend/src/App.tsx`.** Add `import { StatsPage } from "./screens/StatsPage";`, add `"#/stats": StatsPage,` to `routes`, and add `<a href="#/stats">Stats</a>` after the Curriculum link in `<nav>`.
+- [ ] **Step 6: Append to `frontend/src/styles.css`**
 ```css
 .visually-hidden {
   position: absolute;
@@ -1620,20 +1623,20 @@ Expected: JSON with `lessonId`, `focus`, `words`, `tip`. Without the header: `40
 
 ---
 
-## Task 9 — Vultr + GoDaddy Registry deploy (U9)
+## Task 9 — Vercel (frontend) + Vultr (API) deploy (U9)
 
-**Files:** Create `deploy/setup.sh`
+**Files:** Create `backend/deploy/setup.sh`
 
-- [ ] **Step 1: Write `deploy/setup.sh`**
+- [ ] **Step 1: Write `backend/deploy/setup.sh`**
 ```bash
 #!/usr/bin/env bash
 # Bootstrap a fresh Ubuntu 24.04 Vultr VM. Run as root:
-#   bash setup.sh <domain> <git-repo-url>
+#   bash setup.sh <api-hostname> <git-repo-url>
 # scp your .env to /root/handshake.env first (the clone needs an empty /opt/handshake), or the script stops and tells you.
 set -euo pipefail
 
-DOMAIN="${1:?usage: setup.sh <domain> <repo-url>}"
-REPO="${2:?usage: setup.sh <domain> <repo-url>}"
+DOMAIN="${1:?usage: setup.sh <api-hostname> <repo-url>}"
+REPO="${2:?usage: setup.sh <api-hostname> <repo-url>}"
 APP=/opt/handshake
 
 apt-get update
@@ -1674,7 +1677,7 @@ User=handshake
 WorkingDirectory=$APP
 EnvironmentFile=$APP/.env
 Environment=SERVE_STATIC=1
-ExecStart=/usr/bin/node server/index.mjs
+ExecStart=/usr/bin/node backend/index.mjs
 Restart=on-failure
 
 [Install]
@@ -1694,12 +1697,12 @@ ufw --force enable
 
 echo "Done. Check: curl -I https://$DOMAIN"
 ```
-- [ ] **Step 2: Verify the script's syntax locally** — `bash -n deploy/setup.sh` → no output. If `shellcheck` is installed: `shellcheck deploy/setup.sh` → no errors.
-- [ ] **Step 3 (human): domain.** Register an MLH-eligible GoDaddy Registry TLD domain (check MLH's current list; the track page names the eligible TLDs). In its DNS settings, add an `A` record → the Vultr VM's IPv4. Check: `dig +short <domain>` shows the VM IP.
-- [ ] **Step 4 (human): VM.** Create a Vultr Ubuntu 24.04 VM. `scp .env root@<ip>:/root/handshake.env`, then `scp deploy/setup.sh root@<ip>:` and `ssh root@<ip> bash setup.sh <domain> <repo-url>`. The `.env` needs `SERVE_STATIC` unset (the unit sets it), `PORT=8787`, `GEMINI_API_KEY`, and the other integration vars.
-- [ ] **Step 5: Verify live** — `curl -sI https://<domain>` → `HTTP/2 200`; `curl -s https://<domain>/api/features` → JSON; open `https://<domain>/#/` on a phone and confirm the camera permission prompt appears (needs HTTPS); from outside, `curl -m 5 http://<vm-ip>:8787/` fails (loopback only, firewall closed).
+- [ ] **Step 2: Verify the script's syntax locally** — `bash -n backend/deploy/setup.sh` → no output. If `shellcheck` is installed: `shellcheck backend/deploy/setup.sh` → no errors.
+- [ ] **Step 3 (human): API hostname.** No domain is purchased. Use a hostname that resolves to the Vultr VM IPv4, e.g. `<ip-with-dashes>.sslip.io`. Check: `dig +short <hostname>` shows the VM IP. [NEEDS: verify Let's Encrypt works for the chosen hostname]
+- [ ] **Step 4 (human): VM.** Create a Vultr Ubuntu 24.04 VM. `scp .env root@<ip>:/root/handshake.env`, then `scp backend/deploy/setup.sh root@<ip>:` and `ssh root@<ip> bash setup.sh <api-hostname> <repo-url>`. The `.env` needs `SERVE_STATIC` unset (the unit sets it), `PORT=8787`, `GEMINI_API_KEY`, and the other integration vars.
+- [ ] **Step 5: Verify live** — `curl -sI https://<api-hostname>` → `HTTP/2 200`; `curl -s https://<api-hostname>/api/features` → JSON; open `https://<api-hostname>/#/` on a phone and confirm the camera permission prompt appears (needs HTTPS); from outside, `curl -m 5 http://<vm-ip>:8787/` fails (loopback only, firewall closed).
 - [ ] **Step 6: Commit** — `feat: vultr deploy script`
-- [ ] **Step 7: `security-reviewer`** on `deploy/setup.sh` and the `index.mjs` loopback/trust-proxy change.
+- [ ] **Step 7: `security-reviewer`** on `backend/deploy/setup.sh` and the `index.mjs` loopback/trust-proxy change.
 
 ---
 
@@ -1809,9 +1812,9 @@ for hidden in ["64", "128,64", "256,128"]:
 # COMMAND ----------
 shutil.copy(best["out"], f"{data_dir}/model.json")
 shutil.copy(best["report"], f"{data_dir}/report.txt")
-print(f"Best holdout accuracy {best['accuracy']:.3f}. Download with: databricks fs cp dbfs:{data_dir}/model.json public/model/model.json")
+print(f"Best holdout accuracy {best['accuracy']:.3f}. Download with: databricks fs cp dbfs:{data_dir}/model.json frontend/public/model/model.json")
 ```
-- [ ] **Step 6 (human): run it.** Databricks Free Edition: create a Git folder from the GitHub repo, make a volume, upload the data (`training/data/kaggle_features.npz`, `training/data/recorded/*.json`), open the notebook, fill the widgets, Run all. Check: three runs appear under Experiments with `holdout_accuracy`; `model.json` and `report.txt` exist in the volume. Download `model.json` to `public/model/model.json`, run `npm run dev`, confirm the lesson debug panel says "trained model". Screenshot the MLflow runs for Devpost.
+- [ ] **Step 6 (human): run it.** Databricks Free Edition: create a Git folder from the GitHub repo, make a volume, upload the data (`training/data/kaggle_features.npz`, `training/data/recorded/*.json`), open the notebook, fill the widgets, Run all. Check: three runs appear under Experiments with `holdout_accuracy`; `model.json` and `report.txt` exist in the volume. Download `model.json` to `frontend/public/model/model.json`, run `npm run dev`, confirm the lesson debug panel says "trained model". Screenshot the MLflow runs for Devpost.
 - [ ] **Step 7: Commit** — `feat: databricks training job with mlflow`
 
 ---
@@ -1823,7 +1826,7 @@ print(f"Best holdout accuracy {best['accuracy']:.3f}. Download with: databricks 
 - [ ] **Step 1: Create an n8n Cloud workspace** (free trial or the prize plan). Create a **Header Auth** credential `handshake-secret` (name `X-Handshake-Secret`, value = `N8N_SECRET`). Create a **Data Table** `handshake_learners` with columns `learnerId` (string, unique key), `userName`, `theirName`, `learnerEmail`, `contactEmail`, `lastSentAt` (date).
 - [ ] **Step 2: Workflow "Handshake subscribe"**: Webhook (POST, path `handshake-subscribe`, Header Auth credential, **Respond: "Using 'Respond to Webhook' Node"**) → Switch on `{{$json.body.action}}` → `subscribe`: Data Table **Upsert** by `learnerId` (map the other fields from `body`) | `unsubscribe`: Data Table **Delete** where `learnerId` equals `body.learnerId` → Respond to Webhook `{"ok": true}`. Activate it; copy the **production** URL into `N8N_SUBSCRIBE_URL`.
 - [ ] **Step 3: Workflow "Handshake lesson complete"**: Webhook (POST, path `handshake-event`, same credential, **Respond: "Using 'Respond to Webhook' Node"**, node name `Webhook`) → Data Table **Get** (node name `Get learner`) where `learnerId` = `{{ $json.body.learnerId }}` → IF row exists AND `contactEmail` is set AND (`lastSentAt` is empty OR older than 10 minutes) → Send Email (Gmail/SMTP) to `{{ $('Get learner').item.json.contactEmail }}`, subject `{{ $('Get learner').item.json.userName }} is learning to sign with you`, body `{{ $('Get learner').item.json.userName }} just finished "{{ $('Webhook').item.json.body.lessonTitle }}" on Handshake. Say hi!` → Data Table **Update** `lastSentAt` = `{{ $now }}` → Respond to Webhook `{"ok": true}` (also connected from the IF's false branch). Later nodes read earlier data with `$('<node name>')`, because each node replaces the item. The 10-minute throttle is best-effort (the read-check-update isn't atomic if two requests land at once); the server's 10/min/IP limit is the other guard. Activate; copy the production URL into `N8N_EVENT_URL`.
-- [ ] **Step 4: Workflow "Handshake weekly recap"**: Schedule Trigger (weekly) → Data Table **Get many** (node name `Get learners`) where `learnerEmail` is not empty → HTTP Request GET `https://<domain>/api/stats/{{ $json.learnerId }}` (runs once per item) → Code node "Run Once for Each Item" (below) → Send Email to `{{ $json.to }}`, subject `{{ $json.subject }}`, body `{{ $json.text }}`.
+- [ ] **Step 4: Workflow "Handshake weekly recap"**: Schedule Trigger (weekly) → Data Table **Get many** (node name `Get learners`) where `learnerEmail` is not empty → HTTP Request GET `https://<api-hostname>/api/stats/{{ $json.learnerId }}` (runs once per item) → Code node "Run Once for Each Item" (below) → Send Email to `{{ $json.to }}`, subject `{{ $json.subject }}`, body `{{ $json.text }}`.
 ```js
 // Weighted by attempts, so a day with 20 tries counts more than a day with 2.
 const stats = $input.item.json; // { daily, items } from the HTTP Request node
@@ -1867,17 +1870,17 @@ Expected `{"ok":true}` and the row in the Data Table. Without the header → `40
 
 ## Task 13 — Call-site wiring and Devpost evidence (last)
 
-**Files:** Modify `src/screens/LessonPlayer.tsx` (exists only after plan 2), `README.md` · Create `docs/devpost-tracks.md`
+**Files:** Modify `frontend/src/screens/LessonPlayer.tsx` (exists only after plan 2), `README.md` · Create `docs/devpost-tracks.md`
 
-- [ ] **Step 1: Wire the reporters.** If `src/screens/LessonPlayer.tsx` exists, add `import { reportAttempt, reportLessonComplete } from "../lib/track";` and, directly after each existing call:
+- [ ] **Step 1: Wire the reporters.** If `frontend/src/screens/LessonPlayer.tsx` exists, add `import { reportAttempt, reportLessonComplete } from "../lib/track";` and, directly after each existing call:
   - after `progress.current = recordAttempt(progress.current, d.letter, true);` → `reportAttempt(d.letter, true);`
   - after `progress.current = recordAttempt(progress.current, target, false);` → `reportAttempt(target, false, feedback.map((f) => f.code));`
   - after `progress.current = completeLesson(progress.current, lesson!.id, lesson!.xp);` → `reportLessonComplete(lesson!.id, lesson!.title, lesson!.xp);`
   
   If `LessonPlayer.tsx` doesn't exist yet, leave this step unchecked and write "Stats need LessonPlayer (plan 2)" at the top of `docs/devpost-tracks.md`; the Tiger Data, Maritime and n8n tracks can't be demoed with live data until it's done.
-- [ ] **Step 2: Verify** — `grep -n "reportAttempt\|reportLessonComplete" src/screens/*.tsx` shows the three call sites; play lesson 1.1 on the deployed app, then `#/stats` shows a chart point and `node server/db.smoke.mjs`-style query (or the Tiger Cloud console) shows rows for your learner id.
-- [ ] **Step 3: Create `docs/devpost-tracks.md`**: one section per track in the spec's Track Coverage table (shipped units only), each with the evidence it lists and where the artifact lives: Tiger Data (schema + chart screenshot), Vultr and GoDaddy (the URL), Databricks (MLflow screenshot, `report.txt`), Maritime (agent URL, demo clip), n8n (workflow screenshots, the email), Entire (repo URL, three screenshots), plus the Most Accessible Design notes (keyboard-only flow, contrast, `aria-live` status, chart text table, no audio). End with the Devpost privacy note: anonymous UUID, no names in Tiger Data or Gemini, names and emails only to n8n with consent, and the "UUID holder could trigger emails" risk.
-- [ ] **Step 4: README.** Under "Run", add a short "Optional integrations" list pointing to `.env.example`, `deploy/setup.sh`, `agent/`, `n8n/`, `training/databricks/`.
+- [ ] **Step 2: Verify** — `grep -n "reportAttempt\|reportLessonComplete" frontend/src/screens/*.tsx` shows the three call sites; play lesson 1.1 on the deployed app, then `#/stats` shows a chart point and `node backend/db.smoke.mjs`-style query (or the Tiger Cloud console) shows rows for your learner id.
+- [ ] **Step 3: Create `docs/devpost-tracks.md`**: one section per track in the spec's Track Coverage table (shipped units only), each with the evidence it lists and where the artifact lives: Tiger Data (schema + chart screenshot), Vercel + Vultr (the Vercel URL and the Vultr API URL), Databricks (MLflow screenshot, `report.txt`), Maritime (agent URL, demo clip), n8n (workflow screenshots, the email), Entire (repo URL, three screenshots), plus the Most Accessible Design notes (keyboard-only flow, contrast, `aria-live` status, chart text table, no audio). End with the Devpost privacy note: anonymous UUID, no names in Tiger Data or Gemini, names and emails only to n8n with consent, and the "UUID holder could trigger emails" risk.
+- [ ] **Step 4: README.** Under "Run", add a short "Optional integrations" list pointing to `.env.example`, `backend/deploy/setup.sh`, `agent/`, `n8n/`, `training/databricks/`.
 - [ ] **Step 5: Commit** — `docs: devpost track evidence and integration notes`
 
 ---
@@ -1888,6 +1891,6 @@ Run in order; each must pass.
 2. `python3 training/test_train_smoke.py` → `train smoke ok`.
 3. `npm run build` → success.
 4. **Env unset:** `unset DATABASE_URL N8N_SECRET MARITIME_AGENT_URL; npm run dev` → the app behaves as before; `#/stats` shows the empty/local states; `/api/features` is all false.
-5. **Env set:** with real values, `node server/db.smoke.mjs` → `db smoke ok`; `#/stats` shows the chart, "planned by: agent", and the notification form enabled; completing a lesson sends the email.
-6. **Production:** `curl -sI https://<domain>` → 200; the camera prompt appears on a phone; `http://<ip>:8787` is unreachable from outside.
+5. **Env set:** with real values, `node backend/db.smoke.mjs` → `db smoke ok`; `#/stats` shows the chart, "planned by: agent", and the notification form enabled; completing a lesson sends the email.
+6. **Production:** `curl -sI https://<api-hostname>` → 200; the camera prompt appears on a phone; `http://<ip>:8787` is unreachable from outside.
 7. **Spec coverage:** U0→T1, U1→T2, U2→T2, U3→T3+T11, U4→T4, U5→T5, U6→T8, U7→T6, U8→T7, U9→T9, U10→T10, U11→T12; Track Coverage evidence → T13.

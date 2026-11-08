@@ -1,0 +1,366 @@
+{
+  "name": "Handshake v1 - contact links",
+  "nodes": [
+    {
+      "id": "confirmation-landing",
+      "name": "Confirmation landing",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "path": "handshake-confirm",
+        "httpMethod": "GET",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "build-landing",
+      "name": "Build landing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const token=$json.query?.token;\nif(typeof token!=='string'||!/^[a-f0-9]{64}$/.test(token))return [{json:{html:'Invalid or expired link.'}}];\nconst origin=$vars.HANDSHAKE_LINK_ORIGIN;\nif(typeof origin!=='string'||!/^https:\\/\\/[^\\s<>\"']+$/.test(origin))throw new Error('Configure HTTPS HANDSHAKE_LINK_ORIGIN');\nreturn [{json:{html:'<!doctype html><html lang=\"en\"><meta name=\"viewport\" content=\"width=device-width\"><meta name=\"referrer\" content=\"no-referrer\"><title>Confirm lesson updates</title><h1>Confirm lesson updates</h1><p>Choose Confirm to receive ASL lesson updates. Opening this page alone does not subscribe you.</p><form method=\"post\" action=\"'+origin+'/webhook/handshake-confirm\"><input type=\"hidden\" name=\"token\" value=\"'+token+'\"><button type=\"submit\">Confirm lesson updates</button></form></html>'}}];"
+      }
+    },
+    {
+      "id": "landing-page",
+      "name": "Landing page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        450,
+        0
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              },
+              {
+                "name": "Referrer-Policy",
+                "value": "no-referrer"
+              },
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "confirm-action",
+      "name": "Confirm action",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        250
+      ],
+      "parameters": {
+        "path": "handshake-confirm",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "consume-confirmation",
+      "name": "Consume confirmation",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        220,
+        250
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT handshake.contact_action('confirm',$1) AS result",
+        "options": {
+          "queryReplacement": "={{ [$json.body?.token ?? null] }}"
+        }
+      }
+    },
+    {
+      "id": "confirmation-result",
+      "name": "Confirmation result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        450,
+        250
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.result.changed ? 'Confirmed. You can unsubscribe from any lesson email.' : 'Invalid, expired, or already used link. No change made.' }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              },
+              {
+                "name": "Referrer-Policy",
+                "value": "no-referrer"
+              },
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "contact-unsubscribe",
+      "name": "Contact unsubscribe",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        500
+      ],
+      "parameters": {
+        "path": "handshake-unsubscribe",
+        "httpMethod": "GET",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "clear-contact",
+      "name": "Clear contact",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        220,
+        500
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT handshake.contact_action('unsubscribe',$1) AS result",
+        "options": {
+          "queryReplacement": "={{ [$json.query?.token ?? null] }}"
+        }
+      }
+    },
+    {
+      "id": "contact-stopped",
+      "name": "Contact stopped",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        450,
+        500
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Contact lesson updates stopped, or this link was already invalid.",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              },
+              {
+                "name": "Referrer-Policy",
+                "value": "no-referrer"
+              },
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "learner-unsubscribe",
+      "name": "Learner unsubscribe",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        750
+      ],
+      "parameters": {
+        "path": "handshake-learner-unsubscribe",
+        "httpMethod": "GET",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "delete-learner",
+      "name": "Delete learner",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        220,
+        750
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT handshake.contact_action('learner-unsubscribe',$1) AS result",
+        "options": {
+          "queryReplacement": "={{ [$json.query?.token ?? null] }}"
+        }
+      }
+    },
+    {
+      "id": "all-stopped",
+      "name": "All stopped",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        450,
+        750
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Recaps and contact lesson updates stopped, or this link was already invalid.",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              },
+              {
+                "name": "Referrer-Policy",
+                "value": "no-referrer"
+              },
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Confirmation landing": {
+      "main": [
+        [
+          {
+            "node": "Build landing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build landing": {
+      "main": [
+        [
+          {
+            "node": "Landing page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm action": {
+      "main": [
+        [
+          {
+            "node": "Consume confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consume confirmation": {
+      "main": [
+        [
+          {
+            "node": "Confirmation result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contact unsubscribe": {
+      "main": [
+        [
+          {
+            "node": "Clear contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear contact": {
+      "main": [
+        [
+          {
+            "node": "Contact stopped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Learner unsubscribe": {
+      "main": [
+        [
+          {
+            "node": "Delete learner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete learner": {
+      "main": [
+        [
+          {
+            "node": "All stopped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false,
+    "saveExecutionProgress": false,
+    "executionTimeout": 30
+  },
+  "active": false,
+  "pinData": {},
+  "tags": []
+}

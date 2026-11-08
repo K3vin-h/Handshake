@@ -6,11 +6,11 @@
 
 **Architecture:** Screens read `buildCurriculum(profile)`, `progress.ts` and `mistakes.ts` straight from localStorage. `LessonView` and `SceneView` are presentational. `LessonPlayer` (Group 1) feeds them real data, and `#/lesson-preview` feeds them fake data via `useFakeCheck`. Styling: Tailwind + shadcn/ui on top of the existing CSS tokens.
 
-**Tech Stack:** React 19, TypeScript, Vite, Tailwind CSS v4, shadcn/ui, Figma.
+**Tech Stack:** React 19, TypeScript, Vite, Tailwind CSS v4, shadcn/ui.
 
 **Prerequisite:** starter plan merged. **Roadmap:** `2026-11-07-roadmap.md`. Work milestone by milestone, and don't start M(n+1) features before the M(n) gate passes.
 
-**Owns:** Figma, `src/components/` (except `Camera.tsx` and `HandModel3D.tsx`, which are shared; ask Ryan first), `src/screens/Home.tsx`, `Progress.tsx`, `Complete.tsx`, `LessonPreview.tsx`, `src/styles.css`, `src/App.tsx`, `public/reference/`, and the Tailwind root config (`vite.config.ts`, `tsconfig.json`, `components.json`). `package.json` is shared: announce dependency changes and merge them early so the other worktrees rebase once.
+**Owns:** `frontend/src/components/` (except `Camera.tsx` and `HandModel3D.tsx`, which are shared; ask Ryan first), `frontend/src/screens/Home.tsx`, `Progress.tsx`, `Complete.tsx`, `LessonPreview.tsx`, `frontend/src/styles.css`, `frontend/src/App.tsx`, `frontend/public/reference/`, and the Tailwind root config (`vite.config.ts`, `tsconfig.json`, `components.json`). `package.json` is shared: announce dependency changes and merge them early so the other worktrees rebase once.
 
 ## Global Constraints
 - UI copy: "matches the reference", never "correct"; "Reference only, coming later" for letters outside `PRACTICEABLE`; label cached coach replies "cached".
@@ -24,14 +24,14 @@
 
 ## M1 · Your name (by H6)
 
-### Task 1: Figma (H0.5 → H3, human)
-- [ ] **H0.5:** Pick 1 font, 2 colours and 3 status colours (match / not yet / reference only). Save them as Figma styles. Check every text/background pair at ≥ 4.5:1 with a contrast checker.
+### Task 1: Design tokens and screens (H0.5 → H3, human; Figma is not used anymore)
+- [ ] **H0.5:** Pick 1 font, 2 colours and 3 status colours (match / not yet / reference only). Record them as CSS variables in `styles.css`. Check every text/background pair at ≥ 4.5:1 with a contrast checker.
 - [ ] **H1:** Grey-box wireframes of Onboarding, Home, Lesson, Complete and Progress. Agree them with the team at a standup.
-- [ ] **H3:** Polished screens from a shadcn/ui Figma kit. Set the share link to "anyone with the link can view", and paste the link into `docs/notes.md` → Sources.
+- [ ] **H3:** Polished screens from shadcn/ui components. Save real app screenshots under `docs/` and reference them in `docs/notes.md` → Sources.
 
 ### Task 2: Tailwind + shadcn/ui (H3)
 
-**Files:** Modify: `vite.config.ts`, `tsconfig.json`, `src/styles.css`, `package.json`. Create: `components.json`, `src/components/ui/*` (generated), `src/lib/utils.ts` (generated).
+**Files:** Modify: `vite.config.ts`, `tsconfig.json`, `frontend/src/styles.css`, `package.json`. Create: `components.json`, `frontend/src/components/ui/*` (generated), `frontend/src/lib/utils.ts` (generated).
 
 - [ ] **Step 1: Install Tailwind**
 ```bash
@@ -52,27 +52,27 @@ export default defineConfig({
 });
 ```
 `tsconfig.json` compilerOptions, add: `"paths": { "@/*": ["./src/*"] }` (no `baseUrl`: TypeScript 7 removed it, and `paths` resolves relative to the tsconfig).
-Top of `src/styles.css`, add: `@import "tailwindcss";`
-If `npm install` reports a peer-dependency conflict with Vite 8, stop: keep plain CSS with the Figma tokens in `:root` and skip Step 2. Note it in `docs/notes.md` → Decisions.
+Top of `frontend/src/styles.css`, add: `@import "tailwindcss";`
+If `npm install` reports a peer-dependency conflict with Vite 8, stop: keep plain CSS with the design tokens in `:root` and skip Step 2. Note it in `docs/notes.md` → Decisions.
 - [ ] **Step 2: shadcn**
 ```bash
 npx shadcn@latest init
 npx shadcn@latest add button card progress badge
 ```
-Expected: `components.json`, `src/components/ui/button.tsx` etc., and `src/lib/utils.ts` are created.
-- [ ] **Step 3: Tokens.** Replace the `:root` colours in `styles.css` with the Figma styles (keep the variable names `--bg --card --text --muted --primary --border`, and add `--ok --warn --ref`).
+Expected: `components.json`, `frontend/src/components/ui/button.tsx` etc., and `frontend/src/lib/utils.ts` are created.
+- [ ] **Step 3: Tokens.** Replace the `:root` colours in `styles.css` with the chosen design tokens (keep the variable names `--bg --card --text --muted --primary --border`, and add `--ok --warn --ref`).
 - [ ] **Step 4: Verify** `npm run build && npm run dev`. All existing screens still render.
-- [ ] **Step 5: Commit** `git add -A && git commit -m "feat(ui): Tailwind + shadcn + Figma tokens"`
+- [ ] **Step 5: Commit** `git add -A && git commit -m "feat(ui): Tailwind + shadcn + design tokens"`
 
 ### Task 3: LessonView + fake-data preview
 
-**Files:** Modify: `src/components/LessonView.tsx` (replace stub, same props). Create: `src/components/useFakeCheck.ts`. Modify: `src/screens/LessonPreview.tsx` (replace stub; the starter already routes `#/lesson-preview`).
+**Files:** Modify: `frontend/src/components/LessonView.tsx` (replace stub, same props). Create: `frontend/src/components/useFakeCheck.ts`. Modify: `frontend/src/screens/LessonPreview.tsx` (replace stub; the starter already routes `#/lesson-preview`).
 
 **Interfaces:**
 - Consumes: `LessonViewProps` (starter; unchanged).
 - Produces: polished `LessonView`; `useFakeCheck({ onMatch, onMiss }) → progress`.
 
-- [ ] **Step 1: `src/components/useFakeCheck.ts`.** It uses D/M rather than Space, because Space activates buttons for keyboard users.
+- [ ] **Step 1: `frontend/src/components/useFakeCheck.ts`.** It uses D/M rather than Space, because Space activates buttons for keyboard users.
 ```ts
 import { useEffect, useRef, useState } from "react";
 
@@ -99,7 +99,7 @@ export function useFakeCheck(handlers: { onMatch: () => void; onMiss: () => void
   return progress;
 }
 ```
-- [ ] **Step 2: `src/screens/LessonPreview.tsx`**
+- [ ] **Step 2: `frontend/src/screens/LessonPreview.tsx`**
 ```tsx
 import { useState } from "react";
 import { LessonView } from "../components/LessonView";
@@ -139,7 +139,7 @@ export function LessonPreview() {
   );
 }
 ```
-- [ ] **Step 3: Build the real `LessonView`** from the Figma Lesson screen, keeping `LessonViewProps` exactly. Required behaviour:
+- [ ] **Step 3: Build the real `LessonView`** from the canvas Lesson design, keeping `LessonViewProps` exactly. Required behaviour:
 ```tsx
 // Hold-progress ring (reuse in LessonView)
 function Ring({ value }: { value: number }) {
@@ -164,13 +164,13 @@ function Ring({ value }: { value: number }) {
 
 ### Task 4: Home trail
 
-**Files:** Modify: `src/screens/Home.tsx` (replace stub).
+**Files:** Modify: `frontend/src/screens/Home.tsx` (replace stub).
 
 **Interfaces:** Consumes `buildCurriculum`, `Lesson`, `Unit`; `loadProgress`, `isUnlocked`, `nextLesson`; `loadProfile`, `DEMO_PROFILE`, `fillNames`, `WELCOME`.
 
 Everyone sees the same trail from 1.1 (spec §2 rule 5): no placement, no skip-ahead links, no "jump to unit".
 
-- [ ] **Step 1: Implement (structure + data; style it from Figma)**
+- [ ] **Step 1: Implement (structure + data; style it from the canvas design)**
 ```tsx
 import { useMemo } from "react";
 import { buildCurriculum } from "../lib/curriculum";
@@ -220,13 +220,13 @@ export function Home() {
   );
 }
 ```
-Build the visual trail (nodes, connector line, current-node highlight) in CSS from the Figma design. Locked/done/coming-soon status must stay in the text, not only in colour.
+Build the visual trail (nodes, connector line, current-node highlight) in CSS from the canvas design. Locked/done/coming-soon status must stay in the text, not only in colour.
 - [ ] **Step 2: Verify** `npm run build`. With the demo profile: Unit 1 is unlocked at 1.1 and everything else is locked. Finish 1.1 in the player (or on the preview): 1.2 unlocks.
 - [ ] **Step 3: Commit** `git commit -am "feat(ui): Home trail with streak and XP"`
 
 ### Task 5: `celebrate()`: confetti + sound
 
-**Files:** Modify: `src/components/celebrate.ts` (replace stub), `src/styles.css`.
+**Files:** Modify: `frontend/src/components/celebrate.ts` (replace stub), `frontend/src/styles.css`.
 
 - [ ] **Step 1: Implement**
 ```ts
@@ -277,9 +277,9 @@ export function celebrate() {
 
 ### Task 6: Complete screen
 
-**Files:** Modify: `src/screens/Complete.tsx` (replace stub).
+**Files:** Modify: `frontend/src/screens/Complete.tsx` (replace stub).
 
-**Interfaces:** Consumes `buildCurriculum`, `flatLessons`, `loadProgress`, `nextLesson`, `loadProfile`, `DEMO_PROFILE`; Group 3's `refreshPracticeWords()` from `src/lib/profile.ts` (added in M2; until then, leave the `useEffect` line commented out).
+**Interfaces:** Consumes `buildCurriculum`, `flatLessons`, `loadProgress`, `nextLesson`, `loadProfile`, `DEMO_PROFILE`; Group 3's `refreshPracticeWords()` from `frontend/src/lib/profile.ts` (added in M2; until then, leave the `useEffect` line commented out).
 
 - [ ] **Step 1: Implement**
 ```tsx
@@ -324,7 +324,7 @@ export function Complete({ lessonId }: { lessonId: string }) {
 
 ### Task 7: Progress screen with weak fingers
 
-**Files:** Modify: `src/screens/Progress.tsx` (replace stub).
+**Files:** Modify: `frontend/src/screens/Progress.tsx` (replace stub).
 
 **Interfaces:** Consumes `loadProgress`, `weakItems`; `loadMistakes`, `weakFingers` (Group 1, real since M1).
 
@@ -373,12 +373,12 @@ export function ProgressScreen() {
 
 ### Task 8: Reference images (H12 at the latest)
 
-**Files:** Create: `public/reference/<LETTER>.png` for each letter in `PRACTICEABLE`, plus `public/reference/CREDITS.md`.
+**Files:** Create: `frontend/public/reference/<LETTER>.png` for each letter in `PRACTICEABLE`, plus `frontend/public/reference/CREDITS.md`.
 
-- [ ] **Step 1:** Draw your own images, or use a licensed source. Save them as `public/reference/A.png` … `Y.png` (square, ≥ 512 px, left-hand versions not needed: the 3D view mirrors).
-- [ ] **Step 2:** Write `public/reference/CREDITS.md` with the source, licence and link (or "drawn by the team"). Copy the credit into the Devpost notes.
+- [ ] **Step 1:** Draw your own images, or use a licensed source. Save them as `frontend/public/reference/A.png` … `Y.png` (square, ≥ 512 px, left-hand versions not needed: the 3D view mirrors).
+- [ ] **Step 2:** Write `frontend/public/reference/CREDITS.md` with the source, licence and link (or "drawn by the team"). Copy the credit into the Devpost notes.
 - [ ] **Step 3: Verify.** On `#/lesson-preview`, the `<img>` from Task 3 shows for Y and A, and stays hidden for R and N (no image, reference only).
-- [ ] **Step 4: Commit** `git add public/reference && git commit -m "assets: credited reference images"`
+- [ ] **Step 4: Commit** `git add frontend/public/reference && git commit -m "assets: credited reference images"`
 
 ### Task 9: M2 wiring
 - [ ] **Step 1:** In `Complete.tsx`, enable the practice-words refresh once Group 3 has merged `refreshPracticeWords`. Add `useEffect` to the React import and `import { refreshPracticeWords } from "../lib/profile";`, then uncomment `useEffect(() => { refreshPracticeWords(); }, []);`.
@@ -398,7 +398,7 @@ export function ProgressScreen() {
 
 ### Task 10: Sign steps on Home + accessibility pass (H14)
 
-**Files:** Modify: `src/screens/Home.tsx`, `src/components/LessonView.tsx`, `src/styles.css`.
+**Files:** Modify: `frontend/src/screens/Home.tsx`, `frontend/src/components/LessonView.tsx`, `frontend/src/styles.css`.
 
 - [ ] **Step 1: Home badges.** Next to each lesson in Units 3–4, add a text badge showing `l.grading`: "auto-checked" (auto), "assisted" (assisted) or "self-check" (self).
 - [ ] **Step 2: Sign view.** When `onSelfCheck` is set, show the "I signed it" button as the primary action, with the status text explaining the sign. The status for a sign step comes in as `status` (e.g. "Good handshape. Now move your hand to your forehead"), so make it large and prominent.
@@ -422,15 +422,15 @@ export function ProgressScreen() {
 
 ### Task 11: SceneView
 
-**Files:** Modify: `src/components/SceneView.tsx` (replace stub, same props).
+**Files:** Modify: `frontend/src/components/SceneView.tsx` (replace stub, same props).
 
-- [ ] **Step 1:** Build the chat layout from Figma, keeping `SceneViewProps`:
+- [ ] **Step 1:** Build the chat layout from the canvas design, keeping `SceneViewProps`:
   - Past turns as bubbles: theirs on the left (gloss in caps + English caption), yours on the right (English).
   - The current turn: their bubble, then your reply as a row of token chips. Chips before `tokenIndex` are marked done ✓ (with text), and the current chip is highlighted.
   - `camera` below the chips, `prompt` in an `aria-live="polite"` region, and an "I signed it" button when `onSelfCheck` is set.
   - A reference clip slot under their bubble (empty box with "clip coming later" if there's no clip).
 - [ ] **Step 2: Verify.** Once Group 1 has merged scene 4.1, play it end to end on the demo laptop.
-- [ ] **Step 3: Figma update (H16).** Update Figma to match the shipped app; both design prizes judge the link.
+- [ ] **Step 3: Screenshots (H16).** Capture real screenshots of the shipped app for the design prizes. [NEEDS: confirm with organizers whether this prize is still eligible without a Figma file]
 - [ ] **Step 4: Commit** `git commit -am "feat(ui): SceneView chat layout"`
 
 ### ✅ Gate M4 (H16)
@@ -443,5 +443,5 @@ export function ProgressScreen() {
 
 ### Task 12: Polish and accessibility notes
 - [ ] **H18:** Polish only: spacing, empty states (no profile, no progress, no templates), and no dead buttons. Remove the `Demo`/`Record`/`Curriculum` nav links from the visible nav before the demo; the routes still work by URL.
-- [ ] **H19:** Write the accessibility notes for the Most Accessible Design opt-in in `docs/notes.md`. List only what shipped (use the Task 10 checklist), plus the Figma link.
+- [ ] **H19:** Write the accessibility notes for the Most Accessible Design opt-in in `docs/notes.md`. List only what shipped (use the Task 10 checklist), plus real app screenshots. [NEEDS: confirm with organizers whether this prize is still eligible without a Figma file]
 - [ ] **H23:** Join the demo run-throughs and fix only what breaks.
