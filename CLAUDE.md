@@ -140,6 +140,8 @@ POST /api/coach { target, feedback: FingerFeedback[], repeat: number, snapshot?:
              repeat 1: one short cue · 2: a different cue or comparison · 3+: UI also shows reference beside live hand
 POST /api/words { knownLetters: string[], weakLetters: string[] }
              → { words: string[], cached?: boolean }    // words built only from knownLetters, weak letters first
+POST /api/praise { kind: "letter"|"sign"|"lesson", target, streak?: 0..50, tries?: 1..20, recent?: string[] /* ≤5 lines shown */ }
+             → { message: string, cached?: boolean }  // only AFTER the app confirmed a match; canned pool = cached; 400 on any other field
 ```
 `snapshot` is accepted only if the H4 snapshot test passes (≥ 8/10 letter named, ≤ 1/10 contradicts landmarks); otherwise the field is ignored server-side and dropped client-side.
 
@@ -229,6 +231,7 @@ Problem Research · Technical Implementation · Design (UI/UX, accessibility) ·
   - n8n receives email addresses only (names are not sent), and only after the user ticks the consent checkbox on #/stats, and can be stopped there. Names and emails never go to Gemini, Maritime or Tiger Data.
   - The Devpost must say both, plus the known risk: anyone holding a learner id could trigger emails to that learner's saved contact.
 - Gemini receives letters and error codes only. Never names, never video.
+- Praise (`/api/praise`) receives only a letter/sign/lesson id and small numbers (streak, tries); `recent` reaches the prompt only if the server issued that line. It never judges: it is asked after the match is confirmed. See docs/gemini-usage.md.
 - A webcam snapshot goes to Gemini ONLY if it passed the H4 test (names the intended letter in 8/10, contradicts the landmarks at most 1/10). If kept, the Devpost says a photo is sent to Google's API.
 - Hand snapshots (e.g. the "download card") stay in the browser or are cut.
 
