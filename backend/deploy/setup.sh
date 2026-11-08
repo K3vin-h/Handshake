@@ -77,14 +77,16 @@ NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=yes
-ExecStart=/usr/bin/env HOST=127.0.0.1 TRUST_PROXY_HOPS=1 PORT=8787 SNAPSHOT_ENABLED=0 CACHE_EXPORT_ENABLED=0 /usr/bin/node index.mjs
+ExecStart=/usr/bin/env HOST=127.0.0.1 TRUST_PROXY_HOPS=1 PORT=8787 COOKIE_SECURE=1 SNAPSHOT_ENABLED=0 CACHE_EXPORT_ENABLED=0 /usr/bin/node index.mjs
 Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
 UNIT
 
-printf '%s {\n  encode gzip\n  reverse_proxy 127.0.0.1:8787\n}\n' "$DOMAIN" > /etc/caddy/Caddyfile
+# header_up keeps the X-Forwarded-Host that the Vercel /api rewrite sets (Caddy would replace it with the API host);
+# the account Origin check (backend/session.mjs sameOrigin) compares against it. Nothing else reads it.
+printf '%s {\n  encode gzip\n  reverse_proxy 127.0.0.1:8787 {\n    header_up X-Forwarded-Host {header.X-Forwarded-Host}\n  }\n}\n' "$DOMAIN" > /etc/caddy/Caddyfile
 
 # Caddy runs as its own user and must be able to read this non-secret config.
 chmod 644 /etc/caddy/Caddyfile /etc/systemd/system/handshake.service

@@ -66,7 +66,7 @@ Handshake/
 Hosting notes:
 - The Vultr API host has no purchased domain: use any hostname that resolves to the VM IP with automatic HTTPS from Caddy, e.g. a free `<ip-with-dashes>.sslip.io` name. [NEEDS: verify Let's Encrypt works for the chosen hostname]
 - Rate limiting is per client IP; browsers call the API directly, so the production proxy chain is Caddy → Express and the Express `trust proxy` hop count is 1 (env `TRUST_PROXY_HOPS=1`). [NEEDS: verify with a real request that req.ip is the visitor's IP]
-- New backend env: `HOST` (bind address; `127.0.0.1` on the VM behind Caddy), `TRUST_PROXY_HOPS` (1 in production) and `ALLOWED_ORIGIN` (CORS allow-list; the Vercel URL). Frontend env: `VITE_API_BASE_URL` (public). n8n Cloud and Maritime hold their own secrets.
+- New backend env: `HOST` (bind address; `127.0.0.1` on the VM behind Caddy), `TRUST_PROXY_HOPS` (1 in production; accounts' Origin check needs it), `ALLOWED_ORIGIN` (CORS allow-list; the Vercel URL) and `COOKIE_SECURE` (1 on the VM). Account calls go through the Vercel `/api` rewrite in `frontend/vercel.json`, whose destination host is a manual step. Frontend env: `VITE_API_BASE_URL` (public). n8n Cloud and Maritime hold their own secrets.
 - `backend/schema.sql` uses TimescaleDB `create_hypertable`, so the database is a Tiger Data Cloud service (TimescaleDB), reached from the Vultr API through `DATABASE_URL` with `sslmode=require`.
 
 ## Ownership (only edit your own files; ask before touching others)

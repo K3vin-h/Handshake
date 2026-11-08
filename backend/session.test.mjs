@@ -71,3 +71,29 @@ test("requireUser sets req.user for a known session", async () => {
   assert.equal(nexted, true);
   assert.deepEqual(req.user, { id: 7 });
 });
+
+// Behind the Vercel rewrite the API sees Host = API host and X-Forwarded-Host = the Vercel host.
+const proxied = (trust, headers) => ({ method: "POST", app: { get: (k) => (k === "trust proxy" ? trust : undefined) }, headers });
+test("sameOrigin ignores X-Forwarded-Host when trust proxy is off", async () => {
+  for (const trust of [undefined, false, 0]) {
+    const { res, nexted } = await run(sameOrigin, proxied(trust, { origin: "https://evil.com", host: "api.example", "x-forwarded-host": "evil.com" }));
+    assert.equal(nexted, false, String(trust));
+    assert.equal(res.code, 403);
+  }
+  // Host still decides, exactly as before
+  assert.equal((await run(sameOrigin, proxied(false, { origin: "https://api.example", host: "api.example", "x-forwarded-host": "evil.com" }))).nexted, true);
+});
+test("sameOrigin uses the first X-Forwarded-Host when trust proxy is on", async () => {
+  assert.equal((await run(sameOrigin, proxied(1, { origin: "https://app.vercel.app", host: "api.example", "x-forwarded-host": "app.vercel.app" }))).nexted, true);
+  assert.equal((await run(sameOrigin, proxied(1, { origin: "https://app.vercel.app", host: "api.example", "x-forwarded-host": "app.vercel.app, evil.com" }))).nexted, true);
+  assert.equal((await run(sameOrigin, proxied(1, { origin: "https://evil.com", host: "api.example", "x-forwarded-host": "app.vercel.app, evil.com" }))).nexted, false);
+  // no forwarded host: Host decides
+  assert.equal((await run(sameOrigin, proxied(1, { origin: "https://api.example", host: "api.example" }))).nexted, true);
+});
+test("sameOrigin 403 when trust proxy is on but Origin matches neither", async () => {
+  const { res, nexted } = await run(sameOrigin, proxied(1, { origin: "https://evil.com", host: "api.example", "x-forwarded-host": "app.vercel.app" }));
+  assert.equal(nexted, false);
+  assert.equal(res.code, 403);
+  // once a forwarded host is present, Host is not a second chance
+  assert.equal((await run(sameOrigin, proxied(1, { origin: "https://api.example", host: "api.example", "x-forwarded-host": "app.vercel.app" }))).nexted, false);
+});

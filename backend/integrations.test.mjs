@@ -95,3 +95,14 @@ test("TRUST_PROXY_HOPS sets Express trust proxy; a malformed value fails at star
   assert.equal(settings({}), undefined);
   assert.throws(() => settings({ TRUST_PROXY_HOPS: "x" }), /positive integer/);
 });
+
+test("account POST behind the Vercel rewrite: X-Forwarded-Host counts only with TRUST_PROXY_HOPS", async () => {
+  const logout = async (env) => {
+    const s = await serve((app) => registerIntegrations(app, env));
+    try {
+      return (await s.request("POST", "/api/auth/logout", { headers: { Origin: "https://app.vercel.app", "X-Forwarded-Host": "app.vercel.app" } })).status;
+    } finally { await s.close(); }
+  };
+  assert.equal(await logout({ TRUST_PROXY_HOPS: "1" }), 204);
+  assert.equal(await logout({}), 403);
+});

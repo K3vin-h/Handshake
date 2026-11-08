@@ -18,7 +18,10 @@ function setUser(u: User | null) {
   listeners.forEach((f) => f(u));
 }
 
-/** Never throws. Error code comes from the server's `error` field, "network" when fetch throws. */
+/** Never throws. Error code comes from the server's `error` field, "network" when fetch throws.
+ *  Paths stay relative (never apiUrl/VITE_API_BASE_URL): account calls must be same-origin, via the Vite
+ *  proxy locally and the frontend/vercel.json /api rewrite in production, so the session cookie and the
+ *  backend's Origin check work. */
 async function call(method: string, path: string, body?: unknown): Promise<Result<{ data: any }>> {
   try {
     const res = await fetch(path, {

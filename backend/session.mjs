@@ -20,13 +20,16 @@ export const cookieHeader = (token, { secure = false, maxAgeSec = SESSION_DAYS *
 export const clearCookie = (secure) => cookieHeader("", { secure, maxAgeSec: 0 });
 
 // CSRF: a browser always sends Origin on cross-site POSTs. SPA and API share one origin, so hosts must match.
+// Behind the Vercel /api rewrite, Host is the API host and X-Forwarded-Host is the site the browser saw.
+// That header counts only when Express `trust proxy` is on (TRUST_PROXY_HOPS); only its first value is used.
 export function sameOrigin(req, res, next) {
   if (req.method === "GET" || req.method === "HEAD") return next();
   const origin = req.headers.origin;
   if (origin) {
     let host = null;
     try { host = new URL(origin).host; } catch { /* not a URL */ }
-    if (host !== req.headers.host) return res.status(403).json({ error: "forbidden" });
+    const fwd = req.app?.get("trust proxy") ? String(req.headers["x-forwarded-host"] ?? "").split(",")[0].trim() : "";
+    if (host !== (fwd || req.headers.host)) return res.status(403).json({ error: "forbidden" });
   }
   next();
 }
