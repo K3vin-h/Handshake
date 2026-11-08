@@ -119,6 +119,9 @@ New `.env` keys: `GOOGLE_CLIENT_ID`, `RESEND_API_KEY`, `RESEND_FROM`, `APP_ORIGI
 - Signup reveals whether an email is taken (hiding it breaks sign-up usability); login and reset do not.
 - Google "Testing" mode silently blocks anyone not on the list: check it before the demo.
 - Progress sync is last-write-wins after the merge; two devices editing within 2 seconds can drop one device's most recent attempt.
+- The per-email login limit lets anyone lock a victim out of password login for 10 minutes.
+- Shared devices: logout leaves the browser's working copy, so a second account that signs in on the same browser merges the first one's progress into itself.
+- Deleting an account does not clear the learner id, camera preference or the n8n opt-in stored in the browser, and an n8n subscription keeps running until it is stopped on #/stats.
 
 ## Testing
 Server: `node --test` with fake database objects, following `server/routes/attempts.test.mjs` and `server/testutil.mjs`. Client: pure `src/lib/merge.test.ts`, `src/lib/auth.test.ts`. Screens: manual checklist in the plan (Google cannot be automated). Run `npm run build`, `node src/styles.contrast.mjs` and `npm test` before every merge. Note: the two slowest tests (`server/complete.test.mjs`, `server/profile.test.mjs`) start a Vite server and can time out on a loaded machine; rerun them alone.

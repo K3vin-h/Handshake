@@ -106,8 +106,8 @@ stats change. Live grading still requires the separate human letter gate.
 Optional email/password and Google sign-in, stored in the same database.
 `server/schema.accounts.sql` adds four tables: `users` (email, password hash,
 Google id), `sessions` (hashed session token, expiry), `password_resets`
-(hashed one-time token, expiry) and `user_state` (one JSON blob of progress per
-user). `npm run db:migrate` applies `schema.sql` and `schema.accounts.sql`
+(hashed one-time token, expiry) and `user_state` (one row per
+user, holding the profile and the progress as JSON). `npm run db:migrate` applies `schema.sql` and `schema.accounts.sql`
 together in one transaction.
 
 Routes: `/api/auth/*` (config, signup, login, logout, Google, reset) and
