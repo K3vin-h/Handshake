@@ -1,4 +1,4 @@
-"""Checks that features.py and src/cv/features.ts produce identical numbers.
+"""Checks that features.py and frontend/src/cv/features.ts produce identical numbers.
 Run from the repo root:  python training/test_parity.py
 (needs `npx tsx`, which npm downloads on first use)
 """
@@ -20,7 +20,7 @@ for i in range(20):
     cases.append({"landmarks": lms, "handedness": "Left" if i % 2 else "Right"})
 
 script = """
-import { extractFeatures } from '../src/cv/features.ts';
+import { extractFeatures } from '../frontend/src/cv/features.ts';
 import { readFileSync } from 'node:fs';
 const cases = JSON.parse(readFileSync(0, 'utf8'));
 console.log(JSON.stringify(cases.map(c => extractFeatures({

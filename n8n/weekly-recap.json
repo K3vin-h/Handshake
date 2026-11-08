@@ -1,0 +1,331 @@
+{
+  "name": "Handshake weekly operator-only recap",
+  "active": false,
+  "nodes": [
+    {
+      "id": "Monday-UTC",
+      "name": "Monday UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 17 * * 1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "Manual-operator-test",
+      "name": "Manual operator test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {},
+      "disabled": true
+    },
+    {
+      "id": "Claim-recaps",
+      "name": "Claim recaps",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select handshake.recap_claim($1) as result",
+        "options": {
+          "queryReplacement": "={{ [$vars.HANDSHAKE_RECAP_TEST_EMAIL || \"\"] }}"
+        }
+      }
+    },
+    {
+      "id": "Fetch-stats",
+      "name": "Fetch stats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "url": "={{ $vars.HANDSHAKE_APP_ORIGIN + \"/api/stats/\" + encodeURIComponent($json.result.learnerId) }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Weighted-stats",
+      "name": "Weighted stats",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        960,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select handshake.recap_stats($1::jsonb) as result",
+        "options": {
+          "queryReplacement": "={{ [JSON.stringify($json)] }}"
+        }
+      }
+    },
+    {
+      "id": "Recheck-recap",
+      "name": "Recheck recap",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1200,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select handshake.recap_recheck($1,$2::uuid,$3) as result",
+        "options": {
+          "queryReplacement": "={{ [$('Claim recaps').item.json.result.learnerId, $('Claim recaps').item.json.result.lease, $vars.HANDSHAKE_RECAP_TEST_EMAIL || ''] }}"
+        }
+      }
+    },
+    {
+      "id": "Learner-still-subscribed",
+      "name": "Learner still subscribed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        240
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "send",
+              "leftValue": "={{ $json.result.send === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "Send-recap",
+      "name": "Send recap",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        240
+      ],
+      "parameters": {
+        "fromEmail": "={{ $vars.HANDSHAKE_FROM_EMAIL }}",
+        "toEmail": "={{ $json.result.email }}",
+        "subject": "Handshake: your last 14 days",
+        "emailFormat": "text",
+        "text": "={{ \"Your last 14 days of ASL practice: \" + $(\"Weighted stats\").item.json.result.attempts + \" attempts. \" + ($(\"Weighted stats\").item.json.result.share === null ? \"No attempts recorded.\" : \"Reference match share: \" + $(\"Weighted stats\").item.json.result.share + \"%.\") + \"\\n\\nStop all email and delete this subscription: \" + $vars.HANDSHAKE_LINK_ORIGIN + \"/webhook/handshake-learner-unsubscribe?token=\" + encodeURIComponent($json.result.unsubscribeToken) }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "Recap-sent",
+      "name": "Recap sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        240
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select handshake.recap_finish($1,$2::uuid,true)",
+        "options": {
+          "queryReplacement": "={{ [$('Claim recaps').item.json.result.learnerId, $('Claim recaps').item.json.result.lease] }}"
+        }
+      }
+    },
+    {
+      "id": "Recap-failed",
+      "name": "Recap failed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        720,
+        240
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select handshake.recap_finish($1,$2::uuid,false)",
+        "options": {
+          "queryReplacement": "={{ [$('Claim recaps').item.json.result.learnerId, $('Claim recaps').item.json.result.lease] }}"
+        }
+      }
+    },
+    {
+      "id": "Report-recap-SMTP-failure",
+      "name": "Report recap SMTP failure",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        960,
+        240
+      ],
+      "parameters": {
+        "errorType": "errorMessage",
+        "errorMessage": "Recap delivery failed; lease released, delivery unconfirmed."
+      }
+    }
+  ],
+  "connections": {
+    "Monday UTC": {
+      "main": [
+        [
+          {
+            "node": "Claim recaps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual operator test": {
+      "main": [
+        [
+          {
+            "node": "Claim recaps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim recaps": {
+      "main": [
+        [
+          {
+            "node": "Fetch stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch stats": {
+      "main": [
+        [
+          {
+            "node": "Weighted stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weighted stats": {
+      "main": [
+        [
+          {
+            "node": "Recheck recap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recheck recap": {
+      "main": [
+        [
+          {
+            "node": "Learner still subscribed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Learner still subscribed": {
+      "main": [
+        [
+          {
+            "node": "Send recap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send recap": {
+      "main": [
+        [
+          {
+            "node": "Recap sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Recap failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recap failed": {
+      "main": [
+        [
+          {
+            "node": "Report recap SMTP failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC",
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false,
+    "saveExecutionProgress": false,
+    "executionTimeout": 60
+  },
+  "pinData": {}
+}

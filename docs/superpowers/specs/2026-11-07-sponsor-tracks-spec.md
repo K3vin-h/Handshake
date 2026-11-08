@@ -8,11 +8,11 @@ each through a real user-facing use, not a logo:
 
 | Track | What it does in Handshake |
 |---|---|
-| Vultr + GoDaddy Registry | The app runs on a Vultr VM at a GoDaddy Registry domain over HTTPS (the webcam needs HTTPS off localhost). |
-| Tiger Data | Every practice attempt goes into a TimescaleDB hypertable. `time_bucket` gives the daily accuracy chart and weakest letters. |
+| Vercel (frontend) + Vultr (backend) | The React app is a static build on Vercel; the Express API runs on a Vultr VM over HTTPS (Caddy); the database is Tiger Data Cloud. The browser calls the Vultr HTTPS API directly (`VITE_API_BASE_URL`; CORS limited to `ALLOWED_ORIGIN`; no Vercel rewrite, which would collapse per-IP rate limits into Vercel's IP); the webcam needs HTTPS off localhost, which Vercel provides. GoDaddy and a purchased domain are not used. |
+| Tiger Data | Every practice attempt goes into a TimescaleDB hypertable (hosted on Tiger Data Cloud). `time_bucket` gives the daily accuracy chart and weakest letters. |
 | Databricks | The recognizer is trained as a Databricks job with MLflow tracking (three MLP sizes compared, per-letter recall) and exports `model.json`. |
 | Maritime | A "practice planner" agent on Maritime (Gemini function calling) reads your Tiger Data stats and plans today's session. |
-| n8n | (a) Lesson-complete webhook → message to the person you're learning for. (b) Weekly recap email to the learner. |
+| n8n (n8n Cloud, Gmail SMTP credential configured inside n8n Cloud) | (a) Lesson-complete webhook → message to the person you're learning for. (b) Weekly recap email to the learner. |
 | Entire | The repo and Claude Code sessions are pushed to Entire (Sessions, Graph, Brain). Setup and write-up only, no app code. |
 
 Every integration stays **off** until its env vars are set. Without them, the app behaves exactly as today, like
@@ -25,14 +25,13 @@ Every track in the HackCamp list, with its status. "Opt in" means ticking it in 
 | Track                                | Status                         | Evidence for Devpost                                                                                             |
 | ------------------------------------ | ------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
 | nwChoice                             | Automatic                      | none                                                                                                             |
-| Most Accessible Design (beginner)    | Already targeted               | Figma link; accessibility notes that match what shipped (keyboard-only flow, 4.5:1 contrast, `aria-live` status, chart has a text-table equivalent, no audio needed) |
+| Most Accessible Design (beginner)    | Already targeted               | real app screenshots + [NEEDS: confirm with organizers whether this prize is still eligible without a Figma file]; accessibility notes that match what shipped (keyboard-only flow, 4.5:1 contrast, `aria-live` status, chart has a text-table equivalent, no audio needed) |
 | Best Problem-Solution Fit (beginner) | Already targeted               | problem statement + solution description                                                                         |
-| Best Design                          | Already targeted               | Figma link                                                                                                       |
+| Best Design                          | Already targeted               | real app screenshots; [NEEDS: confirm with organizers whether this prize is still eligible without a Figma file] |
 | Community Impact                     | Already targeted               | impact statement (Deaf and hard-of-hearing communities); the n8n "notify the person" flow is the concrete impact |
 | Best Use of Gemini API               | Already targeted, strengthened | Gemini coach/words plus the Maritime planner agent (Gemini function calling)                                |
 | Best Use of Tiger Data               | **New: U1, U2, U8**            | schema.sql + the accuracy chart                                                                                  |
-| Best Use of Vultr                    | **New: U9**                    | live URL on the Vultr VM                                                                                         |
-| Best Domain from GoDaddy Registry    | **New: U9**                    | the eligible domain, same URL                                                                                    |
+| Best Use of Vultr                    | **New: U9**                    | live HTTPS API on the Vultr VM; phone camera via the Vercel URL                                                                                         |
 | Best Use of Databricks               | **New: U10**                   | MLflow run screenshot + `report.txt`                                                                             |
 | Best Agent on Maritime               | **New: U6**                    | agent deployed on Maritime + a short demo clip of the planner card                                               |
 | Best use of n8n                      | **New: U3**                    | workflow screenshots (notify + weekly recap)                                                                     |
@@ -52,7 +51,7 @@ Out-of-scope rows can be pulled in later as their own spec. Don't claim a track 
 - Moving `/api/coach` into the agent (it's on the latency-critical demo path).
 - Continuous aggregates, retention policies and dashboards beyond one chart.
 - Storing emails or names in our own database.
-- Changing the CLAUDE.md interfaces of `src/cv` or the existing two Gemini endpoints (`/api/coach`, `/api/words`).
+- Changing the CLAUDE.md interfaces of `frontend/src/cv` or the existing two Gemini endpoints (`/api/coach`, `/api/words`).
 
 ## Users & Flows
 
@@ -77,27 +76,27 @@ Out-of-scope rows can be pulled in later as their own spec. Don't claim a track 
    (≤3), no words, a fixed tip, `source: "local"`. The card looks the same, and a small "planned by: agent | local" label is shown for honesty.
 4. **Notify (n8n).** On `#/stats` → "Notifications" form: optional email for the person you're learning for, optional
 
-   own email for the weekly recap, and a **required** consent checkbox ("Send my first name, their first name and these emails to
+   own email for the weekly recap, and a **required** consent checkbox ("Send these email addresses to
     our n8n automation"). Submit → `POST /api/subscribe { action: "subscribe", … }` → n8n **upserts** the row by `learnerId`
     (resubmitting replaces it, never duplicates) → on success the client stores `notify.v1 = true` locally.
    - "Stop notifications" button → `POST /api/subscribe { action: "unsubscribe", learnerId }` → n8n deletes the row → the client
    clears `notify.v1`.
-   - Lesson completed → `reportLessonComplete` → **only if** `notify.v1` **is true** → `POST /api/lesson-complete { learnerId, lessonId, lessonTitle, xp }` →
-   n8n looks up the learner. No row → drop. Throttle: at most 1 email per learner per 10 min → email: "Ryan just finished 'Spell LILY' on Handshake."
+   - Lesson completed → `reportLessonComplete` → **only if** `notify.v1` **is true** → `POST /api/lesson-complete { learnerId, lessonId, xp }` →
+   n8n looks up the learner. No row → drop. Throttle: at most 1 email per learner per 10 min → email: "Someone just finished a lesson on Handshake" (title derived in n8n from `lessonId`; no names are sent)
    - Weekly cron in n8n → for each row with a learner email → `GET /api/stats/<learnerId>` → recap email.
    - n8n unset → the form shows "Notifications aren't set up on this server" and is disabled (from `GET /api/features`).
-5. **Deploy.** `https://<domain>` serves the built SPA and `/api/`* from one Express process behind Caddy (auto TLS).
+5. **Deploy.** The Vercel URL serves the built SPA (`frontend/`); the frontend build reads `VITE_API_BASE_URL` and calls the Vultr API origin directly, and the API enables CORS only for `ALLOWED_ORIGIN`; the API (`backend/`) runs as one Express process on the VM behind Caddy (auto TLS on a hostname that resolves to the VM IP, e.g. `<ip-with-dashes>.sslip.io`). [NEEDS: verify Let's Encrypt works for the chosen hostname]
 6. **Training (Databricks).** A teammate uploads `kaggle_features.npz` and `recorded/*.json` to a UC Volume and runs the
 
    job. MLflow logs the params, test accuracy, per-letter recall and `report.txt`, and `model.json` is written to the volume →
-    `databricks fs cp` → `public/model/model.json`.
+    `databricks fs cp` → `frontend/public/model/model.json`.
 
 ## Design
 
-**Chosen:** each integration is a separate server module that exports `register(app, deps)`. `server/index.mjs`
+**Chosen:** each integration is a separate server module that exports `register(app, deps)`. `backend/index.mjs`
 creates the app (group-3's `createApp`), then calls each `register`. A module gets its client (pg pool, fetch target)
 from env in `index.mjs` and receives `null` when unconfigured. Tests build a bare Express app, register one
-module with fakes, and hit it with `fetch` (the same pattern as `server/app.test.mjs`). The agent is a separate
+module with fakes, and hit it with `fetch` (the same pattern as `backend/app.test.mjs`). The agent is a separate
 Node package in `agent/` because Maritime deploys it on its own.
 
 Rejected: adding every option to `createApp(...)` (it collides with group-3's file and grows one god-function);
@@ -107,16 +106,16 @@ calling n8n or the agent straight from the browser (it leaks secrets and has COR
 
 | Unit | Purpose | Interface | Depends on |
 |---|---|---|---|
-| U0 `server/limit.mjs`, `server/validate.mjs` (shared regexes) | Fixed-window per-IP rate limit, no dependency | `rateLimit({ windowMs, max }) → express middleware` (429 `{error:"rate_limited"}`) | — |
-| U1 `server/db.mjs` + `server/schema.sql` + `server/migrate.mjs` | Tiger Data access | `createDb(url) → { insertAttempts(learnerId, rows), stats(learnerId), close() }` | `pg` |
-| U2 `server/routes/attempts.mjs` | Attempt ingest + stats | `register(app, { db })` | U0, U1 |
-| U3 `server/routes/notify.mjs` | n8n forwarding | `register(app, { n8n: { subscribeUrl, eventUrl, secret } \| null, fetch })` | U0 |
-| U4 `server/routes/plan.mjs` | Agent proxy + local fallback | `register(app, { agent: { url, token } \| null, fetch })` | U0 |
-| U5 `GET /api/features` (inline in `server/index.mjs`) | What's enabled | `→ { stats, notify, agent }` (booleans) | — |
+| U0 `backend/limit.mjs`, `backend/validate.mjs` (shared regexes) | Fixed-window per-IP rate limit, no dependency | `rateLimit({ windowMs, max }) → express middleware` (429 `{error:"rate_limited"}`) | — |
+| U1 `backend/db.mjs` + `backend/schema.sql` + `backend/migrate.mjs` | Tiger Data access | `createDb(url) → { insertAttempts(learnerId, rows), stats(learnerId), close() }` | `pg` |
+| U2 `backend/routes/attempts.mjs` | Attempt ingest + stats | `register(app, { db })` | U0, U1 |
+| U3 `backend/routes/notify.mjs` | n8n forwarding | `register(app, { n8n: { subscribeUrl, eventUrl, secret } \| null, fetch })` | U0 |
+| U4 `backend/routes/plan.mjs` | Agent proxy + local fallback | `register(app, { agent: { url, token } \| null, fetch })` | U0 |
+| U5 `GET /api/features` (inline in `backend/index.mjs`) | What's enabled | `→ { stats, notify, agent }` (booleans) | — |
 | U6 `agent/` | Maritime planner agent | `POST /plan` (Bearer token), body `{ learnerId, candidates, knownLetters }` (already validated by our server) → `{ lessonId, focus, words, tip }`. Tools: `get_stats()` → `GET {APP_URL}/api/stats/<learnerId>`; `get_practice_words({ focus: string[] })` → `POST {APP_URL}/api/words { knownLetters, weakLetters: focus }`. `learnerId`/`knownLetters` stay in the closure; the model never supplies them. Max 4 model turns. | `@google/genai` (own `agent/package.json`), deployed app URL |
-| U7 `src/lib/learner.ts`, `src/lib/track.ts` (`reportAttempt`, `reportLessonComplete`), `src/lib/planInput.ts` (`buildPlanRequest`), `src/lib/api.ts` additions | Client side | see Data & API | progress.ts |
-| U8 `src/screens/StatsPage.tsx`, `src/components/AccuracyChart.tsx`, `src/components/NotifySettings.tsx`, `src/components/PlanCard.tsx` | UI | route `#/stats` | U7 |
-| U9 `deploy/` | Vultr + Caddy + systemd | `deploy/setup.sh <domain> <repo-url>` | — |
+| U7 `frontend/src/lib/learner.ts`, `frontend/src/lib/track.ts` (`reportAttempt`, `reportLessonComplete`), `frontend/src/lib/planInput.ts` (`buildPlanRequest`), `frontend/src/lib/api.ts` additions | Client side | see Data & API | progress.ts |
+| U8 `frontend/src/screens/StatsPage.tsx`, `frontend/src/components/AccuracyChart.tsx`, `frontend/src/components/NotifySettings.tsx`, `frontend/src/components/PlanCard.tsx` | UI | route `#/stats` | U7 |
+| U9 `backend/deploy/` | Vultr + Caddy + systemd | `backend/deploy/setup.sh <api-hostname> <repo-url>` | — |
 | U10 `training/databricks/train_job.py` | Databricks + MLflow training: a sweep over 3 `--hidden` configs, one MLflow run each (params, holdout accuracy, `report.txt`), the best exported as `model.json` | Databricks notebook source; paths via widgets | `train.py` refactored to `main(argv=None) → {"accuracy": float, "out": str, "report": str}` |
 | U11 Entire | Sessions/Graph/Brain | `entire enable`, push, `docs/notes.md` | — |
 
@@ -132,7 +131,7 @@ and success/error status in an `aria-live="polite"` region.
 ## Data & API
 
 ```sql
--- server/schema.sql (run once: node server/migrate.mjs)
+-- backend/schema.sql (run once: node backend/migrate.mjs)
 CREATE TABLE IF NOT EXISTS attempts (
   ts         timestamptz NOT NULL DEFAULT now(),
   learner_id uuid        NOT NULL,
@@ -149,18 +148,18 @@ CREATE INDEX IF NOT EXISTS attempts_learner_ts ON attempts (learner_id, ts DESC)
 | `POST /api/attempts` | `{ learnerId: uuid, attempts: { item, correct, codes?, ts? }[] }` (1–50) | `204` | `204` (no-op) |
 | `GET /api/stats/:learnerId` | uuid | `{ daily: {day, attempts, accuracy}[], items: {item, attempts, accuracy}[] }` (14 days; 5 weakest items with ≥3 attempts) | `{ daily: [], items: [] }` |
 | `POST /api/plan` | `{ learnerId, candidates: { id, letters }[] (1–20), knownLetters: string[], weakLetters?: string[] }` | `{ lessonId, focus: string[], words: string[], tip, source: "agent" \| "local" }` | `source: "local"` |
-| `POST /api/subscribe` | `{ action: "subscribe", learnerId, consent: true, userName?, theirName?, learnerEmail?, contactEmail? }` (at least one email) or `{ action: "unsubscribe", learnerId }` | `{ ok: boolean, reason? }` | `{ ok: false, reason: "disabled" }` |
-| `POST /api/lesson-complete` | `{ learnerId, lessonId, lessonTitle, xp }` | `{ ok: boolean }` (always 200) | `{ ok: false, reason: "disabled" }` |
+| `POST /api/subscribe` | `{ action: "subscribe", learnerId, consent: true, learnerEmail?, contactEmail? }` (at least one email) or `{ action: "unsubscribe", learnerId }` | `{ ok: boolean, reason? }` | `{ ok: false, reason: "disabled" }` |
+| `POST /api/lesson-complete` | `{ learnerId, lessonId, xp }` | `{ ok: boolean }` (always 200) | `{ ok: false, reason: "disabled" }` |
 | `GET /api/features` | — | `{ stats, notify, agent }` | all false |
 
 Validation (server, every field): `learnerId` must match a UUID regex. `item` must match `/^[A-Z][A-Z0-9_-]{0,19}$/`: letters and sign ids
 like `THANK-YOU`, so `fs:*` word items (which can be names) are **rejected**. The client (`reportAttempt`) never sends `fs:`* items, so a
 batch never mixes them in. `codes`: ≤5 strings matching `/^[a-z]+:[a-z]+$/`. `ts` is
 accepted only within the last 24 h, otherwise `now()`. Emails: ≤254 chars with a basic `x@y.z` check. Names: ≤40 chars matching `/^[\p{L} '-]+$/u`.
-`lessonId`: `/^\d+\.\d+$/`. `lessonTitle` ≤80 chars. `xp` an integer 0–1000. `candidates[].letters` ⊆ A–Z. Bad input → `400 {error:"bad_request"}`.
+`lessonId`: `/^\d+\.\d+$/`. `xp` an integer 0–1000. `candidates[].letters` ⊆ A–Z. Bad input → `400 {error:"bad_request"}`.
 
 Env (`.env.example`): `DATABASE_URL`, `N8N_SUBSCRIBE_URL`, `N8N_EVENT_URL`, `N8N_SECRET`, `MARITIME_AGENT_URL`,
-`MARITIME_AGENT_TOKEN`, `SERVE_STATIC`. Agent env: `GEMINI_API_KEY`, `GEMINI_MODEL`, `APP_URL`, `AGENT_TOKEN`.
+`MARITIME_AGENT_TOKEN`, `HOST`, `TRUST_PROXY_HOPS` (1 in production), `ALLOWED_ORIGIN` (CORS allow-list; `SERVE_STATIC` is removed). Frontend build env: `VITE_API_BASE_URL` (public). Emails are validated as plain `local@domain.tld` (no commas or angle brackets). Agent env: `GEMINI_API_KEY`, `GEMINI_MODEL`, `APP_URL`, `AGENT_TOKEN`.
 
 ## Security
 
@@ -176,27 +175,27 @@ on the agent. `DATABASE_URL` uses `sslmode=require`. Everything lives in `.env` 
 - The agent's reply is guarded: `lessonId` must be one of `candidates`, `focus`/`words` must use only `knownLetters`, and
 `tip` is capped at 200 chars. Otherwise → local fallback.
 - SQL is always parameterized (`pg` `$1` placeholders).
-- In production (`SERVE_STATIC=1`) Express listens on `127.0.0.1` only and sets `trust proxy` to 1, so the rate limit sees real IPs and
+- In production Express binds `HOST=127.0.0.1` and sets `trust proxy` to `TRUST_PROXY_HOPS=1` (Caddy only; browsers call the API directly), so the rate limit sees the visitor's IP [NEEDS: verify with a real request that req.ip is the visitor's IP] and
 forwarded headers can't be spoofed by direct requests. The Vultr firewall (ufw) allows only ports 22, 80 and 443.
 - Known risk (no auth on the attempts/stats endpoints, accepted for a hackathon, stated on Devpost): anyone holding a learner UUID could change that learner's
 subscription or trigger completion emails. Mitigations: UUIDs never leave the learner's browser except to our server; email content is
-a fixed template (only validated names and the lesson title are inserted); each learner stores one row in n8n (upsert); n8n sends at most
+a fixed template (no names or user text are inserted; the lesson title is derived in n8n from `lessonId`); each learner stores one row in n8n (upsert); n8n sends at most
 1 completion email per learner per 10 min (best-effort: not atomic if two requests land at once) and 1 recap per week; and the IP rate limit applies.
 
 ## Testing
 
-- Unit/integration (`node --test`, `npm test`): `server/limit.test.mjs`, `server/routes/attempts.test.mjs` (fake db),
-`server/routes/notify.test.mjs` (fake fetch), `server/routes/plan.test.mjs` (fake fetch, guard, timeout),
-`agent/plan.test.mjs` (fake Gemini, tool loop, closure-held ids), `src/lib/track.test.ts` (fake send), `src/lib/planInput.test.ts`,
-`server/validate.test.mjs`, `server/integrations.test.mjs` (env unset and set).
-- Real DB: `node server/db.smoke.mjs` against Tiger Cloud inserts 3 rows and prints stats.
+- Unit/integration (`node --test`, `npm test`): `backend/limit.test.mjs`, `backend/routes/attempts.test.mjs` (fake db),
+`backend/routes/notify.test.mjs` (fake fetch), `backend/routes/plan.test.mjs` (fake fetch, guard, timeout),
+`agent/plan.test.mjs` (fake Gemini, tool loop, closure-held ids), `frontend/src/lib/track.test.ts` (fake send), `frontend/src/lib/planInput.test.ts`,
+`backend/validate.test.mjs`, `backend/integrations.test.mjs` (env unset and set).
+- Real DB: `node backend/db.smoke.mjs` against the real database inserts 3 rows and prints stats.
 - Manual: deploy checklist (HTTPS camera works on a phone), n8n test webhook, Databricks run visible in MLflow,
 `entire` session listed.
 - Done = `npm run build && npm test` pass with all env unset **and** with env set.
 
 ## Rules alignment (CLAUDE.md judging map)
 
-- **Targets:** every unit maps to a row in the CLAUDE.md prize table (Tiger Data → U1/U2/U8, Vultr + GoDaddy → U9, Databricks → U10, Maritime → U6, Entire → U11, n8n → U3).
+- **Targets:** every unit maps to a row in the CLAUDE.md prize table (Tiger Data → U1/U2/U8, Vercel + Vultr → U9, Databricks → U10, Maritime → U6, Entire → U11, n8n → U3).
 - **Privacy:** CLAUDE.md now allows two opt-in exceptions to "stays in the browser": anonymous attempt rows in Tiger Data, and names/emails to n8n only after consent. Gemini and the agent still get letters, lesson ids and aggregate stats only, never names.
 - **Honesty:** the UI says "matches the reference", never "correct" or "accuracy". The planner label "planned by: agent | local" plays the role of the cached-response label. Claims on Devpost are limited to what shipped.
 - **Accessibility:** every status is text (not colour alone), `aria-live` on form results, the chart has a text table, no animation is added (so `prefers-reduced-motion` is unaffected).
@@ -206,7 +205,7 @@ a fixed template (only validated names and the lesson title are inserted); each 
 
 ## Decisions
 
-- Tracks to add → Vultr+GoDaddy, Tiger Data, Databricks, Maritime, n8n, Entire → the user's choice.
+- Tracks to add → Vercel + Vultr, Tiger Data, Databricks, Maritime, n8n, Entire → the user's choice.
 - "Add all the tracks into the spec" → the Track Coverage table lists all 19 tracks, but only the six chosen are built. The rest are marked
 out, with reasons. This is an interpretation; widening it means a new spec.
 - Ownership → ignored for this work → user's choice (solo session).
@@ -217,15 +216,15 @@ out, with reasons. This is an interpretation; widening it means a new spec.
 
 ## Assumptions
 
-- **Hard prerequisite:** the starter plan and group-3 Task 2 are merged first (`server/app.mjs` `createApp`, `npm test` = `node --test`,
-and `/api/path` is removed, per the Handshake spec §4). Today's `server/index.mjs` `/api/path` still sends names to Gemini, so deploying before that merge
+- **Hard prerequisite:** the starter plan and group-3 Task 2 are merged first (`backend/app.mjs` `createApp`, `npm test` = `node --test`,
+and `/api/path` is removed, per the Handshake spec §4). Today's `backend/index.mjs` `/api/path` still sends names to Gemini, so deploying before that merge
 would break the privacy claim.
 - `npm test` globs are extended to include `agent/**/*.test.mjs`.
 - `LessonPlayer` (plan 2) calls `reportAttempt` / `reportLessonComplete` right after each `recordAttempt` / `completeLesson`. Until it exists
-  there is no call site, so the plan wires `src/screens/LessonDemo.tsx` only if it records attempts; otherwise the wiring is a checklist item in the plan.
+  there is no call site, so the plan wires `frontend/src/screens/LessonDemo.tsx` only if it records attempts; otherwise the wiring is a checklist item in the plan.
 - Maritime runs a custom agent from a Dockerfile/Node entry. The exact CLI is confirmed from its docs at execution.
 - Databricks Free Edition with serverless compute and UC Volumes. The Kaggle features are extracted locally first.
-- Tiger Cloud free service. The TimescaleDB version supports `by_range` (2.13+).
+- Tiger Data Cloud (TimescaleDB service). The TimescaleDB version supports `by_range` (2.13+).
 
 ## Open Questions
 

@@ -4,13 +4,13 @@
 
 **Goal:** Two Gemini endpoints (coach, practice words) that never see names, never judge signs and never block the demo. Plus onboarding (names + signing hand, everyone starts at 1.1), practice order that adapts inside lessons, and the pitch (interviews, Devpost, slides, video), built in curriculum order.
 
-**Architecture:** `server/app.mjs` exports `createApp({ ai, model, precache, snapshot })`, so tests can inject a fake Gemini client. `server/index.mjs` only wires env and listens. Every reply uses `responseSchema` (enums of allowed letters/words), passes through a server-side guard, and falls back to a landmark/mock answer on any error. Cache hits, including `server/precache.json`, are returned with `cached: true`. On the client, `profile.ts` keeps names local and sends only letters.
+**Architecture:** `backend/app.mjs` exports `createApp({ ai, model, precache, snapshot })`, so tests can inject a fake Gemini client. `backend/index.mjs` only wires env and listens. Every reply uses `responseSchema` (enums of allowed letters/words), passes through a server-side guard, and falls back to a landmark/mock answer on any error. Cache hits, including `backend/precache.json`, are returned with `cached: true`. On the client, `profile.ts` keeps names local and sends only letters.
 
 **Tech Stack:** Express 5, `@google/genai`, Node 24 `node --test`, React 19.
 
 **Prerequisite:** starter plan merged. **Roadmap:** `2026-11-07-roadmap.md`. Work milestone by milestone, and don't start M(n+1) features before the M(n) gate passes.
 
-**Owns:** `server/`, `src/lib/api.ts`, `src/lib/profile.ts`, `src/lib/curriculum.ts`, `src/screens/Onboarding.tsx`, `docs/notes.md`, Devpost, slides, video.
+**Owns:** `backend/`, `frontend/src/lib/api.ts`, `frontend/src/lib/profile.ts`, `frontend/src/lib/curriculum.ts`, `frontend/src/screens/Onboarding.tsx`, `docs/notes.md`, Devpost, slides, video.
 
 ## Global Constraints
 - Gemini never sees names. Requests carry letters and error codes only.
@@ -33,13 +33,13 @@
 
 ### Task 2: Server refactor with schemas, privacy and cache (tested, H3)
 
-**Files:** Create: `server/app.mjs`, `server/app.test.mjs`. Modify: `server/index.mjs` (replace).
+**Files:** Create: `backend/app.mjs`, `backend/app.test.mjs`. Modify: `backend/index.mjs` (replace).
 
 **Interfaces:**
 - Consumes: request shapes from spec §4 (`/api/coach {target, feedback, repeat, snapshot?}`, `/api/words {knownLetters, weakLetters}`).
 - Produces: `createApp({ ai, model, precache, snapshot }) → express app`; cache keys `coach:<target>:<code>:<issue>:<repeat≤3>`, `words:<known>:<weak>`; `GET /api/cache` (dump for `precache.json`).
 
-- [ ] **Step 1: Write the failing tests** `server/app.test.mjs`:
+- [ ] **Step 1: Write the failing tests** `backend/app.test.mjs`:
 ```js
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -127,7 +127,7 @@ test("words: second identical call is labelled cached", async () => {
 });
 ```
 - [ ] **Step 2: Run** `npm test`. Expected: FAIL with `Cannot find module './app.mjs'`.
-- [ ] **Step 3: Implement** `server/app.mjs`:
+- [ ] **Step 3: Implement** `backend/app.mjs`:
 ```js
 // Teammate B owns this file. Gemini coaches and personalizes; it never judges signs and never sees names.
 import express from "express";
@@ -246,13 +246,13 @@ Prefer words containing: ${weak.join(", ") || "any of them"}. Return each word a
     }
   });
 
-  // Dev: dump the cache to pre-generate demo replies → server/precache.json (contains no names).
+  // Dev: dump the cache to pre-generate demo replies → backend/precache.json (contains no names).
   app.get("/api/cache", (_req, res) => res.json(Object.fromEntries(cache)));
 
   return app;
 }
 ```
-`server/index.mjs` (replace):
+`backend/index.mjs` (replace):
 ```js
 import "dotenv/config";
 import { existsSync, readFileSync } from "node:fs";
@@ -282,11 +282,11 @@ Expected: real Gemini JSON from both. **H3 checkpoint: "Gemini returns a real re
 
 ### Task 3: Snapshot test, not a feature (H4)
 
-**Files:** Create: `server/snapshot-test.mjs`.
+**Files:** Create: `backend/snapshot-test.mjs`.
 
 - [ ] **Step 1: Script**
 ```js
-// Usage: node server/snapshot-test.mjs <folder of A-right-1.jpg / A-wrong-1.jpg files>
+// Usage: node backend/snapshot-test.mjs <folder of A-right-1.jpg / A-wrong-1.jpg files>
 // Gemini names the letter and the error; a signer judges. Results go in docs/notes.md → Snapshot test.
 import "dotenv/config";
 import { readdirSync, readFileSync } from "node:fs";
@@ -309,15 +309,15 @@ for (const f of readdirSync(dir).filter((f) => f.endsWith(".jpg"))) {
 }
 ```
 - [ ] **Step 2: Run** it on Ryan's 10 photos (5 right, 5 wrong; see group-1 Task 5). With a signer, mark each result: did it name the intended letter? Did it contradict `getHandFeedback`? Log the table in `docs/notes.md`.
-- [ ] **Step 3: Decide.** Keep only if it named the intended letter in ≥ 8/10 and contradicted the landmarks ≤ 1/10. If kept: set `SNAPSHOT_ENABLED=1` in `.env`, set `SEND_SNAPSHOT = true` in `src/lib/api.ts`, and add "a photo of your hand is sent to Google's Gemini API" to the Devpost notes. Otherwise leave both off and log "dropped".
-- [ ] **Step 4: Commit** `git add server/snapshot-test.mjs src/lib/api.ts docs/notes.md && git commit -m "test: H4 snapshot decision"`
+- [ ] **Step 3: Decide.** Keep only if it named the intended letter in ≥ 8/10 and contradicted the landmarks ≤ 1/10. If kept: set `SNAPSHOT_ENABLED=1` in `.env`, set `SEND_SNAPSHOT = true` in `frontend/src/lib/api.ts`, and add "a photo of your hand is sent to Google's Gemini API" to the Devpost notes. Otherwise leave both off and log "dropped".
+- [ ] **Step 4: Commit** `git add backend/snapshot-test.mjs frontend/src/lib/api.ts docs/notes.md && git commit -m "test: H4 snapshot decision"`
 
 ### Task 4: Onboarding
 
-**Files:** Modify: `src/screens/Onboarding.tsx` (replace stub).
+**Files:** Modify: `frontend/src/screens/Onboarding.tsx` (replace stub).
 
 **Interfaces:**
-- Consumes: `isPracticeable` (src/cv); `saveProfile`, `DEMO_PROFILE` (profile).
+- Consumes: `isPracticeable` (frontend/src/cv); `saveProfile`, `DEMO_PROFILE` (profile).
 - Produces: a saved `Profile`, then navigates to `#/`.
 
 - [ ] **Step 1: Implement**
@@ -383,7 +383,7 @@ export function Onboarding() {
 
 ### Task 5: Alphabet families cover the letter set, identical for everyone
 
-**Files:** Modify: `src/lib/curriculum.ts` (`FAMILIES` and the Unit 2 loop).
+**Files:** Modify: `frontend/src/lib/curriculum.ts` (`FAMILIES` and the Unit 2 loop).
 
 Spec §1: Unit 2 must have the same lesson ids, order and scope for every learner. Today the loop drops letters Unit 1 taught (and whole families when empty) and inserts "Spell <them>" wherever its letters happen to be known, so `2.2` means different lessons for different names.
 
@@ -434,11 +434,11 @@ const FAMILIES: { id: string; title: string; letters: string[]; scope: "demo" | 
 
 ### Task 6: Practice words, weakest first (doc item c)
 
-**Files:** Modify: `src/lib/profile.ts`, `src/screens/Onboarding.tsx`.
+**Files:** Modify: `frontend/src/lib/profile.ts`, `frontend/src/screens/Onboarding.tsx`.
 
 **Interfaces:** Produces `fetchPracticeWords(p: Profile, weak?: string[]) → Promise<Record<string, string[]>>` and `refreshPracticeWords() → Promise<void>` (called by Group 2's Complete screen).
 
-- [ ] **Step 1: Add to `src/lib/profile.ts`**
+- [ ] **Step 1: Add to `frontend/src/lib/profile.ts`**
 ```ts
 import { buildCurriculum, flatLessons } from "./curriculum";
 import { loadProgress, weakItems } from "./progress";
@@ -480,13 +480,13 @@ and import `refreshPracticeWords`. Lessons opened after it finishes include the 
 
 ### Task 7: Pre-cache the demo (by H12)
 
-**Files:** Create: `server/precache.json`.
+**Files:** Create: `backend/precache.json`.
 
 - [ ] **Step 1:** With the real key, run the whole demo path once as Ryan → Lily, including deliberate common mistakes on L, I, Y and A (each made 1×, 2× and 3× so all three coach styles get cached).
-- [ ] **Step 2:** `curl -s localhost:8787/api/cache > server/precache.json`. Open the file and check that there are no names in it and every tip reads well. Edit any bad tip by hand.
+- [ ] **Step 2:** `curl -s localhost:8787/api/cache > backend/precache.json`. Open the file and check that there are no names in it and every tip reads well. Edit any bad tip by hand.
 - [ ] **Step 3:** Restart the API. Expected log: `N precached`. Replay the path: tips appear instantly with the "cached" badge.
 - [ ] **Step 4: Live Gemini recording (M2 gate).** If `precache.json` exists, move it aside; restart the API, and screen-record one live run: the same mistake twice gives a different cue, and a 2.x word drill starts with a weak letter. Put `precache.json` back if you moved it. Save the clip for Devpost.
-- [ ] **Step 5: Commit** `git add server/precache.json && git commit -m "data: precached demo replies (labelled cached)"`
+- [ ] **Step 5: Commit** `git add backend/precache.json && git commit -m "data: precached demo replies (labelled cached)"`
 
 ### ✅ Gate M2 (H10)
 - [ ] `docs/test-log.md`: every letter in `PRACTICEABLE` scores ≥ 8/10.
@@ -529,5 +529,5 @@ and import `refreshPracticeWords`. Lessons opened after it finishes include the 
 ### Task 10: Pitch and submission
 - [ ] **H18:** Slides: problem → person → demo → why different → impact → what's next (reading practice, whole signs via ASL-LEX / ASL Citizen, facial grammar, SignGemma if released).
 - [ ] **H20:** Record a backup demo video (≤ 4 min) of the full path: onboarding → name → LILY → HELLO → scene.
-- [ ] **H21:** Submit on Devpost: repo link, Figma link ("anyone can view"), video, and opt-ins for the 5 core prizes plus each sponsor track that shipped (`docs/devpost-tracks.md`). Work through the doc's submission checklist; claim only what shipped.
+- [ ] **H21:** Submit on Devpost: repo link, video, real app screenshots, and opt-ins for the 5 core prizes plus each sponsor track that shipped (`docs/devpost-tracks.md`). Work through the doc's submission checklist; claim only what shipped.
 - [ ] **H23:** Rehearse the pitch 3× with a timer. Prepare answers to likely judge questions: "Is it correct ASL?" (matches our reference, checked by a fluent signer), "Where do names go?" (nowhere: letters only), "Why not full signs?" (ASL Citizen baseline 63%), and "How is this different from Signiq?".

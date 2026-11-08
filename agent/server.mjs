@@ -35,11 +35,19 @@ http
         raw += chunk;
         if (raw.length > MAX_BODY) return send(413, { error: "too_large" });
       }
-      const { learnerId, candidates, knownLetters } = JSON.parse(raw);
+      let body;
+      try { body = JSON.parse(raw); } catch { return send(400, { error: "bad_request" }); }
+      const { learnerId, candidates, knownLetters } = body ?? {};
+      const letters = (a) => Array.isArray(a) && a.length <= 26 && a.every((l) => typeof l === "string" && /^[A-Z]$/.test(l));
+      if (typeof learnerId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(learnerId) ||
+          !Array.isArray(candidates) || candidates.length < 1 || candidates.length > 20 ||
+          !candidates.every((c) => c && typeof c.id === "string" && /^\d+\.\d+$/.test(c.id) && letters(c.letters)) || !letters(knownLetters)) {
+        return send(400, { error: "bad_request" });
+      }
       send(200, await planSession({ ai, model: GEMINI_MODEL, appUrl: APP_URL, learnerId, candidates, knownLetters }));
     } catch (e) {
       console.error("Planner request failed.");
       send(502, { error: "agent_failed" });
     } finally { active--; }
   })
-  .listen(Number(PORT), () => console.log(`planner agent on :${PORT}`));
+  .listen(Number(PORT), "0.0.0.0", () => console.log(`planner agent on :${PORT}`));

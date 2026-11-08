@@ -78,7 +78,7 @@ All errors are `{ "error": "<code>" }`, matching the existing routes. Auth route
 `localStorage` stays the working copy, so the app works offline and for guests exactly as now. When signed in:
 1. **On load and after sign-in:** `GET /api/me`. If `state` is null, push the local profile and progress. If not, merge, save locally, then push.
 2. **After every change** to progress or profile (both `saveProgress` and `saveProfile` fire a `handshake:state` event), push after a 2 second debounce with `baseRev`. On 409, merge the returned state and retry once. Failures are silent; the next change retries.
-3. **Merge rules** (pure function `mergeState(local, server)` in `src/lib/merge.ts`):
+3. **Merge rules** (pure function `mergeState(local, server)` in `frontend/src/lib/merge.ts`):
    - `profile`: the account's profile wins when the account already has state; local wins only when the account has none.
    - `progress.completed`: union. `xp`: the larger. Streak: take the side with the later `lastActiveDay` (tie: larger `streakDays`). `items`: per key, the side with more `attempts` (tie: the server's).
    - The result is never smaller than either side for completed lessons or XP.
@@ -90,7 +90,7 @@ All errors are `{ "error": "<code>" }`, matching the existing routes. Auth route
 - `#/reset/<token>`: new password field.
 - Onboarding gets a final step "Save your progress" that shows the sign-up card inline, and a "I already have an account" link on step 1.
 - The header shows an account chip: the email when signed in (menu: Settings, Log out), "Log in" when not. Settings gets "Account": log out, delete account (with confirmation text).
-- Accessibility: every field labelled, errors in an `aria-live` region and tied to their field, focus moves to the first error, no CAPTCHA, no information carried by colour alone, works with the keyboard only, respects reduced motion. Same tokens as the rest of the app (the "A Silent Voice" palette passes `node src/styles.contrast.mjs`).
+- Accessibility: every field labelled, errors in an `aria-live` region and tied to their field, focus moves to the first error, no CAPTCHA, no information carried by colour alone, works with the keyboard only, respects reduced motion. Same tokens as the rest of the app (the "A Silent Voice" palette passes `node frontend/src/styles.contrast.mjs`).
 
 ## Privacy and honesty (must change with this feature)
 - `CLAUDE.md` privacy rules say the profile, names and mistake history stay in the browser. New text: **guests:** unchanged. **Signed-in users:** their profile and progress are stored on our server, tied to their account, and deleted when they delete the account. Gemini still receives only letters and error codes, never names. Attempt rows in Tiger Data stay anonymous.
@@ -126,4 +126,4 @@ New `.env` keys: `GOOGLE_CLIENT_ID`, `RESEND_API_KEY`, `RESEND_FROM`, `APP_ORIGI
 - Deleting an account does not clear the learner id, camera preference or the n8n opt-in stored in the browser, and an n8n subscription keeps running until it is stopped on #/stats.
 
 ## Testing
-Server: `node --test` with fake database objects, following `server/routes/attempts.test.mjs` and `server/testutil.mjs`. Client: pure `src/lib/merge.test.ts`, `src/lib/auth.test.ts`. Screens: manual checklist in the plan (Google cannot be automated). Run `npm run build`, `node src/styles.contrast.mjs` and `npm test` before every merge. Note: the two slowest tests (`server/complete.test.mjs`, `server/profile.test.mjs`) start a Vite server and can time out on a loaded machine; rerun them alone.
+Server: `node --test` with fake database objects, following `backend/routes/attempts.test.mjs` and `backend/testutil.mjs`. Client: pure `frontend/src/lib/merge.test.ts`, `frontend/src/lib/auth.test.ts`. Screens: manual checklist in the plan (Google cannot be automated). Run `npm run build`, `node frontend/src/styles.contrast.mjs` and `npm test` before every merge. Note: the two slowest tests (`frontend/tests/complete.test.mjs`, `frontend/tests/profile.test.mjs`) start a Vite server and can time out on a loaded machine; rerun them alone.

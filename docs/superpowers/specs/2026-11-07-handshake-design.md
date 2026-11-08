@@ -57,7 +57,7 @@ Home/Progress ← buildCurriculum(personalization) + loadProgress + mistakes
 
 ## 4. Interface changes (update `CLAUDE.md` at H0.5)
 
-### CV → frontend (`src/cv`, owner Group 1)
+### CV → frontend (`frontend/src/cv`, owner Group 1)
 ```ts
 type FingerFeedback = { finger: string; issue: string; code: ErrorCode };
 type ErrorCode = `${"thumb"|"index"|"middle"|"ring"|"pinky"}:${"curl"|"direction"|"placement"}`;
@@ -79,12 +79,12 @@ type LessonViewProps = { title; target; word?: { letters: string[]; index: numbe
   actionLabel /* "Skip" | "Continue" */; onAction(); onSelfCheck?() };
 type SceneViewProps = { turns: { them: { gloss; english }; you: { tokens: string[]; english } }[];
   turnIndex; tokenIndex; camera: ReactNode; prompt; onSelfCheck?() };
-celebrate(): void   // src/components/celebrate.ts: confetti (skipped under reduced motion) + short sound
+celebrate(): void   // frontend/src/components/celebrate.ts: confetti (skipped under reduced motion) + short sound
 ```
 Presentational only. Before H10, Group 2 drives them from `#/lesson-preview` with `useFakeCheck`: the D key counts as a detection and M as a miss.
 `SEND_SNAPSHOT` (in `api.ts`, owner Group 3) stays `false` unless the H4 snapshot test passes.
 
-### Mistake memory (`src/lib/mistakes.ts`, owner Group 1; no imports so `node --test` runs it)
+### Mistake memory (`frontend/src/lib/mistakes.ts`, owner Group 1; no imports so `node --test` runs it)
 ```ts
 recordMistake(m: Mistakes, letter: string, code: ErrorCode, now?) → Mistakes   // count + lastAt
 mistakeCount(m, letter, code) → number
@@ -92,7 +92,7 @@ weakFingers(m, limit?) → { finger, count }[]
 loadMistakes() / saveMistakes(m)   // localStorage "handshake.mistakes.v1"
 ```
 
-### Profile (`src/lib/profile.ts`, owner Group 3)
+### Profile (`frontend/src/lib/profile.ts`, owner Group 3)
 ```ts
 type Profile = Personalization & { leftHanded: boolean };   // Personalization.relationship is optional (default pack)
 const WELCOME: string;   // uses {you}/{them}; fillNames(WELCOME, profile)
@@ -113,12 +113,12 @@ POST /api/words { knownLetters: string[], weakLetters: string[] }
 
 | Group | Owner | Owns | Delivers |
 |---|---|---|---|
-| 1 · CV + integration | Ryan | `src/cv/`, `src/lib/mistakes.ts`, `RecordPage`, `LessonDemo`, `LessonPlayer`, `TokenRunner`, `training/`, `docs/test-log.md` | Reliable letters + signs, `useLetterCheck`, error codes, mistake memory, left-hand mode, H10 integration |
-| 2 · Design + frontend | Teammate A | Figma, `src/components/`, `src/screens/` (Home, Progress, Complete, LessonPreview), `styles.css`, `App.tsx` routes | 5 polished screens, XP/streak/confetti, reference images, scene chat UI, accessibility |
-| 3 · Gemini + backend + pitch | Teammate B | `server/`, `src/lib/api.ts`, `src/lib/profile.ts`, `src/lib/curriculum.ts`, `Onboarding.tsx`, `docs/notes.md` | 2 endpoints (coach, words), onboarding, practice order, adaptive coach, cache, interviews, Devpost, slides, video |
+| 1 · CV + integration | Ryan | `frontend/src/cv/`, `frontend/src/lib/mistakes.ts`, `RecordPage`, `LessonDemo`, `LessonPlayer`, `TokenRunner`, `training/`, `docs/test-log.md` | Reliable letters + signs, `useLetterCheck`, error codes, mistake memory, left-hand mode, H10 integration |
+| 2 · Design + frontend | Teammate A | `frontend/src/components/`, `frontend/src/screens/` (Home, Progress, Complete, LessonPreview), `styles.css`, `App.tsx` routes | 5 polished screens, XP/streak/confetti, reference images, scene chat UI, accessibility |
+| 3 · Gemini + backend + pitch | Teammate B | `backend/`, `frontend/src/lib/api.ts`, `frontend/src/lib/profile.ts`, `frontend/src/lib/curriculum.ts`, `Onboarding.tsx`, `docs/notes.md` | 2 endpoints (coach, words), onboarding, practice order, adaptive coach, cache, interviews, Devpost, slides, video |
 
 `progress.ts` is shared: Group 2 reads it; nobody changes its exports without telling the team. `docs/notes.md` is owned by Group 3 but append-only for everyone (Groups 1 and 2 log decisions and sources there).
-Seams: Group 2 builds `LessonView` and `SceneView` (presentational, in `src/components/`); Group 1 wires them inside `LessonPlayer`. The starter plan adds every route and an empty stub for every new file at H0.5, so nobody edits `App.tsx` for routing afterwards.
+Seams: Group 2 builds `LessonView` and `SceneView` (presentational, in `frontend/src/components/`); Group 1 wires them inside `LessonPlayer`. The starter plan adds every route and an empty stub for every new file at H0.5, so nobody edits `App.tsx` for routing afterwards.
 
 ## 6. Roadmap: milestones follow the curriculum (hours from kickoff)
 Work is built in curriculum order. Each milestone is a **playable vertical slice**: all three groups deliver their part, merge, and demo it end to end before anyone starts the next milestone's features. Polish and pitch work can run alongside.
@@ -132,7 +132,7 @@ Work is built in curriculum order. Each milestone is a **playable vertical slice
 | **M4 Conversation** (Unit 4: scene 4.1) | H16 | Scene 4.1 chat UI plays end to end → **feature freeze** |
 | Ship | H16–H24 | Polish, accessibility notes, Devpost (H21), backup video, rehearsal ×3 (H23) |
 
-Other doc checkpoints that still apply: **H3** Figma done · skeleton on webcam · Gemini returns a real reply · fluent signer lined up. **H4** snapshot test. **H12** interviews done · adaptive cut rule.
+Other doc checkpoints that still apply: **H3** design tokens done · skeleton on webcam · Gemini returns a real reply · fluent signer lined up. **H4** snapshot test. **H12** interviews done · adaptive cut rule.
 
 ## 7. Cut rules
 - Letters not ≥ 80% by H8 → cut to L I Y B O V; demo name stays LILY.
@@ -143,8 +143,8 @@ Other doc checkpoints that still apply: **H3** Figma done · skeleton on webcam 
 
 ## 8. Testing
 - `python training/test_parity.py` after any feature change.
-- `node --test server/*.test.mjs`: guards (names never in prompts, letter filters, mock fallback, cached flag).
-- `node --test src/lib/mistakes.test.ts`: counts, weak fingers.
+- `node --test backend/*.test.mjs`: guards (names never in prompts, letter filters, mock fallback, cached flag).
+- `node --test frontend/src/lib/mistakes.test.ts`: counts, weak fingers.
 - Webcam accuracy is human-tested: `docs/test-log.md` (letter, tester, 10 tries, hits). Claude can't test the webcam.
 - `npm run build` before every merge to main.
 
@@ -152,7 +152,7 @@ Other doc checkpoints that still apply: **H3** Figma done · skeleton on webcam 
 Placement test / level quiz, hearts, daily goal, leagues, Gemini-picked word pack (`/api/path`, removed: the stretch word-pack lessons use a fixed default pack). Reading-fingerspelling practice, facial grammar, two-handed auto-checking, rigged glTF hand (PLANS.md #7), SignGemma (10-min check at kickoff only).
 
 ## 10. Sponsor tracks (built from their own spec and plan)
-`2026-11-07-sponsor-tracks-spec.md` and `plans/2026-11-07-sponsor-tracks.md` add Tiger Data, Databricks, Maritime, n8n, Vultr + GoDaddy and Entire. This spec only sets the boundaries:
+`2026-11-07-sponsor-tracks-spec.md` and `plans/2026-11-07-sponsor-tracks.md` add Tiger Data, Databricks, Maritime, n8n, Vercel + Vultr and Entire. This spec only sets the boundaries:
 - Each integration is off until its env vars are set; with none set the app behaves as specified above.
 - They never change the baseline: same units, order and unlock rule for everyone. The planner agent's "next lesson" uses `nextLesson` (demo scope only).
 - New surface: `#/stats` (added by that plan, not by the starter plan) and the server routes `/api/attempts`, `/api/stats`, `/api/plan`, `/api/subscribe`, `/api/lesson-complete`, `/api/features`. `/api/coach` and `/api/words` do not move.

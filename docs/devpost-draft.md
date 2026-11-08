@@ -28,7 +28,7 @@ React, TypeScript and Vite; browser MediaPipe hand landmarks; recorded handshape
 
 [NEEDS: confirm which recognizer/model actually ran].
 
-[NEEDS: verified Tiger Data, Maritime, n8n, Vultr/domain, Databricks and Entire usage, linked artifacts from devpost-tracks.md].
+[NEEDS: verified Tiger Data, Maritime, n8n, Vercel/Vultr, Databricks and Entire usage, linked artifacts from devpost-tracks.md].
 
 ## Challenges we ran into
 
@@ -52,11 +52,11 @@ Validate references with ASL-fluent and Deaf reviewers, expand only letters that
 
 ## Accessibility
 
-The sponsor stats chart includes a text table, and notification status is announced politely. [NEEDS: verified keyboard flow, contrast, text scaling, reduced-motion behavior, detection announcements, left-handed support, matching Figma URL]. Do not describe untested accessibility requirements as completed.
+The sponsor stats chart includes a text table, and notification status is announced politely. [NEEDS: verified keyboard flow, contrast, text scaling, reduced-motion behavior, detection announcements, left-handed support]. Do not describe untested accessibility requirements as completed.
 
 ## Privacy and limitations
 
-Use the privacy note in [devpost-tracks.md](devpost-tracks.md), updated to the final enabled features. Names/emails go only to n8n after explicit consent; opted-in lesson titles can also contain names. Anonymous UUIDs are not authentication, and someone holding an id could trigger emails to its saved contact. [NEEDS: confirm final snapshot setting and disclose Google photo transfer if enabled].
+Use the privacy note in [devpost-tracks.md](devpost-tracks.md), updated to the final enabled features. Only email addresses go to n8n, after explicit consent (names and lesson titles are not sent; lessons are identified by id). Anonymous UUIDs are not authentication, and someone holding an id could trigger emails to its saved contact. [NEEDS: confirm final snapshot setting and disclose Google photo transfer if enabled].
 
 References match our recordings unless reviewed by an ASL-fluent person. [NEEDS: reviewer and verification record, or retain that limitation]. No measured learning improvement or community endorsement is claimed.
 
@@ -65,7 +65,7 @@ References match our recordings unless reviewed by an ASL-fluent person. [NEEDS:
 - Demo: [NEEDS: final public HTTPS URL]
 - Repository: [NEEDS: public submission repo/branch]
 - Video: [NEEDS: final demo video]
-- Figma: [NEEDS: matching design file]
+- Design/accessibility prizes: [NEEDS: confirm with organizers whether this prize is still eligible without a Figma file]
 - Sponsor evidence: [devpost-tracks.md](devpost-tracks.md)
 - Built with: [NEEDS: final list of tools actually used]
 - Team contributions: [NEEDS: names and actual contributions]
