@@ -51,7 +51,7 @@ Handshake/
 │   └── package.json     (frontend-only dependencies)
 ├── backend/             → Vultr VM (Express API; talks to Tiger Data Cloud)
 │   ├── index.mjs app.mjs gemini.mjs db.mjs integrations.mjs limit.mjs validate.mjs precache.mjs precache.json migrate.mjs
-│   ├── routes/          (attempts, notify, plan, auth, me)
+│   ├── routes/          (attempts, notify, plan)
 │   ├── schema.sql, schema.accounts.sql, DATABASE.md, README.md
 │   ├── deploy/          (setup.sh, preflight.sh, tests/, README.md; Caddy + systemd, API only)
 │   └── package.json
@@ -66,7 +66,7 @@ Handshake/
 Hosting notes:
 - The Vultr API host has no purchased domain: use any hostname that resolves to the VM IP with automatic HTTPS from Caddy, e.g. a free `<ip-with-dashes>.sslip.io` name. [NEEDS: verify Let's Encrypt works for the chosen hostname]
 - Rate limiting is per client IP; browsers call the API directly, so the production proxy chain is Caddy → Express and the Express `trust proxy` hop count is 1 (env `TRUST_PROXY_HOPS=1`). [NEEDS: verify with a real request that req.ip is the visitor's IP]
-- New backend env: `HOST` (bind address; `127.0.0.1` on the VM behind Caddy), `TRUST_PROXY_HOPS` (1 in production; accounts' Origin check needs it), `ALLOWED_ORIGIN` (CORS allow-list; the Vercel URL) and `COOKIE_SECURE` (1 on the VM). Account calls go through the Vercel `/api` rewrite in `frontend/vercel.json`, whose destination host is a manual step. Frontend env: `VITE_API_BASE_URL` (public). n8n Cloud and Maritime hold their own secrets.
+- New backend env: `HOST` (bind address; `127.0.0.1` on the VM behind Caddy), `TRUST_PROXY_HOPS` (1 in production), and `ALLOWED_ORIGIN` (CORS allow-list; the Vercel URL). Frontend env: `VITE_API_BASE_URL` (public). n8n Cloud and Maritime hold their own secrets.
 - `backend/schema.sql` uses TimescaleDB `create_hypertable`, so the database is a Tiger Data Cloud service (TimescaleDB), reached from the Vultr API through `DATABASE_URL` with `sslmode=require`.
 
 ## Ownership (only edit your own files; ask before touching others)
@@ -171,7 +171,7 @@ POST /api/praise { kind: "letter"|"sign"|"lesson", target, streak?: 0..50, tries
 - Whole signs are "assisted": handshape + body zone + movement. Two-handed/facial signs are self-checked.
   Sign descriptions are simplified: verify against a Deaf-led source (Lifeprint) before the demo.
 - Record templates for every handshape `requiredHandshapes()` lists, including "5" (open hand).
-- Drop: Auth0 (still dropped: accounts use Google sign-in directly, see `docs/superpowers/specs/2026-11-07-accounts-spec.md`). Stretch: everything marked stretch, rigged 3D hand.
+- Drop: Auth0 and all accounts/login (guests only; data stays in localStorage). Stretch: everything marked stretch, rigged 3D hand.
 
 ## 3D hand (lesson reference)
 - `frontend/src/components/HandModel3D.tsx`: React Three Fiber + drei OrbitControls (drag to spin, auto-rotate).
