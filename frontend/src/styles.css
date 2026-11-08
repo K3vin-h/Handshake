@@ -669,8 +669,7 @@ html { accent-color: var(--brand); scrollbar-color: #b9d6ea transparent; }
 @keyframes auth-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .auth-spinner { animation: none; } }
 [data-reduce-motion] .auth-spinner { animation: none; }
-/* Onboarding save step: AuthCard sits flat inside the onboarding card (no card in a card), left-aligned like the
-   other steps. Onboarding's own "Skip for now" button replaces AuthCard's skip link. */
+/* Onboarding card layout helpers (guest path has no account save step). */
 .onboard-save .auth-wrap { max-width: none; margin: var(--space-4) 0 0; }
 .onboard-save .auth-card { margin: 0; padding: 0; background: none; border: 0; border-radius: 0; box-shadow: none; }
 .onboard-save .auth-card > h2 { text-align: left; font-size: 1.15rem; }

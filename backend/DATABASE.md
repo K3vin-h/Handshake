@@ -103,23 +103,6 @@ against a real Tiger Cloud service before claiming the sponsor integration is
 verified. Then play a live-graded letter lesson and confirm the same learner's
 stats change. Live grading still requires the separate human letter gate.
 
-## Accounts
+## Accounts (removed)
 
-Optional email/password and Google sign-in, stored in the same database.
-`backend/schema.accounts.sql` adds four tables: `users` (email, password hash,
-Google id), `sessions` (hashed session token, expiry), `password_resets`
-(hashed one-time token, expiry) and `user_state` (one row per
-user, holding the profile and the progress as JSON). `npm run db:migrate` applies `schema.sql` and `schema.accounts.sql`
-together in one transaction.
-
-Routes: `/api/auth/*` (config, signup, login, logout, Google, reset) and
-`/api/me` (profile and state). Env: `GOOGLE_CLIENT_ID` (public),
-`RESEND_API_KEY` and `RESEND_FROM` (server-only), `APP_ORIGIN` (reset email is
-off without all three; `APP_ORIGIN` is used only to build the reset link and in production must be the
-public Vercel URL, not the API host). The session cookie is `Secure` when `COOKIE_SECURE=1`, or when
-`NODE_ENV=production` unless `COOKIE_SECURE=0`; the VM's service sets both. In production the browser
-reaches account routes through the Vercel `/api` rewrite (`frontend/vercel.json`; its destination host
-is a manual step, see `deploy/README.md`), and `TRUST_PROXY_HOPS` must be set so the Origin check
-reads the forwarded host. To disable accounts, unset `DATABASE_URL`: every account
-route then answers 503 `accounts_unavailable` and `/api/auth/config` reports
-`accounts: false`.
+Guest-only. Account/auth tables and routes were removed. Profile and progress stay in the browser (`localStorage`). Tiger Data still stores anonymous `attempts` rows only (letter/sign id, pass/fail, error codes, random `learner_id`) — never names or emails.

@@ -122,8 +122,8 @@ test('remote production tip is required; ancestor or unrelated SHA is not suffic
     if fetch_production "$SEED"; then exit 50; fi
     if fetch_production '${older}'; then exit 51; fi
     mkdir -p backend
-    printf 'CREATE TABLE users(id int);' > backend/schema.accounts.sql
-    git add backend/schema.accounts.sql
+    printf 'CREATE TABLE attempts(id int);' > backend/schema.sql
+    git add backend/schema.sql
     git -c user.name=Test -c user.email=test@example.invalid commit -qm schema
     schema_tip=$(git rev-parse HEAD)
     if fetch_production "$schema_tip"; then exit 52; fi

@@ -6,17 +6,15 @@ import { LockedUnit } from "../components/LockedUnit";
 import { coverage } from "../components/LiveCoverage";
 import { buildCurriculum, type Personalization } from "../lib/curriculum";
 import { loadProfile, refreshPracticeWords, saveProfile } from "../lib/profile";
-import { AuthCard } from "../components/AuthCard";
 import { cleanName } from "../lib/nameRule";
-import { getAuthConfig, getUser, subscribe, type User } from "../lib/auth";
 
 // Onboarding: four short steps. Everything typed here stays in this browser (saveProfile: localStorage in
 // try/catch with an in-memory fallback). "Build my path" saves the profile, builds the path locally
 // (buildCurriculum) and then asks the server for practice words in the background (refreshPracticeWords).
 // That request carries letters only, never names, and a failure never blocks: the local path is already built.
 
-// With accounts on, a fifth step "Save your progress" follows "Build my path" (spec: Defaults 1).
 const PATH_STEPS = 4;
+const TOTAL = PATH_STEPS;
 
 // Onboarding is often shown AT "#/" (no profile yet). Setting the same hash fires no hashchange, so the router would never re-render.
 // App compares the new hash with its state, so an identical hash is skipped. "#/home" is a different value that renders Home.
@@ -30,7 +28,6 @@ const PATH_CALLS_SERVER = true;
 const PRIVACY = PATH_CALLS_SERVER
   ? "Your names stay in this browser. Letter lists and measured feedback are sent for coaching and practice words."
   : "Your names stay in this browser. Nothing is sent to a server.";
-const PRIVACY_SIGNED_IN = "You're signed in: your names and progress are saved to your account.";
 
 /**
  * Name rule (shown in the helper text): only the letters A to Z are signed.
@@ -96,15 +93,7 @@ export function Onboarding() {
   const themRef = useRef<HTMLInputElement>(null);
   const mounted = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const [accounts, setAccounts] = useState(false);
-  const [user, setUser] = useState<User | null>(getUser());
-  useEffect(() => {
-    void getAuthConfig().then((r) => setAccounts(r.ok && r.accounts));
-    return subscribe(setUser);
-  }, []);
-  // Already signed in (e.g. editing names from Settings): no save step. Once on it, keep the count while sign-up syncs.
-  const TOTAL = accounts && (!user || step > PATH_STEPS) ? PATH_STEPS + 1 : PATH_STEPS;
-  const privacy = user ? PRIVACY_SIGNED_IN : PRIVACY;
+  const privacy = PRIVACY;
 
   // Focus the new step's heading on every step change (not on first load). preventScroll: never jump the page.
   useEffect(() => {
@@ -142,10 +131,8 @@ export function Onboarding() {
     if (step < PATH_STEPS) return go(step + 1);
     // Build my path: save locally (try/catch + memory fallback inside saveProfile), then refresh practice words in the
     // background. The local path already exists, so a slow, failing or mock server can never block this.
-    // Saved BEFORE the sign-up step, so the sync after sign-up has a profile to push.
     saveProfile({ userName: cleanName(foldName(you)), theirName: cleanName(foldName(them)), relationship, leftHanded });
     void refreshPracticeWords().catch(() => {});
-    if (step < TOTAL) return go(step + 1);
     goHome();
   }
 
@@ -160,28 +147,6 @@ export function Onboarding() {
       </ol>
     </div>
   );
-
-  // Save step: outside the onboarding <form>, because AuthCard is its own form (no nested forms, and the outer
-  // Enter handler must not submit it). The profile is already saved, so skipping goes home exactly as before.
-  if (step > PATH_STEPS) {
-    return (
-      <div className="page onboarding">
-        <div className="onboard-card onboard-save">
-          {stepHead}
-          <div className={stepClass}>
-            <h1 ref={heading} tabIndex={-1}>Save your progress</h1>
-            <p className="muted">Create an account to keep your path and progress on any device. You can skip this.</p>
-            <AuthCard mode="signup" headingLevel={2} onDone={goHome} />
-          </div>
-          <div className="step-actions">
-            <button type="button" className="secondary" onClick={() => go(PATH_STEPS)}>Back</button>
-            <button type="button" className="cta" onClick={goHome}>Skip for now</button>
-          </div>
-          <p className="muted small privacy">{privacy}</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="page onboarding">
@@ -217,7 +182,6 @@ export function Onboarding() {
                 onChange={(e) => { setYou(e.target.value); if (err) setErr(""); }}
               />
               <LiveTiles name={you} />
-              {accounts && !user && <p className="auth-skip"><a href="#/login">I already have an account</a></p>}
             </>
           )}
 

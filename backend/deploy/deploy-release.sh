@@ -46,10 +46,9 @@ fetch_production() {
   tip=$(git --git-dir="$STATE/repo.git" rev-parse refs/heads/production) || return 1
   [[ "$tip" == "$1" ]] || { fail 'Refusing stale SHA: requested commit is not the production tip.'; return 1; }
   git --git-dir="$STATE/repo.git" merge-base --is-ancestor "$SEED" "$1" || return 1
-  # This rollout deliberately excludes main's account schema. A schema rollout needs
-  # an administrator's separate migration review and an explicit helper update.
+  # A schema rollout needs an administrator's separate migration review and an explicit helper update.
   git --git-dir="$STATE/repo.git" diff --quiet "$SEED" "$1" -- \
-    backend/schema.sql backend/schema.accounts.sql || {
+    backend/schema.sql || {
       fail 'Schema differs from the approved baseline; deployment requires manual review.'; return 1;
     }
 }
