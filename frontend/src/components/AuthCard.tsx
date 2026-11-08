@@ -80,6 +80,9 @@ export function AuthCard({ mode, onDone, headingLevel = 1 }: { mode: "signup" | 
     <div className="auth-wrap">
       <form className="auth-card" onSubmit={submit} noValidate>
         <H>{signup ? "Create your profile" : "Log in"}</H>
+        {headingLevel === 1 && (
+          <p className="muted auth-lead">{signup ? "Keep your path and progress on any device." : "Welcome back. Pick up where you left off."}</p>
+        )}
         {cfg?.googleClientId && (
           <>
             <GoogleButton clientId={cfg.googleClientId} onCredential={google} />
@@ -108,13 +111,24 @@ export function AuthCard({ mode, onDone, headingLevel = 1 }: { mode: "signup" | 
             error={errs.password}
             onChange={(e) => { setPassword(e.target.value); setErrs({}); }}
           />
-          <button type="button" className="secondary auth-toggle" aria-pressed={show} onClick={() => setShow(!show)}>
-            {show ? "Hide password" : "Show password"}
-          </button>
+          <div className="auth-pw-row">
+            <button type="button" className="secondary auth-toggle" aria-pressed={show} onClick={() => setShow(!show)}>
+              {show ? "Hide password" : "Show password"}
+            </button>
+            {!signup && <a className="auth-forgot" href="#/forgot">Forgot password?</a>}
+          </div>
         </div>
         {/* Live region stays mounted. Field errors are also tied to their field by HaloField (aria-describedby). */}
         <StatusMessage kind="error" label={false} message={errs.form ?? errs.email ?? errs.password ?? ""} />
-        <button type="submit" className="cta" disabled={busy}>{busy ? "One moment..." : signup ? "Create account" : "Log in"}</button>
+        <button type="submit" className="cta" disabled={busy}>
+          {busy && <span className="auth-spinner" aria-hidden="true" />}
+          {busy ? "One moment..." : signup ? "Create account" : "Log in"}
+        </button>
+        {signup && (
+          <p className="muted small auth-legal">
+            By creating an account you agree to how we handle your data (see <a href="#/settings">Privacy in Settings</a>).
+          </p>
+        )}
         <p className="muted small auth-switch">
           {signup ? <>Already have an account? <a href="#/login">Log in</a></> : <>New here? <a href="#/signup">Create your profile</a></>}
         </p>

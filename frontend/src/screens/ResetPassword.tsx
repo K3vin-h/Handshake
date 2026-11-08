@@ -39,27 +39,33 @@ export function ResetPassword() {
   if (done) {
     return (
       <div className="page">
-        <div className="auth-card">
+        <div className="auth-wrap auth-card">
           <h1>Reset password</h1>
           <StatusMessage kind="match" label={false} message="Password changed." />
-          <p><a href="#/login">Log in</a></p>
+          <a className="link-button primary auth-cta-link" href="#/login">Log in</a>
         </div>
       </div>
     );
   }
   return (
     <div className="page">
-      <form className="auth-card" onSubmit={submit} noValidate>
+      <form className="auth-wrap auth-card" onSubmit={submit} noValidate>
         <h1>Reset password</h1>
+        <p className="muted auth-lead">Choose a new password for your account.</p>
         <div className="auth-pw">
           <HaloField id="reset-password" inputRef={ref} label="New password" type={show ? "text" : "password"} autoComplete="new-password"
             description="At least 10 characters." value={password} error={fieldErr} onChange={(e) => { setPassword(e.target.value); setFieldErr(""); }} />
-          <button type="button" className="secondary auth-toggle" aria-pressed={show} onClick={() => setShow(!show)}>
-            {show ? "Hide password" : "Show password"}
-          </button>
+          <div className="auth-pw-row">
+            <button type="button" className="secondary auth-toggle" aria-pressed={show} onClick={() => setShow(!show)}>
+              {show ? "Hide password" : "Show password"}
+            </button>
+          </div>
         </div>
         <StatusMessage kind="error" label={false} message={formErr || fieldErr} />
-        <button type="submit" className="cta" disabled={busy}>Change password</button>
+        <button type="submit" className="cta" disabled={busy}>
+          {busy && <span className="auth-spinner" aria-hidden="true" />}
+          Change password
+        </button>
         <p className="muted small auth-switch"><a href="#/forgot">Ask for a new link</a></p>
       </form>
     </div>

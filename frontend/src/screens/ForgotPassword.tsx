@@ -36,15 +36,19 @@ export function ForgotPassword() {
 
   return (
     <div className="page">
-      <form className="auth-card" onSubmit={submit} noValidate>
+      <form className="auth-wrap auth-card" onSubmit={submit} noValidate>
         <h1>Forgot password</h1>
+        <p className="muted auth-lead">Enter your email and we'll send you a link to choose a new password.</p>
         <HaloField id="forgot-email" inputRef={ref} label="Email" type="email" autoComplete="email" value={email} error={err} disabled={enabled === false}
           onChange={(e) => { setEmail(e.target.value); setErr(""); }} />
         <StatusMessage
           kind="info"
           message={netDown ? authMessage("network") : enabled === false ? "Password reset isn't set up on this server." : sent ? "If that address has an account, we sent a link. It works for 30 minutes." : ""}
         />
-        <button type="submit" className="cta" disabled={enabled !== true || busy}>Send link</button>
+        <button type="submit" className="cta" disabled={enabled !== true || busy}>
+          {busy && <span className="auth-spinner" aria-hidden="true" />}
+          Send link
+        </button>
         <p className="muted small auth-switch"><a href="#/login">Back to log in</a></p>
       </form>
     </div>
