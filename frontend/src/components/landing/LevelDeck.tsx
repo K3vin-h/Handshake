@@ -324,7 +324,8 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
             className="lp-track"
             style={{ x, paddingLeft: lead, gap: GAP }}
             drag="x"
-            dragConstraints={{ left: restOf(units.length - 1), right: restOf(0) }}
+            // Extra room past the first and last positions so a drag can travel about as far as a full card, then springs back.
+            dragConstraints={{ left: restOf(units.length - 1) - slot * 0.7, right: restOf(0) + slot * 0.7 }}
             dragElastic={reduce ? 0 : 0.14}
             dragMomentum={false}
             onDragEnd={onDragEnd}
