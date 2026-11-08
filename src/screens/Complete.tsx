@@ -15,7 +15,7 @@ export function Complete({ lessonId }: { lessonId: string }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const celebrated = useRef(false);
   const [progress] = useState(loadProgress);
-  const [units] = useState(() => buildCurriculum(loadProfile() ?? DEMO_PROFILE).filter((u) => ["u1", "u2", "u3"].includes(u.id)));
+  const [units] = useState(() => buildCurriculum(loadProfile() ?? DEMO_PROFILE).filter((u) => ["u1", "u2", "u3", "u4"].includes(u.id)));
   const lesson = flatLessons(units).find((l) => l.id === lessonId);
   const done = !!lesson && progress.completed.includes(lessonId);
 

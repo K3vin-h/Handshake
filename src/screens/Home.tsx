@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { isPracticeable } from "../cv";
 import { LiveCoverage } from "../components/LiveCoverage";
-import { LockedUnit } from "../components/LockedUnit";
 import { UnitSection, type MapLesson } from "../components/PathMap";
 import { StatusBadge } from "../components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { buildCurriculum } from "../lib/curriculum";
 import { DEMO_PROFILE, WELCOME, fillNames, loadProfile } from "../lib/profile";
 import { dueItems, isUnlocked, loadProgress, nextLesson, weakItems } from "../lib/progress";
 
-// Home: the path. Units 1-3 are active; Unit 4 is locked ("Coming later").
+// Home: the path. Units 1-4 are active (demo lessons only).
 // Reads the profile and progress from localStorage only.
 
 export function Home() {
@@ -90,7 +89,7 @@ export function Home() {
 
       <div className="home-layout">
         <div className="units">
-          {units.slice(0, 3).map((u, i) => (
+          {units.slice(0, 4).map((u, i) => (
             <UnitSection
               key={u.id}
               index={i + 1}
@@ -100,11 +99,6 @@ export function Home() {
               onOpen={open}
             />
           ))}
-          <div className="locked-grid">
-            {units.slice(3, 4).map((u, i) => (
-              <LockedUnit key={u.id} title={`Unit ${i + 4} · ${u.title}`} />
-            ))}
-          </div>
         </div>
 
         <aside className="side" aria-label="Your letters and practice">

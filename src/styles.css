@@ -449,3 +449,16 @@ a.feature-tile:hover { border-color: var(--brand-text); background: var(--tint);
    utility would turn it into a CSS grid, so this unlayered rule restores the old row for plain elements.
    shadcn parts carry data-slot and keep Tailwind's grid. New code should use .chip-row, not .grid. */
 .grid:not([data-slot]) { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Conversation scene (Ryan): chat bubbles + a row of sign chips. State is always written in text, not colour alone. */
+.scene-chat { list-style: none; margin: var(--space-3) 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.scene-pair { display: flex; flex-direction: column; gap: var(--space-1); }
+.bubble { margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); border: 2px solid var(--border); max-width: 85%; background: var(--card); }
+.bubble-them { align-self: flex-start; }
+.bubble-you { align-self: flex-end; border-color: var(--match); }
+.bubble-gloss { font-weight: 700; letter-spacing: 0.04em; }
+.scene-chips { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.chip-sign { display: inline-flex; flex-direction: column; align-items: center; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); border: 2px solid var(--border); font-weight: 700; }
+.chip-state { font-size: 12px; font-weight: 400; }
+.chip-done { border-color: var(--match); color: var(--match); }
+.chip-now { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand); }
