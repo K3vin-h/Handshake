@@ -56,7 +56,7 @@ export type Personalization = {
 
 const MOVING = ["J", "Z"];
 
-/** Static letter families, easiest first. Same for every learner: Unit 1 letters are simply practised again. */
+/** Static letter families, easiest first. Same for every learner: Unit 1 letters are simply practiced again. */
 const FAMILIES: { id: string; title: string; letters: string[]; scope: "demo" | "stretch" }[] = [
   { id: "flat", title: "Flat and curved", letters: ["B", "C", "O"], scope: "demo" },
   { id: "point", title: "Point and pinky", letters: ["D", "I", "L", "Y"], scope: "demo" },

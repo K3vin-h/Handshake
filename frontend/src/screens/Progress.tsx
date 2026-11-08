@@ -55,9 +55,9 @@ export function ProgressScreen() {
   const pages = lessons.filter((l) => progress.completed.includes(l.id) && l.teaches?.length);
   const bars = letterBars(items);
   const { strong, weak } = strongAndWeak(items);
-  const { mastered, practising } = masteryCounts(items);
+  const { mastered, practicing } = masteryCounts(items);
   const almost = almostThere(items);
-  const maxCount = Math.max(1, mastered, practising);
+  const maxCount = Math.max(1, mastered, practicing);
 
   const mistakes = loadMistakes();
   const fingers = fingerBars(mistakes, FINGERS);
@@ -73,7 +73,7 @@ export function ProgressScreen() {
     const it = items[l];
     if (!isPracticeable(l)) return "Reference only";
     if (!it) return "Not started";
-    return it.mastered ? "Mastered ✓" : `Practising: ${Math.min(it.streak, 3)} of 3 in a row`;
+    return it.mastered ? "Mastered ✓" : `Practicing: ${Math.min(it.streak, 3)} of 3 in a row`;
   };
   const tableRows = (letters: string[], name: string) => (
     <div className="jr-table-wrap">
@@ -150,14 +150,14 @@ export function ProgressScreen() {
             {!next ? (
               <span>You finished every lesson that is available right now.</span>
             ) : nextOpen ? (
-              <a href={`#/lesson/${next.id}`}>Practise next: {next.id} {next.title}</a>
+              <a href={`#/lesson/${next.id}`}>Practice next: {next.id} {next.title}</a>
             ) : (
               <span>Finish the lesson before to unlock {next.id}.</span>
             )}
           </p>
           {weak[0] && (
             <p>
-              <Ink tone="smudge">{weak[0]} was hard · practise again</Ink>
+              <Ink tone="smudge">{weak[0]} was hard · practice again</Ink>
             </p>
           )}
         </Page>
@@ -166,7 +166,7 @@ export function ProgressScreen() {
       <Spread>
         <Page side="left" label="Tries" title="How my tries went" number={3}>
           {bars.length === 0 ? (
-            <p className="muted">Nothing here yet. Practise a lesson and this page fills in.</p>
+            <p className="muted">Nothing here yet. Practice a lesson and this page fills in.</p>
           ) : (
             <div className="jr-stack">
               {bars.map((b) => (
@@ -195,7 +195,7 @@ export function ProgressScreen() {
             </section>
             <div className="jr-stack">
               <HandBar label="Mastered" value={mastered} max={maxCount} text={String(mastered)} tone="good" />
-              <HandBar label="Practising" value={practising} max={maxCount} text={String(practising)} />
+              <HandBar label="Practicing" value={practicing} max={maxCount} text={String(practicing)} />
             </div>
             {almost && (
               <Sticker>{almost.letter} is {almost.need === 1 ? "1 away" : `${almost.need} away`} from mastered</Sticker>
@@ -207,7 +207,7 @@ export function ProgressScreen() {
       <Spread>
         <Page side="left" label="My hands" title="Which finger needs love" number={5}>
           {noMistakes ? (
-            <p className="muted">No finger differences recorded yet. Practise a lesson and they will appear here.</p>
+            <p className="muted">No finger differences recorded yet. Practice a lesson and they will appear here.</p>
           ) : (
             <div className="jr-stack">
               {fingers.map((f) => (

@@ -38,7 +38,7 @@ function HomeInner({ profile }: { profile: Profile }) {
   const letterStatus = (l: string): MarkState => {
     if (!isPracticeable(l)) return "reference-only";
     const it = progress.items[l];
-    return it?.mastered ? "mastered" : it && it.attempts > 0 ? "practising" : "not-started";
+    return it?.mastered ? "mastered" : it && it.attempts > 0 ? "practicing" : "not-started";
   };
   const stateOf = (id: string): LessonState => {
     if (progress.completed.includes(id)) return "done";

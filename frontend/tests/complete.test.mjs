@@ -42,7 +42,7 @@ test("Complete reads saved completion and never awards XP on navigation or reloa
     assert.ok(!PRACTICEABLE.includes("J") && !PRACTICEABLE.includes("Z"));
     const { Complete } = await vite.ssrLoadModule("/src/screens/Complete.tsx");
     const render = (lessonId) => renderToStaticMarkup(createElement(Complete, { lessonId }));
-    assert.match(render("1.1"), /Keep practising/);
+    assert.match(render("1.1"), /Keep practicing/);
     assert.deepEqual([...saved.keys()], ["handshake.profile.v1"]); // rendering wrote nothing but the profile this test seeded
     const progress = { xp: 40, streakDays: 1, lastActiveDay: null, completed: ["1.1"], items: {} };
     saved.set("handshake.progress.v1", JSON.stringify(progress));

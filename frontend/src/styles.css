@@ -306,7 +306,7 @@ button:hover:not(:disabled), .link-button:hover { transform: translateY(-1px); b
 .badge-status { font-size: 13px; font-weight: 600; }
 .badge-status { display: inline-flex; align-items: center; gap: 6px; }
 .badge-mastered { border-color: var(--brand-2); }
-.badge-practising { border-color: var(--brand-2); }
+.badge-practicing { border-color: var(--brand-2); }
 .badge-not-started { border-color: var(--border-strong); }
 .badge-reference-only { background: var(--reference-bg); color: var(--reference); border-style: dashed; border-color: var(--reference); }
 /* StatusMark shapes: colour is decoration, the shape and the text label carry the meaning */

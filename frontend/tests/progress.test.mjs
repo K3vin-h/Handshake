@@ -18,7 +18,7 @@ test("Progress journal spreads 1 and 2 render empty and filled states", async ()
     assert.match(empty, /aria-label="Lessons done"[^>]*aria-valuenow="0"/);
     assert.match(empty, /Your first page is waiting\. Finish a lesson to write it down\./);
     assert.match(empty, /No tries yet/);
-    assert.match(empty, /Nothing here yet\. Practise a lesson and this page fills in\./);
+    assert.match(empty, /Nothing here yet\. Practice a lesson and this page fills in\./);
     assert.match(empty, /reward-dawn/);
     assert.doesNotMatch(empty, /NaN/);
 
@@ -30,7 +30,7 @@ test("Progress journal spreads 1 and 2 render empty and filled states", async ()
     assert.match(full, /<span class="sr-only">L, matches the reference<\/span>/);
     assert.match(full, /aria-label="Letters A to M"/);
     assert.match(full, /aria-label="Letters N to Z"/);
-    assert.match(full, /Practise next: /);
+    assert.match(full, /Practice next: /);
     assert.doesNotMatch(full, /NaN/);
 
     // sign / sentence / scene items never show up in letter views
@@ -40,7 +40,7 @@ test("Progress journal spreads 1 and 2 render empty and filled states", async ()
     assert.doesNotMatch(signs, /MY NAME fs:RYAN/);
     assert.match(signs, /jr-table-wrap/);
 
-    // a letter practised just now (due in a day) is not due today
+    // a letter practiced just now (due in a day) is not due today
     saved.set("handshake.progress.v1", JSON.stringify({ xp: 0, streakDays: 0, lastActiveDay: null, completed: [], items: { L: { ...item(2, 0, false, 1, 1), due: Date.now() + 86400000 } } }));
     const fresh = render();
     assert.match(fresh, /Nothing is due today\./);
@@ -89,7 +89,7 @@ test("Progress journal spreads 3 and 4 (my hands, review plan)", async () => {
 
     // no mistakes, nothing due
     const empty = render();
-    assert.match(empty, /No finger differences recorded yet\. Practise a lesson and they will appear here\./);
+    assert.match(empty, /No finger differences recorded yet\. Practice a lesson and they will appear here\./);
     assert.match(empty, /Nothing is due today\./);
     assert.match(empty, /How often the camera measured each finger away from the reference\. Fewer is better\./);
     assert.doesNotMatch(empty, /NaN/);
@@ -158,7 +158,7 @@ test("Progress journal spread 5 (the full table)", async () => {
     assert.match(row("Q"), /Not started/);
     assert.match(row("L"), /Mastered ✓/);
     assert.match(row("L"), /4 of 5/);
-    assert.match(row("B"), /Practising: 2 of 3 in a row/);
+    assert.match(row("B"), /Practicing: 2 of 3 in a row/);
     assert.match(row("B"), /2 of 3/);
     assert.match(row("Q"), /–/);
     assert.match(t, /Mastered means matching the reference 3 times in a row\. Reference-only letters have no pass or fail\./);

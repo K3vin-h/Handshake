@@ -120,7 +120,7 @@ export function LessonDemo() {
       </div>
       <div className="row">
         <label>
-          Practise{" "}
+          Practice{" "}
           <select
             value={mode}
             onChange={(e) => {

@@ -51,7 +51,7 @@ export function Complete({ lessonId: routeParam }: { lessonId: string }) {
       <div className="page complete">
         <header className="hero">
           <p className="eyebrow">Lesson {lesson.id}</p>
-          <h1 ref={heading} tabIndex={-1}>Keep practising</h1>
+          <h1 ref={heading} tabIndex={-1}>Keep practicing</h1>
         </header>
         <StatusMessage kind="info" message={`Finish ${lesson.title} to save its completion and earn XP.`} />
         <div className="row">

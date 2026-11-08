@@ -39,7 +39,7 @@ test("strongAndWeak caps at 3", () => {
 test("masteryCounts", () => {
   assert.deepEqual(
     masteryCounts({ A: it({ mastered: true, attempts: 3 }), B: it({ attempts: 1 }), C: it() }),
-    { mastered: 1, practising: 1 },
+    { mastered: 1, practicing: 1 },
   );
 });
 

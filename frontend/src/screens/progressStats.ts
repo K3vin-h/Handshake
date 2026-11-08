@@ -34,12 +34,12 @@ export function strongAndWeak(items: Record<string, Item>) {
 
 export function masteryCounts(items: Record<string, Item>) {
   let mastered = 0;
-  let practising = 0;
+  let practicing = 0;
   for (const i of Object.values(items)) {
     if (i.mastered) mastered++;
-    else if (i.attempts > 0) practising++;
+    else if (i.attempts > 0) practicing++;
   }
-  return { mastered, practising };
+  return { mastered, practicing };
 }
 
 export function almostThere(items: Record<string, Item>): { letter: string; need: number } | null {

@@ -161,7 +161,7 @@ function Player({ lessonId }: { lessonId: string }) {
       </div>
     );
   const item = items[i];
-  if (!item) return <div className="page"><p>Nothing to practise here yet.</p><button onClick={next}>Continue</button></div>;
+  if (!item) return <div className="page"><p>Nothing to practice here yet.</p><button onClick={next}>Continue</button></div>;
   const stepLabel = `Step ${i + 1} of ${items.length}`;
 
   // Whole signs and sentences: one TokenRunner walks the parts (handshape → place → movement) on one camera.
@@ -374,7 +374,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
   return (
     <LessonView {...common} title={item.word ? `Spell ${item.word.letters.join("")}` : `Sign ${item.letter}`} word={item.word}
       showReference={item.showReference || sideBySide || recall} progress={shownProgress}
-      status={status || (recall ? `From memory: sign ${target}. The reference is hidden on purpose so you practise recalling it.` : `Hold the sign for ${target}${reps > 1 ? ` (${rep} of ${reps})` : ""}`)} feedback={result || undefined}
+      status={status || (recall ? `From memory: sign ${target}. The reference is hidden on purpose so you practice recalling it.` : `Hold the sign for ${target}${reps > 1 ? ` (${rep} of ${reps})` : ""}`)} feedback={result || undefined}
       actionLabel="Continue" actionDisabled={result !== "match"} onAction={onNext}
       onRetry={result === "match" ? retry : undefined} onSkip={result === "match" ? undefined : onSkip} />
   );

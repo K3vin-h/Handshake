@@ -77,7 +77,7 @@ export function TokenRunner(props: {
     return (
       <div className="page">
         <p role="status">
-          {movers.length ? `${movers.join(" and ")} move${movers.length === 1 ? "s" : ""}, so the camera can't check ${movers.length === 1 ? "it" : "them"}. Practise by watching and copying.` : "There is nothing for the camera to check in this step."}
+          {movers.length ? `${movers.join(" and ")} move${movers.length === 1 ? "s" : ""}, so the camera can't check ${movers.length === 1 ? "it" : "them"}. Practice by watching and copying.` : "There is nothing for the camera to check in this step."}
         </p>
         <button type="button" onClick={props.onEmpty}>Continue</button>
       </div>
