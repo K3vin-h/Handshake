@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { FaceAnchors } from "./faceTracker";
 import { useHandTracking } from "./useHandTracking";
 import { extractFeatures } from "./features";
 import { loadTemplates, meanTemplate } from "./classifier";
@@ -17,7 +18,7 @@ export type LetterCheckOptions = {
   enabled?: boolean;
   onMatch?: (d: SignDetection) => void;
   onMiss?: (feedback: FingerFeedback[], missCount: number) => void;
-  onFrame?: (hand: HandFrame | null, pred: Prediction, now: number) => void;
+  onFrame?: (hand: HandFrame | null, pred: Prediction, now: number, face?: FaceAnchors | null) => void;
 };
 
 /** A hand touching the frame edge gives bad landmarks: treat it as no hand. */
@@ -62,7 +63,7 @@ export function useLetterCheck(target: string, lessonLetters: string[], opts: Le
   useEffect(reset, [target]);
 
   const cam = useHandTracking(
-    (raw, now) => {
+    (raw, now, face) => {
       const hand = raw && inFrame(raw) ? raw : null;
       lastHand.current = hand;
       setHint(raw && !hand ? "Move your whole hand into the frame" : "");
@@ -80,13 +81,13 @@ export function useLetterCheck(target: string, lessonLetters: string[], opts: Le
         votes.current.reset();
         hold.current.reset();
         since.current = now;
-        o.current.onFrame?.(null, NONE, now);
+        o.current.onFrame?.(null, NONE, now, face);
         return;
       }
       const features = extractFeatures(hand);
       const p = votes.current.push(recognizer.predict(features, candidates));
       setPrediction(p);
-      o.current.onFrame?.(hand, p, now);
+      o.current.onFrame?.(hand, p, now, face);
       const d = hold.current.update(p.letter === target ? p : NONE, now);
       setProgress(hold.current.progress(now));
       if (d?.letter === target) {

@@ -7,7 +7,7 @@ export type LetterStatus = MarkState;
  *
  * Props
  * - letter: the letter or handshape id, e.g. "A" or "5".
- * - status: "mastered" | "practising" | "not-started" | "reference-only" (image + how-to, no pass/fail).
+ * - status: "mastered" | "practicing" | "not-started" | "reference-only" (image + how-to, no pass/fail).
  * - selected: highlights the badge (adds aria-current).
  * - onSelect: when given, the badge is a button (keyboard: Tab, Enter/Space).
  */

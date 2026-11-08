@@ -9,6 +9,10 @@ export type SceneViewProps = {
   camera: ReactNode;
   prompt: string;
   onSelfCheck?: () => void;
+  /** Lesson title, shown as the heading. Default "Say hello". */
+  title?: string;
+  /** Leave the scene without a match (not counted as one). Shown when given. */
+  onSkip?: () => void;
 };
 
 /** "fs:RYAN" → "spell RYAN"; a sign id → its gloss. */
@@ -28,7 +32,7 @@ export function SceneView(p: SceneViewProps) {
           <p className="eyebrow">
             Conversation · turn {Math.min(p.turnIndex + 1, p.turns.length)} of {p.turns.length}
           </p>
-          <h1>Say hello</h1>
+          <h1>{p.title ?? "Say hello"}</h1>
         </div>
       </header>
 
@@ -73,11 +77,18 @@ export function SceneView(p: SceneViewProps) {
       </section>
 
       <StatusMessage kind="info" label={false} message={p.prompt} />
-      {p.onSelfCheck && (
+      {(p.onSelfCheck || p.onSkip) && (
         <div className="row">
-          <button type="button" onClick={p.onSelfCheck}>
-            I signed it
-          </button>
+          {p.onSelfCheck && (
+            <button type="button" onClick={p.onSelfCheck}>
+              I signed it
+            </button>
+          )}
+          {p.onSkip && (
+            <button type="button" className="secondary" onClick={p.onSkip}>
+              Skip this scene
+            </button>
+          )}
         </div>
       )}
     </div>

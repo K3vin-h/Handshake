@@ -1,8 +1,8 @@
-export type MarkState = "mastered" | "practising" | "not-started" | "reference-only";
+export type MarkState = "mastered" | "practicing" | "not-started" | "reference-only";
 
 export const MARK_LABEL: Record<MarkState, string> = {
   mastered: "Mastered",
-  practising: "Practising",
+  practicing: "Practicing",
   "not-started": "Not started",
   "reference-only": "Reference only",
 };
@@ -12,7 +12,7 @@ export const MARK_LABEL: Record<MarkState, string> = {
  * depends on colour, and every use must sit next to its text label (MARK_LABEL).
  *
  * - mastered: filled accent circle with a check
- * - practising: accent ring, half filled
+ * - practicing: accent ring, half filled
  * - not-started: plain neutral outline ring (never green)
  * - reference-only: dashed grey ring
  *
@@ -30,7 +30,7 @@ export function StatusMark({ state, size = 20 }: { state: MarkState; size?: numb
           <path d="M7.5 12.5l3 3 6-6.5" className="mark-check" fill="none" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
         </>
       )}
-      {state === "practising" && (
+      {state === "practicing" && (
         <>
           <circle cx="12" cy="12" r="9" className="mark-ring" fill="none" strokeWidth="2.4" />
           <path d="M12 3a9 9 0 0 0 0 18z" className="mark-half" />

@@ -56,3 +56,17 @@ test("bounds tracked IPs without evicting active limits and frees expired entrie
   t = 1000;
   assert.ok(run(mw, "new-ip").nexted);
 });
+
+test("key option: separate keys limited independently, same key across IPs shares a budget", () => {
+  const mw = rateLimit({ windowMs: 1000, max: 1, now: () => 0, key: (req) => req.body.email });
+  const go = (ip, email) => {
+    let nexted = false;
+    let status = 200;
+    const res = { status(c) { status = c; return this; }, json() { return this; } };
+    mw({ ip, body: { email } }, res, () => { nexted = true; });
+    return { nexted, status };
+  };
+  assert.ok(go("1.1.1.1", "a@x.com").nexted);
+  assert.ok(go("1.1.1.1", "b@x.com").nexted);
+  assert.equal(go("2.2.2.2", "a@x.com").status, 429);
+});

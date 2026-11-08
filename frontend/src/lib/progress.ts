@@ -1,4 +1,5 @@
 import { flatLessons, type Unit } from "./curriculum";
+import { liveStreak, touchStreak } from "./streak";
 
 // Learner progress in localStorage: XP, daily streak, per-item mastery, spaced review.
 // Item ids: a letter ("A"), a sign ("HELLO"), or a word ("fs:LILY").
@@ -17,14 +18,16 @@ export type Progress = {
   lastActiveDay: string | null;
   completed: string[]; // lesson ids
   items: Record<string, ItemState>;
+  /** lesson id -> share (0..1) of its steps matched, for a lesson walked to the end with skipped steps. Not completed: no XP. */
+  partial?: Record<string, number>;
 };
 
 const empty = (): Progress => ({ xp: 0, streakDays: 0, lastActiveDay: null, completed: [], items: {} });
-const today = (now = Date.now()) => new Date(now).toISOString().slice(0, 10);
-
 export function loadProgress(): Progress {
   try {
-    return { ...empty(), ...JSON.parse(localStorage.getItem(KEY) ?? "{}") };
+    const p: Progress = { ...empty(), ...JSON.parse(localStorage.getItem(KEY) ?? "{}") };
+    p.streakDays = liveStreak(p.streakDays, p.lastActiveDay); // a lapsed streak reads 0, not an old number
+    return p;
   } catch {
     return empty();
   }
@@ -36,6 +39,7 @@ export function saveProgress(p: Progress) {
   } catch {
     /* storage unavailable: progress lasts for this session only */
   }
+  try { dispatchEvent(new Event("handshake:state")); } catch { /* not in a browser */ }
 }
 
 /** Call after every graded attempt. Returns the updated progress (also saved). */
@@ -53,7 +57,7 @@ export function recordAttempt(p: Progress, itemId: string, correct: boolean, now
   }
   it.due = now + BOX_DAYS[it.box] * DAY;
   const next = { ...p, items: { ...p.items, [itemId]: it } };
-  touchStreak(next, now);
+  Object.assign(next, touchStreak(next.streakDays, next.lastActiveDay, now));
   saveProgress(next);
   return next;
 }
@@ -64,18 +68,18 @@ export function addXp(p: Progress, amount: number): Progress {
   return next;
 }
 
-export function completeLesson(p: Progress, lessonId: string, xp: number): Progress {
-  const next = { ...p, xp: p.xp + xp, completed: p.completed.includes(lessonId) ? p.completed : [...p.completed, lessonId] };
+/** A lesson walked to the end with skipped steps: remembered as partly done. It stays incomplete, but the next lesson opens. */
+export function recordPartial(p: Progress, lessonId: string, share: number): Progress {
+  const next = { ...p, partial: { ...p.partial, [lessonId]: Math.max(0, Math.min(1, share)) } };
   saveProgress(next);
   return next;
 }
 
-function touchStreak(p: Progress, now: number) {
-  const t = today(now);
-  if (p.lastActiveDay === t) return;
-  const yesterday = today(now - DAY);
-  p.streakDays = p.lastActiveDay === yesterday ? p.streakDays + 1 : 1;
-  p.lastActiveDay = t;
+export function completeLesson(p: Progress, lessonId: string, xp: number): Progress {
+  const { [lessonId]: _gone, ...partial } = p.partial ?? {};
+  const next = { ...p, partial, xp: p.xp + xp, completed: p.completed.includes(lessonId) ? p.completed : [...p.completed, lessonId] };
+  saveProgress(next);
+  return next;
 }
 
 /** Items due for review (weakest first). Used by "review" steps and the Daily review card. */
@@ -87,12 +91,12 @@ export function dueItems(p: Progress, now = Date.now(), limit = 5): string[] {
     .map(([id]) => id);
 }
 
-/** A lesson is unlocked when the previous DEMO lesson (in path order) is completed. Stretch lessons never gate. */
+/** A lesson is unlocked when the previous DEMO lesson (in path order) is completed, or was walked to the end with some steps skipped. Stretch lessons never gate. */
 export function isUnlocked(units: Unit[], p: Progress, lessonId: string): boolean {
   const all = flatLessons(units);
   const i = all.findIndex((l) => l.id === lessonId);
   const prev = all.slice(0, Math.max(0, i)).filter((l) => l.scope === "demo").at(-1);
-  return !prev || p.completed.includes(prev.id);
+  return !prev || p.completed.includes(prev.id) || (p.partial?.[prev.id] ?? 0) > 0;
 }
 
 /** Next lesson to do (first demo lesson not completed). */

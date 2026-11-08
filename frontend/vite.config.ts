@@ -8,6 +8,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   server: {
-    proxy: { "/api": "http://localhost:8787" },
+    // changeOrigin:false keeps the browser's Host header, which the account CSRF check (Origin host == Host) needs.
+    proxy: { "/api": { target: "http://localhost:8787", changeOrigin: false } },
   },
 });

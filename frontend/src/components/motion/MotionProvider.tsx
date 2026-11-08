@@ -37,6 +37,12 @@ export function useReduceMotion(): boolean {
   return useContext(MotionCtx).reduce;
 }
 
+/** Which setting asked for reduced motion: the device (`os`) or the in-app switch (`userChoice`). */
+export function useMotionSource(): { os: boolean; userChoice: boolean } {
+  const { os, userChoice } = useContext(MotionCtx);
+  return { os, userChoice };
+}
+
 /** Nav switch. Text states the current setting, so it never relies on colour or an icon. */
 export function ReduceMotionToggle() {
   const { userChoice, setUserChoice } = useContext(MotionCtx);
