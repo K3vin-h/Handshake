@@ -5,7 +5,7 @@ import { StatusBadge, type BadgeKind } from "../components/StatusBadge";
 import { Progress } from "@/components/ui/progress";
 import { buildCurriculum } from "../lib/curriculum";
 import { loadMistakes, weakFingers } from "../lib/mistakes";
-import { DEMO_PROFILE, loadProfile } from "../lib/profile";
+import { requireProfile } from "../lib/requireProfile";
 import { dueItems, loadProgress, nextLesson, weakItems } from "../lib/progress";
 
 // Progress (Stats folded in). Every number comes from localStorage via the progress and mistakes code:
@@ -18,9 +18,10 @@ const FINGERS = ["thumb", "index", "middle", "ring", "pinky"];
 const pct = (n: number, of: number) => Math.round((n / of) * 100);
 
 export function ProgressScreen() {
-  const profile = loadProfile() ?? DEMO_PROFILE;
+  const profile = requireProfile();
   const progress = loadProgress();
-  const units = useMemo(() => buildCurriculum(profile).filter((u) => ["u1", "u2"].includes(u.id)), []); // eslint-disable-line react-hooks/exhaustive-deps
+  // All units, like Home and Complete, so "lessons done" and "next up" agree across screens.
+  const units = useMemo(() => buildCurriculum(profile), []); // eslint-disable-line react-hooks/exhaustive-deps
   const fingerCounts = new Map(weakFingers(loadMistakes(), FINGERS.length).map((f) => [f.finger, f.count]));
   const maxMiss = Math.max(1, ...FINGERS.map((f) => fingerCounts.get(f) ?? 0));
 
@@ -163,7 +164,7 @@ export function ProgressScreen() {
           <summary>
             Alphabet{" "}
             <span className="muted">
-              · {mastered} of {liveLetters.length} live mastered, {LETTERS.length - liveLetters.length} reference only. Open or close the list.
+              · {mastered} of {liveLetters.length} camera-checked letters mastered (not gate-tested), {LETTERS.length - liveLetters.length} reference only. Open or close the list.
             </span>
           </summary>
           <div className="table-wrap">
