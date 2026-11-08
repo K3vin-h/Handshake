@@ -10,8 +10,8 @@
 /* Handshake design tokens + styles. Plain CSS, no framework. Light theme ("A Silent Voice": pale sky, river blue, sakura pink).
    Contrast for every text/background pair is checked by `node src/styles.contrast.mjs`. */
 :root {
-  /* 1 font (system stack; Inter is used when installed. No web font is loaded, so nothing leaves the device) */
-  --font: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* 1 font, self-hosted (served from our own origin, nothing leaves the device) */
+  --font: "Atkinson Hyperlegible Next Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
 
   /* surfaces + text */
   --bg: #eef4fa; /* pale sky page (fallback under the sky layers), so white cards stand out */
@@ -59,6 +59,20 @@
   --radius-pill: 999px;
   --shadow-md: 0 10px 30px rgba(30, 50, 70, 0.1);
   --glow: 0 0 36px rgba(58, 106, 143, 0.4);
+  --shadow-card: 0 0 0 1px rgba(30, 50, 70, 0.06), 0 1px 2px rgba(30, 50, 70, 0.04), 0 8px 24px rgba(30, 50, 70, 0.06);
+
+  /* type scale + sections */
+  --text-display: clamp(2.25rem, 1.4rem + 3.6vw, 3.5rem);
+  --text-h1: clamp(1.75rem, 1.3rem + 1.8vw, 2.5rem);
+  --text-h2: 1.375rem; --text-body: 1.0625rem; --text-small: 0.875rem;
+  --section: clamp(40px, 6vw, 80px);
+  --space-7: 48px; --space-8: 64px;
+
+  /* easing + durations (mirror components/motion/tokens.ts) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-press: 150ms; --dur-ui: 200ms; --dur-enter: 300ms;
 
   /* motion */
   --motion-fast: 140ms;
@@ -143,7 +157,9 @@ body::after {
   animation: cloud-drift 90s ease-in-out infinite alternate;
 }
 @keyframes cloud-drift { to { transform: translateX(8%); } }
-h1, h2, h3 { line-height: 1.15; }
+h1, h2, h3 { line-height: 1.15; text-wrap: balance; }
+p { text-wrap: pretty; }
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 a { color: var(--brand-text); }
 
 /* Visible focus on every interactive element. */
