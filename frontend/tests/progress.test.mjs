@@ -162,7 +162,7 @@ test("Progress journal spread 5 (the full table)", async () => {
     assert.match(row("B"), /2 of 3/);
     assert.match(row("Q"), /–/);
     assert.match(t, /Mastered means matching the reference 3 times in a row\. Reference-only letters have no pass or fail\./);
-    assert.doesNotMatch(html, /<details/);
+    assert.doesNotMatch(html, /<details(?![^>]*jr-more)/);
     assert.doesNotMatch(html, /NaN/);
   } finally {
     if (previous) Object.defineProperty(globalThis, "localStorage", previous); else delete globalThis.localStorage;

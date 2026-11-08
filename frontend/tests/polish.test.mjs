@@ -45,3 +45,13 @@ test("settings links to the camera demo", () =>
     const { Settings } = await load("/src/screens/Settings.tsx");
     assert.match(render(h(Settings)), /href="#\/camera-demo"/);
   }));
+
+test("progress: detail spreads sit inside one closed disclosure", () =>
+  withApp(async (load, render, h) => {
+    const { ProgressScreen } = await load("/src/screens/Progress.tsx");
+    const html = render(h(ProgressScreen));
+    assert.equal((html.match(/<details[^>]*jr-more/g) ?? []).length, 1);
+    assert.doesNotMatch(html, /<details[^>]*jr-more[^>]*\sopen/);
+    assert.match(html.split("jr-more")[0], /Your alphabet/);
+    assert.match(html.split("jr-more")[1], /Due today/);
+  }));
