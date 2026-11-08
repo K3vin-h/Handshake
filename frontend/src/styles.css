@@ -815,3 +815,11 @@ body:has(.reward-dawn)::after { display: none; }
 .alpha-strip .alpha-done { box-shadow: none; }
 .complete-cols { display: grid; gap: var(--space-5); grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 900px) { .complete-cols { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; } .complete-cols aside { position: sticky; top: var(--space-4); } }
+
+/* Progress journal: the pastel purple/blue "silent voice" sky instead of the peach dawn used on the other reward screens. Still, no animation. */
+body:has(.progress-page.reward-dawn)::before {
+  background:
+    radial-gradient(ellipse at 0% 100%, rgba(203, 190, 236, 0.8), transparent 58%),
+    radial-gradient(ellipse at 100% 0%, rgba(176, 205, 238, 0.95), transparent 55%),
+    linear-gradient(180deg, #eef3fb, #efeaf8);
+}
