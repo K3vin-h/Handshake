@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { SIGNS } from "../cv";
 import { StatusMessage } from "./StatusMessage";
+import { RewardLine } from "./RewardLine";
 
 export type SceneViewProps = {
   turns: { them: { gloss: string; english: string }; you: { tokens: string[]; english: string } }[];
@@ -13,6 +14,8 @@ export type SceneViewProps = {
   title?: string;
   /** Leave the scene without a match (not counted as one). Shown when given. */
   onSkip?: () => void;
+  /** Praise after a confirmed sign match (Gemini or canned, "cached"). */
+  reward?: { message: string; cached: boolean };
 };
 
 /** "fs:RYAN" → "spell RYAN"; a sign id → its gloss. */
@@ -77,6 +80,7 @@ export function SceneView(p: SceneViewProps) {
       </section>
 
       <StatusMessage kind="info" label={false} message={p.prompt} />
+      <RewardLine reward={p.reward} />
       {(p.onSelfCheck || p.onSkip) && (
         <div className="row">
           {p.onSelfCheck && (
