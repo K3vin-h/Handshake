@@ -57,6 +57,16 @@ test("(b) 409 then 200 is exactly 2 PUTs, no echo push", async () => {
   assert.equal(puts, 2);
 });
 
+test("(e) a profile whose name the server would reject is never pushed", async () => {
+  await syncNow();
+  profile = { ...prof, userName: "Ryan2" };
+  const before = puts;
+  await syncNow();
+  fire();
+  await wait(40);
+  assert.equal(puts, before);
+});
+
 test("(d) a debounce armed while signed in sends nothing after logout", async () => {
   const { logOut } = await import("./auth.ts");
   await syncNow();
