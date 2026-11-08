@@ -168,6 +168,12 @@ nav a:hover { color: var(--text); background: var(--raised); }
 nav a[aria-current="page"] { color: var(--text); background: var(--raised); box-shadow: inset 0 -3px 0 var(--brand-text); }
 nav a.brand { color: var(--text); font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; margin-right: var(--space-3); padding-left: 0; }
 nav a.brand:hover { background: transparent; }
+/* Three zones. Equal side columns keep the streak and XP chip exactly in the middle. */
+nav.top-nav { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--space-3); }
+nav.top-nav .nav-left, nav.top-nav .nav-right { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; min-width: 0; }
+nav.top-nav .nav-right { justify-content: flex-end; gap: var(--space-2); }
+nav.top-nav .nav-center { display: flex; justify-content: center; align-items: center; }
+@media (max-width: 820px) { nav.top-nav { grid-template-columns: 1fr; } nav.top-nav .nav-center { justify-content: flex-start; } nav.top-nav .nav-right { justify-content: flex-start; } }
 .nav-chips { margin-left: auto; }
 /* Phones: the nav wraps instead of widening the page, and scrolls away so it doesn't eat the screen. */
 nav { flex-wrap: wrap; }

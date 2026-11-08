@@ -85,8 +85,9 @@ const NAV: [string, string][] = [
   ["#/", "Home"],
   ["#/path", "Levels"],
   ["#/progress", "Progress"],
-  ["#/settings", "Settings"],
 ];
+/** Settings sits at the right end of the bar, by the Dev tools menu. */
+const SETTINGS: [string, string] = ["#/settings", "Settings"];
 const DEV_NAV: [string, string][] = [
   ["#/demo", "Demo"],
   ["#/record", "Record"],
@@ -130,32 +131,40 @@ export default function App() {
       <a className="skip-link" href="#main" onClick={(e) => { e.preventDefault(); document.getElementById("main")?.focus(); }}>
         Skip to content
       </a>
-      <nav aria-label="Main">
-        <a className="brand" href="#/">Handshake</a>
-        {NAV.map(([href, label]) => (
-          <a key={href} href={href} aria-current={navActive(href, hash) ? "page" : undefined}>
-            {label}
-          </a>
-        ))}
-        {loadProfile() && (
-          <span className="nav-chips">
-            <StreakXpChip streakDays={loadProgress().streakDays} xp={loadProgress().xp} />
-          </span>
-        )}
-        <AccountChip />
-        <ReduceMotionToggle />
-        {import.meta.env.DEV && (
-          <details className="dev-menu">
-            <summary>Dev tools</summary>
-            <div className="dev-menu-list">
-              {DEV_NAV.map(([href, label]) => (
-                <a key={href} href={href} aria-current={hash === href ? "page" : undefined}>
-                  {label}
-                </a>
-              ))}
-            </div>
-          </details>
-        )}
+      <nav aria-label="Main" className="top-nav">
+        {/* Three zones with equal side columns, so the streak and XP chip is always exactly in the middle. */}
+        <div className="nav-left">
+          <a className="brand" href="#/">Handshake</a>
+          {NAV.map(([href, label]) => (
+            <a key={href} href={href} aria-current={navActive(href, hash) ? "page" : undefined}>
+              {label}
+            </a>
+          ))}
+        </div>
+        <div className="nav-center">
+          {loadProfile() && (
+            <span className="nav-chips">
+              <StreakXpChip streakDays={loadProgress().streakDays} xp={loadProgress().xp} />
+            </span>
+          )}
+        </div>
+        <div className="nav-right">
+          <AccountChip />
+          <ReduceMotionToggle />
+          {import.meta.env.DEV && (
+            <details className="dev-menu">
+              <summary>Dev tools</summary>
+              <div className="dev-menu-list">
+                {DEV_NAV.map(([href, label]) => (
+                  <a key={href} href={href} aria-current={hash === href ? "page" : undefined}>
+                    {label}
+                  </a>
+                ))}
+              </div>
+            </details>
+          )}
+          <a href={SETTINGS[0]} aria-current={navActive(SETTINGS[0], hash) ? "page" : undefined}>{SETTINGS[1]}</a>
+        </div>
       </nav>
       <main id="main" tabIndex={-1}>
         <PageTransition key={hash}>{screen(hash)}</PageTransition>
