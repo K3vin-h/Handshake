@@ -440,6 +440,9 @@ a.feature-tile:hover { border-color: var(--brand-text); background: var(--tint);
 [data-reduce-motion] .halo-rim::before { animation: none; }
 }
 
+/* Lesson progress bar across the top of a lesson (Ryan). The match / "not yet" result is shown by StatusMessage in the coach panel. */
+.lesson-progress { width: 100%; height: 12px; accent-color: var(--brand); margin-bottom: var(--space-2); }
+
 /* Typed so the halo rim angle can animate (outside the layer: @property is global). */
 @property --halo-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
 

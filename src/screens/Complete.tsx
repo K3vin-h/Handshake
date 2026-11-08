@@ -92,6 +92,9 @@ export function Complete({ lessonId }: { lessonId: string }) {
             <p>You finished the current path. Greetings and conversations are coming later.</p>
           )}
           <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl border-2">
+            <a href={`#/lesson/${lessonId}`}>Practice again</a>
+          </Button>
+          <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl border-2">
             <a href="#/">Back to your path</a>
           </Button>
           <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl border-2">
