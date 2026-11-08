@@ -232,6 +232,24 @@ test("google linking: unverified password account is linked and its password cle
   });
 });
 
+test("google linking: squatter session/state created mid-link does not survive; owner's does", async () => {
+  const db = fakeDb();
+  const squatter = await addUser(db, { email: "owner@example.com", verified: false });
+  const realLink = db.linkGoogle;
+  db.linkGoogle = async (...a) => { // squatter logs in between the first cleanup and the link
+    db.sessions.set("squat-late", { userId: squatter.id });
+    db.states.set(squatter.id, { profile: "squatter" });
+    return realLink(...a);
+  };
+  await withApp({ db }, async (s) => {
+    const r = await s.post("/api/auth/google", { credential: "g-squat" });
+    assert.equal(r.status, 200);
+    assert.equal(db.sessions.has("squat-late"), false);
+    assert.equal(db.states.has(squatter.id), false);
+    assert.equal([...db.sessions.values()].filter((x) => x.userId === squatter.id).length, 1, "only the owner's new session");
+  });
+});
+
 test("google linking: verified password account is linked and keeps its password", async () => {
   const db = fakeDb();
   const owner = await addUser(db, { email: "owner@example.com", verified: true });
@@ -404,15 +422,22 @@ test("signup: breached password is 400 breached_password and creates no user", a
   });
 });
 
-test("signup: obvious passwords are 400 weak_password, without asking the breach API", async () => {
+test("signup: obvious passwords are 400 obvious_password, without asking the breach API", async () => {
   const db = fakeDb();
   let asked = 0;
   await withApp({ db, isBreached: async () => { asked++; return false; } }, async (s) => {
     const r = await s.post("/api/auth/signup", { email: "marathon@example.com", password: "my-MARATHON-2024" });
-    assert.deepEqual([r.status, r.body], [400, { error: "weak_password" }]);
+    assert.deepEqual([r.status, r.body], [400, { error: "obvious_password" }]);
+    assert.deepEqual((await s.post("/api/auth/signup", { email: "marathon2@example.com", password: "marathon2@example.com".split("@")[0] + "99" })).body, { error: "obvious_password" });
     assert.equal((await s.post("/api/auth/signup", { email: "b@example.com", password: "handshake-rocks" })).status, 400);
     assert.equal(db.users.size, 0);
     assert.equal(asked, 0);
+  });
+});
+
+test("signup: a short email name inside an unrelated longer password is accepted", async () => {
+  await withApp({}, async (s) => {
+    assert.equal((await s.post("/api/auth/signup", { email: "ryan@x.com", password: "Bryant-sunset-2026" })).status, 201);
   });
 });
 
@@ -431,7 +456,7 @@ test("reset: breached or obvious password is 400 and does not use up the token",
     const r = await s.post("/api/auth/reset", { token, password: PW });
     assert.deepEqual([r.status, r.body], [400, { error: "breached_password" }]);
     assert.equal([...db.resets.values()][0].used, false);
-    assert.deepEqual((await s.post("/api/auth/reset", { token, password: "handshake-pass-1" })).body, { error: "weak_password" });
+    assert.deepEqual((await s.post("/api/auth/reset", { token, password: "handshake-pass-1" })).body, { error: "obvious_password" });
     assert.equal([...db.resets.values()][0].used, false);
     breached = false;
     assert.equal((await s.post("/api/auth/reset", { token, password: "a-brand-new-password" })).status, 204);

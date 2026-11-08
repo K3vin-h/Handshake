@@ -38,8 +38,10 @@ test("tooObvious", () => {
   assert.equal(tooObvious("aaaaaaaaaaaa", "a@b.co"), true);
   assert.equal(tooObvious("0123456789", "a@b.co"), true);
   assert.equal(tooObvious("abcdefghijkl", "a@b.co"), true);
-  assert.equal(tooObvious("ryan-is-here-1", "ryan@example.com"), true);
-  assert.equal(tooObvious("abc-is-here-12", "abc@example.com"), false, "local part under 4 chars is ignored");
+  assert.equal(tooObvious("ryan-is-here-1", "ryan@example.com"), false, "local part under 6 chars is ignored");
+  assert.equal(tooObvious("marathon-and-a-long-sunset-1", "marathon@example.com"), true, "starts with it");
+  assert.equal(tooObvious("a-long-sunny-walk-marathon-1", "marathon@example.com"), false, "short share, in the middle");
+  assert.equal(tooObvious("abc-is-here-12", "abc@example.com"), false, "short local part is ignored");
   assert.equal(tooObvious(PW, "ryan@example.com"), false);
   assert.equal(tooObvious("some-long-password", undefined), false);
 });

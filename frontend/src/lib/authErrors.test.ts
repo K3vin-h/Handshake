@@ -12,6 +12,8 @@ test("maps known codes verbatim and falls back", () => {
   assert.equal(authMessage("network", "google"), "Can't reach the server. Try again.");
   assert.equal(authMessage("breached_password"), "That password appears in known data breaches. Choose a different one.");
   assert.equal(authErrorField("breached_password"), "password");
+  assert.equal(authMessage("obvious_password"), "That password is too easy to guess. Avoid your email name or the app name.");
+  assert.equal(authErrorField("obvious_password"), "password");
   assert.equal(authErrorField("email_taken"), "email");
   assert.equal(authErrorField("invalid_credentials"), "password");
   assert.equal(authErrorField("network"), "form");

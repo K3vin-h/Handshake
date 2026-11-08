@@ -30,7 +30,8 @@ export function register(app, { db, verifyGoogle, isBreached = realIsBreached, s
   app.post("/api/auth/signup", sameOrigin, rateLimit({ windowMs: 3_600_000, max: 10 }), json, needDb, async (req, res) => {
     const { email, password } = req.body ?? {};
     if (!isEmail(email)) return bad(res);
-    if (!strong(password) || tooObvious(password, email)) return bad(res, "weak_password");
+    if (!strong(password)) return bad(res, "weak_password");
+    if (tooObvious(password, email)) return bad(res, "obvious_password");
     if (await isBreached(password)) return bad(res, "breached_password");
     try {
       const user = await db.createUser({ email: norm(email), passwordHash: await hashPassword(password) });
@@ -73,8 +74,11 @@ export function register(app, { db, verifyGoogle, isBreached = realIsBreached, s
           // password and end its live sessions first, so a squatter who registered the address cannot keep access.
           const clearPassword = !existing.email_verified_at;
           // Also drop the squatter's saved names/progress so they can never sync into the owner's profile.
-          if (clearPassword) { await db.deleteState(existing.id); await db.deleteUserSessions(existing.id); }
+          const purge = async () => { await db.deleteState(existing.id); await db.deleteUserSessions(existing.id); };
+          if (clearPassword) await purge();
           user = await db.linkGoogle(existing.id, g.sub, { clearPassword });
+          // The squatter could log in with the password until it was cleared: purge again (idempotent), before the owner's session starts.
+          if (clearPassword && user) await purge();
         } else {
           user = await db.createUser({ email, googleSub: g.sub, verified: true });
           isNew = true;
@@ -111,7 +115,8 @@ export function register(app, { db, verifyGoogle, isBreached = realIsBreached, s
     if (typeof token !== "string" || token.length > 100) return bad(res, "invalid_token");
     // Validate before consumeReset so a rejected password does not burn the single-use token.
     // No email here (and none looked up), so only the 'handshake' and trivial-run checks apply.
-    if (!strong(password) || tooObvious(password)) return bad(res, "weak_password");
+    if (!strong(password)) return bad(res, "weak_password");
+    if (tooObvious(password)) return bad(res, "obvious_password");
     if (await isBreached(password)) return bad(res, "breached_password");
     try {
       const userId = await db.consumeReset(hashToken(token), new Date(now()));

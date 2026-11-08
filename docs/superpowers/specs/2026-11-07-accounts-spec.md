@@ -50,12 +50,12 @@ All errors are `{ "error": "<code>" }`, matching the existing routes. Auth route
 | Route | Body | Success | Errors |
 |---|---|---|---|
 | `GET /api/auth/config` | none | `{ accounts, googleClientId, resetEmail }` | none |
-| `POST /api/auth/signup` | `{ email, password }` | 201 `{ user }` + session cookie | 400 `bad_request`/`weak_password`/`breached_password`, 409 `email_taken`, 429, 503 |
+| `POST /api/auth/signup` | `{ email, password }` | 201 `{ user }` + session cookie | 400 `bad_request`/`weak_password` (length only)/`obvious_password`/`breached_password`, 409 `email_taken`, 429, 503 |
 | `POST /api/auth/login` | `{ email, password }` | 200 `{ user }` + cookie | 401 `invalid_credentials`, 429 |
 | `POST /api/auth/google` | `{ credential }` (Google ID token) | 200 `{ user, isNew }` + cookie | 401 `invalid_token`, 429 |
 | `POST /api/auth/logout` | none | 204, cookie cleared, session deleted | none |
 | `POST /api/auth/forgot` | `{ email }` | **always** 202 (no account enumeration) | 429 |
-| `POST /api/auth/reset` | `{ token, password }` | 204, all sessions of that user deleted | 400 `invalid_token`/`weak_password`/`breached_password` |
+| `POST /api/auth/reset` | `{ token, password }` | 204, all sessions of that user deleted | 400 `invalid_token`/`weak_password` (length only)/`obvious_password`/`breached_password` |
 | `GET /api/me` | none | `{ user: { email, hasPassword, google }, state: { profile, progress, rev } \| null }` | 401 `unauthenticated` |
 | `PUT /api/me/state` | `{ profile, progress, baseRev }` | 200 `{ rev }` | 409 `conflict` with `{ state }`, 400, 401 |
 | `DELETE /api/me` | none | 204, account and all its rows removed | 401 |
