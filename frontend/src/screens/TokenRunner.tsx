@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { SIGNS, SignChecker, isPracticeable, useLetterCheck, zoneOf } from "../cv";
+import { SIGNS, SequenceChecker, SignChecker, getSignTemplate, isPracticeable, useLetterCheck, zoneOf } from "../cv";
 import { Camera } from "../components/Camera";
 import { SignGuide } from "./SignGuide";
 
@@ -44,11 +44,15 @@ export function TokenRunner(props: {
   useEffect(() => setK(0), [tokensKey]); // the same runner (and camera) is reused for the next step
   const u = units[k];
   const def = u?.kind === "sign" ? SIGNS[u.id] : undefined;
-  const auto = u?.kind === "letter" || (SIGNS_AUTO && def?.grading === "assisted");
-  const checker = useMemo(() => (def ? new SignChecker(def) : null), [def]);
+  // A sign with recorded takes (#/record-signs) is checked against them; otherwise the handshape + place + movement rules.
+  const tpl = useMemo(() => (def ? getSignTemplate(def.id) : null), [def]);
+  const auto = u?.kind === "letter" || !!tpl || (SIGNS_AUTO && def?.grading === "assisted");
+  const checker = useMemo(() => (def && !tpl ? new SignChecker(def) : null), [def, tpl]);
+  const seqChecker = useMemo(() => (tpl ? new SequenceChecker(tpl) : null), [tpl]);
   const advance = () => {
     setMsg("");
-    checker?.reset(); // the same sign can come up again (e.g. YOU in consecutive scene turns)
+    checker?.reset();
+    seqChecker?.reset(); // the same sign can come up again (e.g. YOU in consecutive scene turns)
     if (k + 1 < units.length) setK(k + 1);
     else {
       setK(0);
@@ -61,6 +65,12 @@ export function TokenRunner(props: {
     enabled: !!u && auto,
     onMatch: () => u?.kind === "letter" && advance(),
     onFrame: (hand, pred, now) => {
+      if (seqChecker && auto) {
+        const r = seqChecker.update(hand, now);
+        setMsg(r.message);
+        if (r.done) advance();
+        return;
+      }
       if (!checker || !auto) return;
       if (hand) setZone(zoneOf(hand));
       const r = checker.update(hand, pred, now);

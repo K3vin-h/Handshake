@@ -1,6 +1,7 @@
 import { Suspense, lazy } from "react";
 import { meanPose3D, type SignDef } from "../cv";
 import type { Template } from "../cv/types";
+import { DIAGRAMS, SignDiagram } from "../components/SignDiagram";
 
 const HandModel3D = lazy(() => import("../components/HandModel3D"));
 
@@ -31,6 +32,17 @@ function Arrow({ move, x, y }: { move: SignDef["movement"]; x: number; y: number
  */
 export function SignGuide({ def, templates, leftHanded }: { def: SignDef; templates: Template[]; leftHanded: boolean }) {
   const [x, y] = AT[def.zone];
+  if (DIAGRAMS[def.id])
+    return (
+      <section className="card sign-guide" aria-label={`How to sign ${def.english}`}>
+        <h2 className="small-title">How to sign “{def.english}”{def.hands === 2 ? " (both hands)" : ""}</h2>
+        <SignDiagram id={def.id} leftHanded={leftHanded} />
+        <Suspense fallback={<div className="hand3d empty">Loading 3D hand…</div>}>
+          <HandModel3D pose={meanPose3D(def.handshape, templates, leftHanded)} letter={def.handshape} height={170} />
+        </Suspense>
+        <p className="muted small">Picture is like a mirror: faded dashed hands are the start, solid hands the end. Handshape: “{def.handshape === "5" ? "open hand" : def.handshape}”. Simplified, not yet checked by a fluent signer.</p>
+      </section>
+    );
   return (
     <section className="card sign-guide" aria-label={`How to sign ${def.english}`}>
       <h2 className="small-title">How to sign “{def.english}”</h2>

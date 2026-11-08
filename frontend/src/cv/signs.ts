@@ -23,6 +23,8 @@ export type SignDef = {
   howTo: string;
   /** "assisted" = auto-checked as above; "self" = two-handed / needs the face: learner confirms. */
   grading: "assisted" | "self";
+  /** Hands the sign needs (default 1). Two-handed signs are only matched against recorded takes (#/record-signs). */
+  hands?: 1 | 2;
   /** Topic packs Gemini can pick from during onboarding. */
   packs?: ("coworker" | "friend" | "family" | "classmate" | "partner")[];
   verified?: boolean;
@@ -32,10 +34,10 @@ export const SIGNS: Record<string, SignDef> = {
   HELLO: { id: "HELLO", english: "hello", handshape: "B", zone: "forehead", movement: "away", alsoMovement: ["side"], grading: "assisted", howTo: "Flat hand at the side of your forehead, then move it outward, like a small salute." },
   BYE: { id: "BYE", english: "bye", handshape: "5", zone: "side", movement: "side", grading: "assisted", howTo: "Open hand, palm out, and wave." },
   MY: { id: "MY", english: "my", handshape: "B", zone: "chest", movement: "none", grading: "assisted", howTo: "Flat palm placed on your chest." },
-  NAME: { id: "NAME", english: "name", handshape: "H", zone: "chest", movement: "tap", grading: "assisted", howTo: "Both hands in the H shape; tap the top fingers on the bottom fingers twice." },
+  NAME: { id: "NAME", hands: 2, english: "name", handshape: "H", zone: "chest", movement: "tap", grading: "assisted", howTo: "Both hands in the H shape; tap the top fingers on the bottom fingers twice." },
   YOU: { id: "YOU", english: "you", handshape: "D", zone: "chest", movement: "away", grading: "assisted", howTo: "Point your index finger at the person you're talking to." },
-  NICE: { id: "NICE", english: "nice", handshape: "B", zone: "chest", movement: "side", grading: "self", howTo: "Slide one flat palm across the other flat palm." },
-  MEET: { id: "MEET", english: "meet", handshape: "D", zone: "chest", movement: "side", grading: "self", howTo: "Two index fingers pointing up come together in front of you." },
+  NICE: { id: "NICE", hands: 2, english: "nice", handshape: "B", zone: "chest", movement: "side", grading: "self", howTo: "Slide one flat palm across the other flat palm." },
+  MEET: { id: "MEET", hands: 2, english: "meet", handshape: "D", zone: "chest", movement: "side", grading: "self", howTo: "Two index fingers pointing up come together in front of you." },
   PLEASE: { id: "PLEASE", english: "please", handshape: "B", zone: "chest", movement: "circle", grading: "assisted", howTo: "Flat hand on your chest, rub in a circle." },
   "THANK-YOU": { id: "THANK-YOU", english: "thank you", handshape: "B", zone: "chin", movement: "away", grading: "assisted", howTo: "Fingertips of a flat hand start at your chin and move forward and down." },
   SORRY: { id: "SORRY", english: "sorry", handshape: "A", zone: "chest", movement: "circle", grading: "assisted", howTo: "A-hand (fist, thumb at the side) on your chest, rub in a circle." },

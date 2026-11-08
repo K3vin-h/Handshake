@@ -1,6 +1,8 @@
 import { useEffect, useReducer, useRef, useState, type ReactElement } from "react";
 import { LessonDemo } from "./screens/LessonDemo";
 import { RecordPage } from "./screens/RecordPage";
+import { RecordSignsPage } from "./screens/RecordSignsPage";
+import { SignDiagramsPage } from "./screens/SignDiagramsPage";
 import { CurriculumPreview } from "./screens/CurriculumPreview";
 import { ComponentGallery } from "./screens/ComponentGallery";
 import { StatsPage } from "./screens/StatsPage";
@@ -29,6 +31,8 @@ import { ResetPassword } from "./screens/ResetPassword";
 function screen(hash: string): ReactElement {
   const [, name = "", param = ""] = hash.split("/");
   if (name === "record") return <RecordPage />;
+  if (name === "record-signs") return <RecordSignsPage />;
+  if (name === "sign-diagrams") return <SignDiagramsPage />;
   if (name === "curriculum") return <CurriculumPreview />;
   if (name === "demo") return <LessonDemo />;
   if (name === "lesson-preview") return <LessonPreview />;
@@ -61,6 +65,8 @@ const TITLES: Record<string, string> = {
   "camera-demo": "Camera demo",
   demo: "Demo",
   record: "Record",
+  "record-signs": "Record signs",
+  "sign-diagrams": "Sign diagrams",
   curriculum: "Curriculum",
   components: "Components",
   "lesson-preview": "Lesson preview",
@@ -81,6 +87,8 @@ const NAV: [string, string][] = [
 const DEV_NAV: [string, string][] = [
   ["#/demo", "Demo"],
   ["#/record", "Record"],
+  ["#/record-signs", "Record signs"],
+  ["#/sign-diagrams", "Sign diagrams"],
   ["#/curriculum", "Curriculum"],
   ["#/lesson-preview", "Lesson preview"],
   ["#/components", "Components"],

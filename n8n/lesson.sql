@@ -14,7 +14,7 @@ BEGIN
  WHEN '2.1' THEN 'Flat and curved' WHEN '2.2' THEN 'Point and pinky' WHEN '2.3' THEN 'Two and three fingers'
  WHEN '2.4' THEN 'The fist' WHEN '2.5' THEN 'Spell their name' WHEN '2.6' THEN 'More finger shapes'
  WHEN '2.7' THEN 'The fist family' WHEN '2.8' THEN 'Sideways shapes' WHEN '2.9' THEN 'Moving letters' WHEN '2.10' THEN 'Alphabet checkpoint'
- WHEN '3.1' THEN 'Hello and goodbye' WHEN '3.2' THEN 'Introductions' WHEN '4.1' THEN 'First hello' END;
+ WHEN '3.1' THEN 'The signs' WHEN '3.2' THEN 'Introduce yourself' WHEN '4.1' THEN 'First hello' END;
  IF title IS NULL THEN RETURN jsonb_build_object('send',false,'status',200); END IF;
  SELECT * INTO r FROM handshake.learners WHERE learner_id=p->>'learnerId' FOR UPDATE;
  IF r.learner_id IS NULL OR r.contact_email='' OR r.contact_confirmed_at IS NULL OR r.unsubscribe_token IS NULL OR
