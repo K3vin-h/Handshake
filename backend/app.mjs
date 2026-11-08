@@ -119,6 +119,31 @@ ${style} Say what to move. Never say the sign is correct or incorrect. No emojis
     }
   });
 
+  // 3. How to form a letter, from Gemini's general ASL knowledge (not from our recordings). Unverified by a fluent signer,
+  //    so the UI says so. Empty text = Gemini unsure or unavailable → the UI shows nothing.
+  app.post("/api/explain", async (req, res) => {
+    const none = { text: "", cached: true };
+    const target = String(req.body?.target ?? "").toUpperCase();
+    if (!/^([A-Z]|5)$/.test(target) || !ai) return res.json(none);
+    const what = target === "5" ? "the open-hand '5' handshape (the number 5)" : `the ASL fingerspelling letter ${target}`;
+    try {
+      res.json(await cached(`explain:${target}`, async () => {
+        const out = await askJson(
+          `Explain to a beginner how to form ${what} in American Sign Language, using your general knowledge of ASL.
+Write at most 2 short sentences (max 40 words): say what the fingers and thumb do, and how the palm faces. Plain words, no emojis.
+If you are not sure how this handshape is formed, set confident to false and leave text empty. Never invent details.`,
+          { type: Type.OBJECT, properties: { text: { type: Type.STRING }, confident: { type: Type.BOOLEAN } }, required: ["text", "confident"] },
+        );
+        const text = typeof out?.text === "string" ? out.text.trim() : "";
+        if (out?.confident !== true || !text || text.length > 320) throw new Error("explain not usable");
+        return { text };
+      }));
+    } catch {
+      console.warn("Explain generation failed; showing no how-to.");
+      res.json(none);
+    }
+  });
+
   // 2. Practice words from known letters only, weak letters first.
   app.post("/api/words", async (req, res) => {
     const known = letters(req.body?.knownLetters);
@@ -158,6 +183,7 @@ ${style} Say what to move. Never say the sign is correct or incorrect. No emojis
   app.use((error, req, res, next) => {
     if (req.path === "/api/coach") return res.json({ tip: "Compare your hand with the reference and hold still.", cached: true });
     if (req.path === "/api/words") return res.json({ words: [], cached: true });
+    if (req.path === "/api/explain") return res.json({ text: "", cached: true });
     next(error);
   });
   return app;

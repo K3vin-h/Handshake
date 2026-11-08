@@ -1,4 +1,4 @@
-import { LetterBadge } from "./LetterBadge";
+import { LetterBadge, type LetterStatus } from "./LetterBadge";
 
 /** Distinct letters of a name, A–Z only, upper-case, in order of first appearance. */
 export function nameLetters(name: string): string[] {
@@ -23,9 +23,11 @@ export function coverage(name: string, isLive: (letter: string) => boolean) {
  * Props
  * - name: the name as entered (any case). Nothing is sent anywhere; this is pure display.
  * - isLive: (letter) => boolean. Pass `isPracticeable` from "src/cv" in screens; pass a fake in demos.
+ * - stateOf: optional (letter) => "mastered" | "practising" | "not-started" for live letters (e.g. from progress).
+ *   Default is "not-started". Letters that are not live are always "reference-only".
  */
-export function LiveCoverage(props: { name: string; isLive: (letter: string) => boolean }) {
-  const { name, isLive } = props;
+export function LiveCoverage(props: { name: string; isLive: (letter: string) => boolean; stateOf?: (letter: string) => Exclude<LetterStatus, "reference-only"> }) {
+  const { name, isLive, stateOf } = props;
   const c = coverage(name, isLive);
   if (c.total === 0) return <p className="muted">Type a name to see which letters are live.</p>;
   const allLive = c.liveCount === c.total;
@@ -37,9 +39,9 @@ export function LiveCoverage(props: { name: string; isLive: (letter: string) => 
         </strong>
         {!allLive && <span className="muted"> · {c.total - c.liveCount} of its letters are reference only (no pass/fail)</span>}
       </p>
-      <div className="grid">
+      <div className="chip-row">
         {c.letters.map((l) => (
-          <LetterBadge key={l} letter={l} status={isLive(l) ? "live" : "reference-only"} />
+          <LetterBadge key={l} letter={l} status={isLive(l) ? (stateOf?.(l) ?? "not-started") : "reference-only"} />
         ))}
       </div>
     </div>

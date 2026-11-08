@@ -4,6 +4,7 @@ import { RecordPage } from "./screens/RecordPage";
 import { CurriculumPreview } from "./screens/CurriculumPreview";
 import { ComponentGallery } from "./screens/ComponentGallery";
 import { StatsPage } from "./screens/StatsPage";
+import { CameraDemo } from "./screens/CameraDemo";
 import { Home } from "./screens/Home";
 import { Onboarding } from "./screens/Onboarding";
 import { LessonPlayer } from "./screens/LessonPlayer";
@@ -12,6 +13,8 @@ import { ProgressScreen } from "./screens/Progress";
 import { LessonPreview } from "./screens/LessonPreview";
 import { loadProfile } from "./lib/profile";
 import { loadProgress } from "./lib/progress";
+import { ReduceMotionToggle } from "./components/motion/MotionProvider";
+import { PageTransition } from "./components/motion/PageTransition";
 import { StreakXpChip } from "./components/StreakXpChip";
 
 // Hash router: "#/lesson/1.1" → name "lesson", param "1.1".
@@ -28,6 +31,7 @@ function screen(hash: string): ReactElement {
   if (name === "complete") return <Complete lessonId={param} />;
   if (name === "progress") return <ProgressScreen />;
   if (name === "stats") return <StatsPage />;
+  if (name === "camera-demo") return <CameraDemo />;
   return <Home />;
 }
 
@@ -38,6 +42,7 @@ const TITLES: Record<string, string> = {
   complete: "Lesson complete",
   progress: "Progress",
   stats: "Stats",
+  "camera-demo": "Camera demo",
   demo: "Demo",
   record: "Record",
   curriculum: "Curriculum",
@@ -45,15 +50,18 @@ const TITLES: Record<string, string> = {
   "lesson-preview": "Lesson preview",
 };
 
-// Player-facing links. The dev tools (demo, record, curriculum, components) only show in `npm run dev`,
-// never in the production build, but their routes keep working.
+// Player-facing nav is deliberately small: Home (the main page that leads everywhere) and Progress.
+// Dev tools live in a "Dev tools" menu that only exists in `npm run dev`; their routes keep working in every build.
 const NAV: [string, string][] = [
-  ["#/", "Path"],
+  ["#/", "Home"],
   ["#/progress", "Progress"],
-  ["#/stats", "Stats"],
-  ...(import.meta.env.DEV
-    ? ([["#/demo", "Demo"], ["#/record", "Record"], ["#/curriculum", "Curriculum"], ["#/components", "Components"]] as [string, string][])
-    : []),
+];
+const DEV_NAV: [string, string][] = [
+  ["#/demo", "Demo"],
+  ["#/record", "Record"],
+  ["#/curriculum", "Curriculum"],
+  ["#/lesson-preview", "Lesson preview"],
+  ["#/components", "Components"],
 ];
 
 export default function App() {
@@ -88,9 +96,22 @@ export default function App() {
             <StreakXpChip streakDays={loadProgress().streakDays} xp={loadProgress().xp} />
           </span>
         )}
+        <ReduceMotionToggle />
+        {import.meta.env.DEV && (
+          <details className="dev-menu">
+            <summary>Dev tools</summary>
+            <div className="dev-menu-list">
+              {DEV_NAV.map(([href, label]) => (
+                <a key={href} href={href} aria-current={hash === href ? "page" : undefined}>
+                  {label}
+                </a>
+              ))}
+            </div>
+          </details>
+        )}
       </nav>
       <main id="main" tabIndex={-1}>
-        {screen(hash)}
+        <PageTransition key={hash}>{screen(hash)}</PageTransition>
       </main>
     </>
   );

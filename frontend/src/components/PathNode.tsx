@@ -1,3 +1,7 @@
+import { useRef } from "react";
+import { motion } from "motion/react";
+import { useReduceMotion } from "./motion/MotionProvider";
+
 export type PathNodeState = "locked" | "available" | "current" | "done";
 
 const LABEL: Record<PathNodeState, string> = { locked: "Locked", available: "Ready", current: "Up next", done: "Done" };
@@ -16,9 +20,15 @@ const ICON: Record<PathNodeState, string> = { locked: "🔒", available: "○", 
  */
 export function PathNode(props: { id: string; title: string; state: PathNodeState; xp?: number; onOpen?: (id: string) => void }) {
   const { id, title, state, xp, onOpen } = props;
+  const reduce = useReduceMotion();
+  const prev = useRef(state);
+  const unlocked = prev.current === "locked" && state !== "locked";
+  prev.current = state;
   return (
-    <button
+    <motion.button
       type="button"
+      animate={unlocked && !reduce ? { scale: [1, 1.12, 1] } : undefined}
+      transition={{ duration: 0.45, ease: "easeOut" }}
       className={`path-node path-node-${state}`}
       aria-disabled={state === "locked" || undefined}
       aria-current={state === "current" ? "step" : undefined}
@@ -31,6 +41,6 @@ export function PathNode(props: { id: string; title: string; state: PathNodeStat
         {LABEL[state]}
         {xp !== undefined && <span> · {xp} XP</span>}
       </span>
-    </button>
+    </motion.button>
   );
 }

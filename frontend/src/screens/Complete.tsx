@@ -15,9 +15,12 @@ export function Complete({ lessonId }: { lessonId: string }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const celebrated = useRef(false);
   const [progress] = useState(loadProgress);
-  const [units] = useState(() => buildCurriculum(loadProfile() ?? DEMO_PROFILE).filter((u) => ["u1", "u2"].includes(u.id)));
+  const [units] = useState(() => buildCurriculum(loadProfile() ?? DEMO_PROFILE).filter((u) => ["u1", "u2", "u3", "u4"].includes(u.id)));
   const lesson = flatLessons(units).find((l) => l.id === lessonId);
   const done = !!lesson && progress.completed.includes(lessonId);
+  // "Level" complete = the last demo lesson of its unit is now done. Stretch lessons never gate (same rule as unlocking).
+  const unit = units.find((u) => u.lessons.some((l) => l.id === lessonId));
+  const unitDone = !!unit && done && unit.lessons.filter((l) => l.scope === "demo").every((l) => progress.completed.includes(l.id));
 
   useEffect(() => {
     if (done) void refreshPracticeWords(); // re-pick practice words around the learner's weakest letters
@@ -27,9 +30,9 @@ export function Complete({ lessonId }: { lessonId: string }) {
     heading.current?.focus();
     if (done && !celebrated.current) {
       celebrated.current = true;
-      celebrate();
+      celebrate(unitDone ? "unit" : "lesson");
     }
-  }, [lessonId, done]);
+  }, [lessonId, done, unitDone]);
 
   if (!lesson) {
     return (
@@ -73,6 +76,8 @@ export function Complete({ lessonId }: { lessonId: string }) {
 
       <StatusMessage kind="match" label="Lesson complete" message={`You finished ${lesson.title} and earned ${lesson.xp} XP. Your total is ${progress.xp} XP.`} />
 
+      {unitDone && unit && <StatusMessage kind="match" label="Unit complete" message={`You finished every lesson in ${unit.title}.`} />}
+
       <dl className="stats">
         <div><dt>Lesson XP</dt><dd>{lesson.xp}</dd></div>
         <div><dt>Total XP</dt><dd>{progress.xp}</dd></div>
@@ -91,6 +96,9 @@ export function Complete({ lessonId }: { lessonId: string }) {
           ) : (
             <p>You finished the current path. Greetings and conversations are coming later.</p>
           )}
+          <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl border-2">
+            <a href={`#/lesson/${lessonId}`}>Practice again</a>
+          </Button>
           <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl border-2">
             <a href="#/">Back to your path</a>
           </Button>

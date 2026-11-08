@@ -1,16 +1,13 @@
 import { useMemo } from "react";
 import { isPracticeable } from "../cv";
-import { LiveCoverage } from "../components/LiveCoverage";
-import { LockedUnit } from "../components/LockedUnit";
 import { UnitSection, type MapLesson } from "../components/PathMap";
-import { StatusBadge } from "../components/StatusBadge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MARK_LABEL, StatusMark, type MarkState } from "../components/StatusMark";
+import { coverage } from "../components/LiveCoverage";
 import { buildCurriculum } from "../lib/curriculum";
-import { DEMO_PROFILE, WELCOME, fillNames, loadProfile } from "../lib/profile";
-import { dueItems, isUnlocked, loadProgress, nextLesson, weakItems } from "../lib/progress";
+import { DEMO_PROFILE, loadProfile } from "../lib/profile";
+import { dueItems, isUnlocked, loadProgress, nextLesson } from "../lib/progress";
 
-// Home: the path. Units 1-2 are active; Units 3-4 are locked ("Coming later").
+// Home: the path. Units 1-4 are active (demo lessons only).
 // Reads the profile and progress from localStorage only.
 
 export function Home() {
@@ -18,8 +15,13 @@ export function Home() {
   const units = useMemo(() => buildCurriculum(profile), []); // eslint-disable-line react-hooks/exhaustive-deps
   const progress = loadProgress();
   const next = nextLesson(units, progress);
-  const weak = weakItems(progress);
-  const due = dueItems(progress).length;
+  const due = dueItems(progress);
+  const letterStatus = (l: string): MarkState => {
+    if (!isPracticeable(l)) return "reference-only";
+    const it = progress.items[l];
+    return it?.mastered ? "mastered" : it && it.attempts > 0 ? "practising" : "not-started";
+  };
+  const dueSet = new Set(due);
 
   const stateOf = (id: string): MapLesson["state"] => {
     if (progress.completed.includes(id)) return "done";
@@ -27,80 +29,81 @@ export function Home() {
     return isUnlocked(units, progress, id) ? "available" : "locked";
   };
   const open = (id: string) => (location.hash = `#/lesson/${id}`);
+  const themKey = profile.theirName.toUpperCase().replace(/[^A-Z]/g, "");
+  const spellThem = units.flatMap((u) => u.lessons).find((l) => l.title.toUpperCase() === `SPELL ${themKey}`);
+  const spellOpen = spellThem ? isUnlocked(units, progress, spellThem.id) : false;
+  // Banner headline: a plain statement of what the learner is doing now. No promises about outcomes.
+  const them = profile.theirName;
+  const headline = !next
+    ? "You've finished every available lesson!"
+    : next.title.toUpperCase() === `SPELL ${them.toUpperCase().replace(/[^A-Z]/g, "")}`
+      ? `Now for ${them}'s name!`
+      : next.id.startsWith("1.")
+        ? "You're learning your name!"
+        : next.id.startsWith("2.")
+          ? "You're learning the alphabet!"
+          : "Keep going!";
+  // Small letters + live coverage under each lesson block (replaces the old side panels).
+  const lessonExtras = (l: { title: string; teaches?: string[] }): Pick<MapLesson, "letters" | "note"> => {
+    const letters = (l.teaches ?? []).filter((x) => /^[A-Z]$/.test(x)).map((x) => ({ letter: x, status: letterStatus(x), due: dueSet.has(x) }));
+    const spell = l.title.match(/^Spell (.+)$/i)?.[1];
+    const c = spell ? coverage(spell, isPracticeable) : null;
+    return { letters, note: c && c.total > 0 ? `${spell!.toUpperCase()}: ${c.liveCount} of ${c.total} live` : undefined };
+  };
 
   return (
     <div className="page home">
-      <header className="hero">
-        <p className="eyebrow">Your path</p>
-        <h1>{fillNames(WELCOME, profile)}</h1>
-        {next ? (
-          <div className="row">
-            <Button size="lg" className="h-12 rounded-2xl border-b-4 border-brand-deep px-7 text-base" onClick={() => open(next.id)}>
-              Continue: {next.id} {next.title}
-            </Button>
-            <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl border-2">
-              <a href="#/progress">See progress</a>
-            </Button>
+      <section className="focus banner stagger" style={{ "--i": 0 } as React.CSSProperties} aria-labelledby="focus-title">
+        <div className="focus-next">
+          <div>
+            <h1 id="focus-title">{headline}</h1>
+            {next ? (
+              <p className="focus-kicker">Lesson {next.id} · {next.title} · {next.xp} XP</p>
+            ) : (
+              <p className="focus-kicker">More lessons are coming later.</p>
+            )}
           </div>
-        ) : (
-          <p className="lead">You have finished every lesson that is available right now.</p>
-        )}
-      </header>
+          {next && (
+            <button type="button" className="focus-cta" onClick={() => open(next.id)}>
+              Go
+              <span className="sr-only"> to lesson {next.id}</span>
+            </button>
+          )}
+        </div>
+      </section>
 
-      <div className="home-layout">
-        <div className="units">
-          {units.slice(0, 2).map((u, i) => (
+      <ul className="shortcuts stagger" style={{ "--i": 1 } as React.CSSProperties} aria-label="Shortcuts">
+        <li><a href="#/progress">Progress</a></li>
+        <li><a href="#/camera-demo">Camera demo</a></li>
+        {spellThem && (
+          <li>
+            {spellOpen ? <a href={`#/lesson/${spellThem.id}`}>{spellThem.title}</a> : <span className="is-locked">{spellThem.title} (locked until the lessons before it are done)</span>}
+          </li>
+        )}
+        <li><a href="#/welcome">Names and hand</a></li>
+      </ul>
+
+      <ul className="status-legend" aria-label="What the shapes mean">
+        {(["mastered", "practising", "not-started", "reference-only"] as MarkState[]).map((m) => (
+          <li key={m}><StatusMark state={m} size={14} /> {MARK_LABEL[m]}</li>
+        ))}
+      </ul>
+
+      <div className="home-single">
+        <div className="units stagger" style={{ "--i": 2 } as React.CSSProperties}>
+          {units.slice(0, 4).map((u, i) => (
             <UnitSection
               key={u.id}
               index={i + 1}
               title={u.title}
               goal={u.goal}
-              lessons={u.lessons.filter((l) => l.scope === "demo").map((l) => ({ id: l.id, title: l.title, summary: l.summary, xp: l.xp, state: stateOf(l.id) }))}
+              lessons={u.lessons.filter((l) => l.scope === "demo").map((l) => ({ id: l.id, title: l.title, summary: l.summary, xp: l.xp, state: stateOf(l.id), ...lessonExtras(l) }))}
               onOpen={open}
+              showStart={false}
             />
           ))}
-          <div className="locked-grid">
-            {units.slice(2, 4).map((u, i) => (
-              <LockedUnit key={u.id} title={`Unit ${i + 3} · ${u.title}`} />
-            ))}
-          </div>
         </div>
 
-        <aside className="side" aria-label="Your letters and practice">
-          <Card className="rounded-3xl border-2 gap-3 py-5">
-            <CardHeader className="gap-0 px-5">
-              <CardTitle className="text-xl">Letters in {profile.theirName}</CardTitle>
-            </CardHeader>
-            <CardContent className="px-5">
-              <LiveCoverage name={profile.theirName} isLive={isPracticeable} />
-            </CardContent>
-          </Card>
-          <Card className="rounded-3xl border-2 gap-3 py-5">
-            <CardHeader className="gap-0 px-5">
-              <CardTitle className="text-xl">Practice</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 px-5">
-              {weak.length === 0 && due === 0 ? (
-                <p className="muted">Nothing to review yet. Finish a lesson and it will show up here.</p>
-              ) : (
-                <>
-                  {weak.length > 0 && (
-                    <p className="flex flex-wrap items-center gap-2">
-                      Needs practice:
-                      {weak.map((l) => (
-                        <StatusBadge key={l} kind="notyet">{l}</StatusBadge>
-                      ))}
-                    </p>
-                  )}
-                  {due > 0 && <p>{due} {due === 1 ? "item is" : "items are"} due for review.</p>}
-                </>
-              )}
-            </CardContent>
-          </Card>
-          <p className="muted small">
-            <a href="#/welcome">Change names or hand</a>
-          </p>
-        </aside>
       </div>
     </div>
   );

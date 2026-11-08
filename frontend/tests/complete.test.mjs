@@ -18,10 +18,13 @@ test("Complete reads saved completion and never awards XP on navigation or reloa
     const blank = { xp: 0, streakDays: 0, lastActiveDay: null, completed: [], items: {} };
     const items = expand([{ kind: "spell", word: "LILY", showReference: false }], blank);
     assert.equal(items.length, 4);
-    assert.ok(items.every((item) => item.kind === "learn" && item.referenceOnly));
+    assert.ok(items.every((item) => item.kind === "check")); // L, I, Y are live letters (src/cv/practiceable.ts)
     assert.doesNotMatch(renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "2.1" })), /<video/);
     assert.match(renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "2.1" })), /Locked/);
-    assert.match(renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "3.1" })), /Lesson not found/);
+    // Units 3 (greetings) and 4 (scene 4.1) are in scope: they exist but stay locked until the lessons before them are done.
+    assert.match(renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "3.1" })), /Locked/);
+    assert.match(renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "4.1" })), /Locked/);
+    assert.match(renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "5.1" })), /Lesson not found/);
     const referenceLesson = renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "1.1" }));
     assert.match(referenceLesson, /Reference only/);
     assert.doesNotMatch(referenceLesson, /<video/);
