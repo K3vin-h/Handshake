@@ -1,21 +1,18 @@
 # Vultr API deployment
 
-The backend (Express API) runs on one Vultr VM; the database is Tiger Data Cloud. The frontend is **not** here: it is hosted on Vercel. Lesson, coach, stats and notify calls go from the browser straight to this API over HTTPS (`VITE_API_BASE_URL`; CORS allows only the origins in `ALLOWED_ORIGIN`). **Account calls** (`/api/auth/*`, `/api/me*`) stay relative and go through the Vercel `/api` rewrite in `frontend/vercel.json`, so the browser sees one origin for the session cookie and the Origin check. No domain purchase is needed.
+The backend (Express API) runs on one Vultr VM; the database is Tiger Data Cloud. The frontend is **not** here: it is hosted on Vercel. Lesson, coach, stats and notify calls go from the browser straight to this API over HTTPS (`VITE_API_BASE_URL`; CORS allows only the origins in `ALLOWED_ORIGIN`). Guest-only: no account routes. No domain purchase is needed.
 
-## MANUAL: accounts need the Vercel rewrite destination
+## CORS / Origins
 
-`frontend/vercel.json` ships with the placeholder `https://REPLACE_WITH_API_HOST/api/:path*`. **Until a human replaces `REPLACE_WITH_API_HOST` with the real API hostname (the one passed to `setup.sh`, e.g. `203-0-113-10.sslip.io`) and redeploys Vercel, sign-up, log-in, reset and sync are unavailable in production** (the rewrite points nowhere). Everything else keeps working because it uses `VITE_API_BASE_URL`.
+Set `ALLOWED_ORIGIN` to the exact Vercel URL(s). Browsers call the API directly via `VITE_API_BASE_URL`; no account cookie rewrite is required.
 
-How it fits together: Vercel forwards `/api/*` with `Host` = the API host and `X-Forwarded-Host` = the Vercel host. Caddy keeps that `X-Forwarded-Host` (`header_up` in the generated Caddyfile) and Express, with `TRUST_PROXY_HOPS=1`, lets `sameOrigin` compare the browser's `Origin` with it. Without `TRUST_PROXY_HOPS` the header is ignored and every account POST from the Vercel site gets 403. `X-Forwarded-Host` is not trustworthy on its own (anyone calling the API host directly can set it); it is only used for this CSRF check, and a browser on another site cannot set it without a CORS preflight, which the API refuses. `[NEEDS: verify on the live stack that Vercel sends X-Forwarded-Host and Caddy passes it through: a sign-up from the Vercel URL returns 200, not 403]`. Also set on the VM: `APP_ORIGIN=<exact Vercel URL>` (reset links must point at the public site). `COOKIE_SECURE=1` is pinned by the service command (`NODE_ENV=production` alone also makes the cookie `Secure`).
-
-`setup.sh` targets a dedicated fresh Ubuntu 24.04 VM, run as root. It installs Node 24 and Caddy, installs the backend's production dependencies, runs Express as `handshake` on loopback port 8787, and configures automatic HTTPS in Caddy. It changes Caddy and the firewall; review before running on an existing server. VM provisioning is not automated.
 
 ## Required operator inputs
 
 - Authorized Vultr account, spending limit, region/plan, SSH access and verified VM host key.
 - An **API hostname** that resolves to the VM IP. No purchase needed: a free `<ip-with-dashes>.sslip.io` name works (VM `203.0.113.10` → `203-0-113-10.sslip.io`). `[NEEDS: verify Let's Encrypt issues a certificate for the chosen hostname]`. Any hostname you control also works.
 - The reviewed release's full 40-character Git SHA, available to the VM's origin; uncommitted worktree changes cannot deploy. Coordinate any push through the lead.
-- A minimal `.env` prepared securely (start from the repo-root `.env.example`). Do not copy the entire developer `.env`. Include only what the backend needs: `GEMINI_API_KEY`, `GEMINI_MODEL`, `DATABASE_URL` (the Tiger Data Cloud connection string). Omit all `N8N_*` and `MARITIME_*` settings until those services are deployed and verified. `SNAPSHOT_ENABLED`, `CACHE_EXPORT_ENABLED`, `HOST`, `TRUST_PROXY_HOPS` and `COOKIE_SECURE` are pinned by the service command. For accounts add `APP_ORIGIN=<exact Vercel URL>` (plus `GOOGLE_CLIENT_ID`, `RESEND_API_KEY`, `RESEND_FROM` if used). Set `ALLOWED_ORIGIN` to the Vercel URL once it exists (step 6).
+- A minimal `.env` prepared securely (start from the repo-root `.env.example`). Do not copy the entire developer `.env`. Include only what the backend needs: `GEMINI_API_KEY`, `GEMINI_MODEL`, `DATABASE_URL` (the Tiger Data Cloud connection string). Omit all `N8N_*` and `MARITIME_*` settings until those services are deployed and verified. `SNAPSHOT_ENABLED`, `CACHE_EXPORT_ENABLED`, `HOST` and `TRUST_PROXY_HOPS` are pinned by the service command. Set `ALLOWED_ORIGIN` to the Vercel URL once it exists (step 6).
 - A Tiger Data Cloud service (TimescaleDB 2.13+). The database is not on this VM; `schema.sql` is applied to it with `npm run db:migrate`. Never include database admin passwords in `.env`.
 
 ## Initial deployment
@@ -31,7 +28,7 @@ How it fits together: Vercel forwards `/api/*` with `Host` = the API host and `X
 
    Private repos need a separately provisioned read-only Git credential; never embed it in the URL. The script fetches the pinned SHA, refuses tracked local edits or a mismatched origin, and checks out detached HEAD. Reruns use the supplied revision, never an implicit branch tip.
 5. Apply the schema with `npm run db:migrate` as documented in `../DATABASE.md`. Add n8n and Maritime settings later in one coordinated pass, then restart `handshake`.
-6. In Vercel: import the repo, set **Root Directory = `frontend`**, set the Environment Variable `VITE_API_BASE_URL=https://<api-hostname>` (public, not a secret), edit `frontend/vercel.json` to replace `REPLACE_WITH_API_HOST` with `<api-hostname>` (see the MANUAL section above), and deploy. Then set `ALLOWED_ORIGIN=<exact Vercel URL>` and `APP_ORIGIN=<exact Vercel URL>` (comma-separated for several origins) in the VM `.env` and restart `handshake`. The camera needs the Vercel HTTPS origin.
+6. In Vercel: import the repo, set **Root Directory = `frontend`**, set the Environment Variable `VITE_API_BASE_URL=https://<api-hostname>` (public, not a secret), deploy. Then set `ALLOWED_ORIGIN=<exact Vercel URL>` (comma-separated for several origins) in the VM `.env` and restart `handshake`. The camera needs the Vercel HTTPS origin.
 
 ## Verification and handoff
 

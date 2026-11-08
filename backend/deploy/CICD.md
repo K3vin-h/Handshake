@@ -31,7 +31,7 @@ Two separate server accounts are used:
 The helper is installed manually under `/usr/local/sbin`; a deployed commit cannot
 replace the privileged helper. It fetches only production from the fixed repository,
 requires the requested SHA to be its exact tip and a descendant of the baseline, and
-blocks changes to `backend/schema.sql` or `backend/schema.accounts.sql`. A future
+blocks changes to `backend/schema.sql`. A future
 schema rollout requires separate reviewed migration work and an administrator-reviewed
 helper change. No migrations, n8n actions, Caddy edits, or firewall edits occur.
 

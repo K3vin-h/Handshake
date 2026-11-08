@@ -19,13 +19,11 @@ Player-facing: `#/` home, `#/path` levels, `#/lesson/<id>`, `#/progress`, `#/set
 
 Developer tools (the "Dev tools" menu exists only under `npm run dev`; the routes work in every build): `#/record` (record letter templates), `#/record-signs`, `#/sign-diagrams`, `#/demo` (the letter test page: sign L-I-L-Y, earn XP, get coached after two misses), `#/curriculum`, `#/lesson-preview`, `#/components`.
 
-## Accounts
-Optional. Learners can sign in with Google or email and password, reset a forgotten password by email, or continue as a guest. Guests keep everything in the browser. Signed-in learners also have their profile (names, signing hand) and progress saved on the server under their account, so they can continue on another device; the account can be deleted from Settings. Gemini only ever receives letters and error codes, never names or video.
-
-Accounts need `DATABASE_URL` (then `npm run db:migrate`); Google sign-in needs `GOOGLE_CLIENT_ID` and an OAuth client that lists `http://localhost:5173` as an authorized origin; reset emails need `RESEND_API_KEY`, `RESEND_FROM` and `APP_ORIGIN`. Without `DATABASE_URL`, `/api/auth/config` reports `accounts: false` and the app runs as a guest. Known limits: no email verification yet, and Google blocks accounts not on the test-user list while its consent screen is in Testing mode. Design and security rules: [spec](docs/superpowers/specs/2026-11-07-accounts-spec.md) and [plan](docs/superpowers/plans/2026-11-07-accounts.md).
+## Guests only
+There is no sign-in. Profile, progress and mistakes stay in the browser (`localStorage`). Optional Tiger Data stores anonymous practice attempts (letter/sign id, pass/fail, error codes, random learner id) — never names or emails. Gemini only ever receives letters and error codes, never names or video.
 
 ## Configuration
-[.env.example](.env.example) is the one file for every service, sectioned by service; copy it to the repo-root `.env` (the backend reads it; the frontend needs no env vars). Leave `HOST`, `TRUST_PROXY_HOPS`, `COOKIE_SECURE` and `ALLOWED_ORIGIN` empty for local development.
+[.env.example](.env.example) is the one file for every service, sectioned by service; copy it to the repo-root `.env` (the backend reads it; the frontend needs no env vars). Leave `HOST`, `TRUST_PROXY_HOPS` and `ALLOWED_ORIGIN` empty for local development.
 
 ## Tests and build
 - `npm run build` builds the frontend; `npm test` runs the frontend, backend and agent suites.

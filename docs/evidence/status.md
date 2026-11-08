@@ -2,6 +2,10 @@
 
 This file records local preparation separately from live deployment and prize evidence.
 
+## Accounts removed (guest-only)
+
+Account/auth (email/password, Google, `/api/auth`, `/api/me`, session cookies) was removed. Guests keep profile, progress and mistakes in `localStorage`. Tiger Data remains anonymous practice storage only (`attempts` hypertable + `#/stats`); no names or emails in Tiger.
+
 | Task | Current status | Evidence |
 |---|---|---|
 | 1. Subscription / confirmation links | Local exports and SQL tests passed; live import/delivery blocked | `n8n/` |

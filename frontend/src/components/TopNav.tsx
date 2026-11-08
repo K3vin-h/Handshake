@@ -1,7 +1,6 @@
 import { motion } from "motion/react";
 import "./TopNav.css";
 import { StreakXpChip } from "./StreakXpChip";
-import { AccountChip } from "./AccountChip";
 import { ReduceMotionToggle } from "./motion/MotionProvider";
 import { springs } from "./motion/tokens";
 import { loadProfile } from "../lib/profile";
@@ -25,7 +24,7 @@ export const navActive = (href: string, hash: string) =>
 /** Lessons run in focus mode: no site nav, the lesson screen has its own way back. */
 export const showNav = (hash: string) => hash.split("/")[1] !== "lesson";
 
-/** Brand left, the three pages in a centred segmented pill, streak / account / settings right. */
+/** Brand left, the three pages in a centred segmented pill, streak / settings right. */
 export function TopNav({ hash }: { hash: string }) {
   const progress = loadProgress();
   return (
@@ -47,7 +46,6 @@ export function TopNav({ hash }: { hash: string }) {
       <div className="nav-right">
         <div className="nav-status">
           {loadProfile() && <StreakXpChip streakDays={progress.streakDays} xp={progress.xp} />}
-          <AccountChip />
           <ReduceMotionToggle />
         </div>
         <a href={SETTINGS[0]} aria-current={navActive(SETTINGS[0], hash) ? "page" : undefined}>{SETTINGS[1]}</a>

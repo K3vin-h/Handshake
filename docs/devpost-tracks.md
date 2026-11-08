@@ -9,10 +9,10 @@ Submission checklist, not a claim that external integrations have been deployed.
 | Community Impact | Intended persona: hearing people learning for a Deaf friend, relative or coworker; optional contact notification | [NEEDS: community feedback and validated impact statement]; do not claim measured learning outcomes or Deaf endorsement |
 | Best Design | Existing React lesson screens | Real screenshots of the final app. [NEEDS: confirm with organizers whether this prize is still eligible without a Figma file] |
 | Most Accessible Design | Stats chart has a visible text table; notification form has labels and a polite status region; no sound needed for these additions | [NEEDS: real app screenshots, keyboard-only walkthrough, visible focus, 4.5:1 contrast measurement, zoom/text scaling, reduced-motion check, detection aria-live and left-handed-mode verification]. Describe only verified behavior |
-| Gemini API | `backend/app.mjs` coach/words; `agent/plan.mjs` tool loop | [NEEDS: live Gemini demo, cached response labels, agent tool trace]. Landmarks measure; Gemini coaches and plans, never grades signs |
-| Tiger Data | `backend/schema.sql`, attempts/stats routes, `#/stats` chart, LessonPlayer attempt reporting | [NEEDS: real migration/smoke test, anonymized rows and chart screenshot] |
-| Vercel (frontend) + Vultr (backend) | frontend calls the Vultr HTTPS API directly (`VITE_API_BASE_URL`, CORS via `ALLOWED_ORIGIN`); `backend/deploy/setup.sh`, `backend/deploy/README.md`; API-only on loopback behind Caddy | [NEEDS: Vercel deployment URL, VM evidence, live HTTPS API URL (e.g. sslip.io hostname; verify Let's Encrypt works for it), phone camera test via the Vercel URL, external port check, verify `req.ip` is the visitor's IP with `TRUST_PROXY_HOPS=1`; CORS preflight from the Vercel origin] |
-| Databricks | Existing recognizer training under `training/` | [NEEDS: Databricks job, three MLflow runs, per-letter report.txt, exported model.json, screenshots]. No Databricks usage claimed by this change |
+| Gemini API | Endpoints: `POST /api/coach`, `/api/words`, `/api/praise`, `/api/explain` in `backend/app.mjs` (+ `backend/gemini.mjs`, `backend/precache.json`); planner loop in `agent/plan.mjs`. Landmarks measure; Gemini rewords only; UI labels cached replies | [NEEDS: live Gemini demo with cached label visible] |
+| Tiger Data | `backend/schema.sql` (`attempts`: ts, learner_id uuid, item, correct, codes[]); `backend/routes/attempts.mjs` + stats; `#/stats`; anonymous random `learner_id` only — never names/emails. Guest localStorage for profile | [NEEDS: live Tiger Cloud migrate+smoke+screenshot] |
+| Vercel (frontend) + Vultr (backend) | `backend/deploy/setup.sh`, `preflight.sh`, `deploy-release.sh`, `backend/deploy/README.md`; frontend `VITE_API_BASE_URL`; API CORS `ALLOWED_ORIGIN`; API-only on loopback behind Caddy | [NEEDS: live Vercel URL + live Vultr HTTPS API URL; phone camera; CORS preflight; `req.ip` with `TRUST_PROXY_HOPS=1`] |
+| Databricks | `training/databricks/sweep.py`, `training/databricks/train_job.py`; outputs `frontend/public/model/model.json`, `report.txt`, `report-heldout.txt` (quote held-out accuracy, not random-split) | [NEEDS: MLflow screenshots / live Databricks job] |
 | Maritime | `agent/` deployable planner; guarded `/api/plan`; local fallback on absent, failed or invalid agent | [NEEDS: actual Maritime deployment URL, live tool-loop evidence and short planner-card demo showing agent/local labels] |
 | n8n (n8n Cloud + Gmail SMTP) | `#/stats` consent form, subscribe/unsubscribe and lesson-complete forwarding; `n8n/README.md` workflow contract | [NEEDS: configured and exported three workflows, screenshots, redacted delivered email, Stop and throttle verification]. No exported/live workflows claimed yet |
 | Entire | No setup performed by this task | [NEEDS: repo URL and actual Sessions, Graph, Brain screenshots and commands in docs/notes.md] |
@@ -31,20 +31,21 @@ Describes what the code does. "Not yet live" means no deployment evidence exists
 - `POST /api/explain` and `/api/praise` add how-to text and short praise; both are labelled unverified/cached in the UI.
 - Fallback: with no key or on a guard failure the response comes from `backend/precache.json` (e.g. key `coach:L:none::1`) and is labelled "cached".
 - Gemini gets letters and error codes only. Never names, emails or video.
+- [NEEDS: live Gemini demo] showing landmark tip first, then Gemini/cached tip with the cached label when applicable.
 
 **Tiger Data (TimescaleDB)** stores per-attempt rows.
 - `backend/schema.sql`: `attempts(ts, learner_id uuid, item, correct, codes text[])`, `create_hypertable('attempts', by_range('ts'))`.
 - `LessonPlayer` calls `reportAttempt("L", true)` on a match, or `reportAttempt("A", false, ["thumb:placement"])` on a miss → `POST /api/attempts`. `GET /api/stats/:learnerId` returns `{daily:[{day,attempts,accuracy}], items:[...]}`, drawn on `#/stats` with a text table beside the chart. No `DATABASE_URL` → empty state.
-- Not yet live: migration and smoke test against a real Tiger Cloud service (`backend/DATABASE.md`).
+- [NEEDS: live Tiger Cloud migrate+smoke+screenshot]. Repo evidence: schema columns above, routes, `#/stats`. "User" data here means anonymous `learner_id` UUID + letter/sign attempts — not names or emails. Accounts were removed; guests keep profile in localStorage.
 
 **Vercel + Vultr** split the app.
 - Vercel serves the static `frontend/` build; Vultr runs the Express API behind Caddy (`backend/deploy/`). The browser calls the API directly: `VITE_API_BASE_URL=https://<ip-with-dashes>.sslip.io`, and the API allows only the Vercel origin via `ALLOWED_ORIGIN`. Direct calls keep per-IP rate limits per visitor (`TRUST_PROXY_HOPS=1`).
 - Camera on a phone needs HTTPS, which the Vercel URL provides.
-- Not yet live: no deployment URL, CORS preflight or `req.ip` check recorded.
+- [NEEDS: live Vercel URL + live Vultr HTTPS API URL]. Repo evidence: deploy scripts, `VITE_API_BASE_URL`, `ALLOWED_ORIGIN`. Do not invent live URLs.
 
 **Databricks + MLflow** train the recognizer.
 - `training/databricks/sweep.py` trains three MLPs (`64`, `128,64`, `256,128`), logs each as an MLflow run, and publishes the best `model.json` + `report.txt` to `frontend/public/model/` for TensorFlow.js. Example: `report.txt` shows 0.966 on a random split (optimistic); `report-heldout.txt` shows 0.668 on a held-out person. Quote the held-out number, not the random one.
-- Not yet live: no Databricks job or MLflow run screenshots.
+- [NEEDS: MLflow screenshots / live Databricks job]. Quote held-out (`report-heldout.txt`) over random-split (`report.txt`).
 
 **Maritime** hosts the planner agent.
 - `agent/plan.mjs` runs a Gemini tool loop (max 4 turns) with `get_stats` (calls `/api/stats/<id>`) and `get_practice_words` (calls `/api/words`). `learnerId` and known letters live in the closure, so the model cannot change them.
