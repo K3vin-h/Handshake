@@ -1,7 +1,7 @@
-/* Level path page: a slimmer banner, a distinct "Up next" line, and stats set in a serif with a warm tint.
+/* Level path page: a slimmer banner, a distinct "Up next" line, and three flat stats.
    Scoped to .path-page so the shared styles.css is untouched. Unlayered, so it wins over the legacy layer. */
-.path-page .home-hero { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); padding: clamp(18px, 2.6vw, 28px) clamp(20px, 3vw, 32px); margin-bottom: var(--space-4); }
-.path-page .home-hero h1 { margin: 0 0 var(--space-2); font-size: clamp(1.6rem, 3.6vw, 2.4rem); }
+.path-page .home-hero { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); padding: clamp(18px, 2.6vw, 28px) clamp(20px, 3vw, 32px); margin-bottom: var(--space-5); }
+.path-page .home-hero h1 { margin: 0 0 var(--space-2); font-size: var(--text-h1); letter-spacing: -0.02em; }
 .path-page .hero-main { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-5); }
 .path-page .hero-main h1 { flex: 1 1 100%; }
 .path-page .hero-kicker { margin: 0; }
@@ -10,11 +10,12 @@
 /* Up next: a pill, a lesson badge, the title in bold, then the XP, so it reads as a different thing from the headline. */
 .hero-next { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0; }
 .hero-next-pill { padding: 3px 12px; border-radius: var(--radius-pill); background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.85); color: #fff; font-size: 13px; font-weight: 800; }
-.hero-next-id { padding: 2px 10px; border-radius: 10px; background: #fff; color: var(--brand-deep); font-weight: 900; }
+.hero-next-id { padding: 2px 10px; border-radius: var(--radius-sm); background: #fff; color: var(--brand-deep); font-weight: 900; }
 .hero-next-title { font-size: 1.15rem; font-weight: 800; color: #fff; }
 .hero-next-xp { font-size: 14px; font-weight: 700; color: rgba(255, 255, 255, 0.9); }
 
-/* Stats: numerals in pale gold, in the theme font (same as the rest of the app), small labels. */
-.path-page .hero-stats { padding-top: var(--space-4); gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
-.path-page .hero-stats dd { font-size: clamp(1.5rem, 2.6vw, 2rem); font-weight: 800; letter-spacing: -0.02em; color: #ffe9a6; }
-.path-page .hero-stats dt { font-size: 13px; font-weight: 600; }
+/* Stats: three equal columns, white numerals (one accent colour), no animation. */
+.path-page .hero-stats { padding-top: var(--space-4); gap: var(--space-3); grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.path-page .hero-stats dd { font-size: var(--text-h1); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; color: #fff; }
+.path-page .hero-stats dt { font-size: var(--text-small); font-weight: 600; opacity: 0.85; }
+.path-page .status-legend { margin-bottom: var(--space-5); }

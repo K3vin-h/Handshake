@@ -30,6 +30,7 @@ export function SceneView(p: SceneViewProps) {
   const t = p.turns[p.turnIndex];
   return (
     <div className="page scene">
+      <a className="lesson-exit" href="#/path">Back to your path</a>
       <header className="lesson-head">
         <div>
           <p className="eyebrow">

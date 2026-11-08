@@ -1,10 +1,11 @@
 import { writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
+import { lessonEmailHtml, recapEmailHtml } from './lib/email-template.mjs';
 const node=(name,type,parameters,typeVersion=1,extra={})=>({id:name.replaceAll(' ','-'),name,type:`n8n-nodes-base.${type}`,typeVersion,position:[0,0],parameters,...extra});
 const sql=(name,query,parameters)=>node(name,'postgres',{operation:'executeQuery',query,options:{queryReplacement:parameters}},2.6);
 const condition=(name,expression)=>node(name,'if',{conditions:{options:{caseSensitive:true,leftValue:'',typeValidation:'strict',version:2},conditions:[{id:'send',leftValue:expression,rightValue:true,operator:{type:'boolean',operation:'true',singleValue:true}}],combinator:'and'},options:{}},2.2);
 const respond=(name,status='200',body='={{ {ok:true} }}')=>node(name,'respondToWebhook',{respondWith:'json',responseBody:body,options:{responseCode:status}},1.4);
-const mail=(name,subject,text)=>node(name,'emailSend',{fromEmail:'={{ $vars.HANDSHAKE_FROM_EMAIL }}',toEmail:'={{ $json.result.email }}',subject,emailFormat:'text',text,options:{appendAttribution:false}},2.1,{onError:'continueErrorOutput'});
+const mail=(name,subject,text,html)=>node(name,'emailSend',{fromEmail:'={{ $vars.HANDSHAKE_FROM_EMAIL }}',toEmail:'={{ $json.result.email }}',subject,emailFormat:'both',text,html,options:{appendAttribution:false}},2.1,{onError:'continueErrorOutput'});
 const workflow=(name,nodes,edges)=>{
  const connections={};
  for(const [from,to,output=0] of edges){connections[from]??={main:[]};while(connections[from].main.length<=output)connections[from].main.push([]);connections[from].main[output].push({node:to,type:'main',index:0});}
@@ -17,13 +18,20 @@ export function lessonWorkflow(){return workflow('Handshake lesson complete',[
  condition('Lesson eligible','={{ $json.result.send === true }}'),
  sql('Recheck lesson','select handshake.lesson_recheck($1,$2::uuid) as result',"={{ [$('Claim lesson').item.json.result.learnerId, $('Claim lesson').item.json.result.lease] }}"),
  condition('Contact still subscribed','={{ $json.result.send === true }}'),
- mail('Send lesson','={{ "Handshake: " + $("Claim lesson").item.json.result.title }}','={{ "An ASL lesson was completed: " + $("Claim lesson").item.json.result.title + ".\\n\\nStop contact updates: " + $vars.HANDSHAKE_LINK_ORIGIN + "/webhook/handshake-unsubscribe?token=" + encodeURIComponent($json.result.unsubscribeToken) }}'),
+ // Kept for tests/export shape; not connected — we do practice reminders, not “lesson finished” pings.
+ mail(
+  'Send lesson',
+  '={{ $("Claim lesson").item.json.result.title + " — practice reminder" }}',
+  '={{ $("Claim lesson").item.json.result.title + " — practice reminder.\\n\\nSpell your name practice reminder placeholder.\\n\\nOpt out: " + $vars.HANDSHAKE_LINK_ORIGIN + "/webhook/handshake-unsubscribe?token=" + encodeURIComponent($json.result.unsubscribeToken) }}',
+  lessonEmailHtml(),
+ ),
+ sql('Skip notify','select handshake.lesson_finish($1,$2::uuid,false)',"={{ [$('Claim lesson').item.json.result.learnerId, $('Claim lesson').item.json.result.lease] }}"),
  sql('Lesson sent','select handshake.lesson_finish($1,$2::uuid,true)',"={{ [$('Claim lesson').item.json.result.learnerId, $('Claim lesson').item.json.result.lease] }}"),
  sql('Lesson failed','select handshake.lesson_finish($1,$2::uuid,false)',"={{ [$('Claim lesson').item.json.result.learnerId, $('Claim lesson').item.json.result.lease] }}"),
  respond('Lesson response',200),
  respond('Claim response','={{ $json.result.status }}','={{ {ok:$json.result.status < 400} }}'),
  respond('SMTP failure',503,'={{ {ok:false,reason:"delivery_failed"} }}'),
- ],[['Lesson webhook','Claim lesson'],['Claim lesson','Lesson eligible'],['Lesson eligible','Recheck lesson'],['Lesson eligible','Claim response',1],['Recheck lesson','Contact still subscribed'],['Contact still subscribed','Send lesson'],['Contact still subscribed','Lesson response',1],['Send lesson','Lesson sent'],['Send lesson','Lesson failed',1],['Lesson sent','Lesson response'],['Lesson failed','SMTP failure']]);}
+ ],[['Lesson webhook','Claim lesson'],['Claim lesson','Lesson eligible'],['Lesson eligible','Recheck lesson'],['Lesson eligible','Claim response',1],['Recheck lesson','Contact still subscribed'],['Contact still subscribed','Skip notify'],['Contact still subscribed','Lesson response',1],['Skip notify','Lesson response'],['Send lesson','Lesson sent'],['Send lesson','Lesson failed',1],['Lesson sent','Lesson response'],['Lesson failed','SMTP failure']]);}
 export function recapWorkflow(){return workflow('Handshake weekly operator-only recap',[
  node('Monday UTC','scheduleTrigger',{rule:{interval:[{field:'cronExpression',expression:'0 17 * * 1'}]}},1.2),
  node('Manual operator test','manualTrigger',{},1,{disabled:true}),
@@ -32,7 +40,12 @@ export function recapWorkflow(){return workflow('Handshake weekly operator-only 
  sql('Weighted stats','select handshake.recap_stats($1::jsonb) as result','={{ [JSON.stringify($json)] }}'),
  sql('Recheck recap','select handshake.recap_recheck($1,$2::uuid,$3) as result',"={{ [$('Claim recaps').item.json.result.learnerId, $('Claim recaps').item.json.result.lease, $vars.HANDSHAKE_RECAP_TEST_EMAIL || ''] }}"),
  condition('Learner still subscribed','={{ $json.result.send === true }}'),
- mail('Send recap','Handshake: your last 14 days','={{ "Your last 14 days of ASL practice: " + $("Weighted stats").item.json.result.attempts + " attempts. " + ($("Weighted stats").item.json.result.share === null ? "No attempts recorded." : "Reference match share: " + $("Weighted stats").item.json.result.share + "%.") + "\\n\\nStop all email and delete this subscription: " + $vars.HANDSHAKE_LINK_ORIGIN + "/webhook/handshake-learner-unsubscribe?token=" + encodeURIComponent($json.result.unsubscribeToken) }}'),
+ mail(
+  'Send recap',
+  'Ready for another ASL session?',
+  '={{ "Ready for another ASL session?\\n\\nA little practice goes a long way. Your last 14 days: " + $("Weighted stats").item.json.result.attempts + " attempts. " + ($("Weighted stats").item.json.result.share === null ? "No attempts recorded yet." : "Reference match share: " + $("Weighted stats").item.json.result.share + "%.") + "\\n\\nOpen Handshake and pick up where you left off.\\n\\nOpt out of all practice emails: " + $vars.HANDSHAKE_LINK_ORIGIN + "/webhook/handshake-learner-unsubscribe?token=" + encodeURIComponent($json.result.unsubscribeToken) }}',
+  recapEmailHtml(),
+ ),
  sql('Recap sent','select handshake.recap_finish($1,$2::uuid,true)',"={{ [$('Claim recaps').item.json.result.learnerId, $('Claim recaps').item.json.result.lease] }}"),
  sql('Recap failed','select handshake.recap_finish($1,$2::uuid,false)',"={{ [$('Claim recaps').item.json.result.learnerId, $('Claim recaps').item.json.result.lease] }}"),
  node('Report recap SMTP failure','stopAndError',{errorType:'errorMessage',errorMessage:'Recap delivery failed; lease released, delivery unconfirmed.'}),

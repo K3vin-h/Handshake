@@ -16,6 +16,7 @@ import { createCoachQueue } from "../lib/coachQueue";
 import type { FingerFeedback } from "../cv/types";
 import { loadTemplates } from "../cv/classifier";
 import { celebrate } from "../components/celebrate";
+import { LessonNotice } from "../components/LessonNotice";
 import { clearRedo, loadRedo, saveRedo } from "./lessonRedo";
 
 const HandModel3D = lazy(() => import("../components/HandModel3D"));
@@ -172,23 +173,29 @@ function Player({ lessonId }: { lessonId: string }) {
   if (!lesson) return <div className="page"><p>Lesson not found. <a href="#/">Back to your path</a></p></div>;
   // Same baseline: no skipping ahead by URL. "Skip" inside a lesson passes an item without counting it as a match.
   if (!isUnlocked(units, progress.current, lesson.id)) return <div className="page"><p>Locked: finish the lessons before it first. <a href="#/">Back to your path</a></p></div>;
-  if (incomplete)
+  if (incomplete) {
+    const n = skipped.current.size;
+    const stepWord = n === 1 ? "step" : "steps";
     return (
-      <div className="page">
-        <h1>Lesson not finished yet</h1>
-        <p role="status">You skipped {skipped.current.size} {skipped.current.size === 1 ? "step" : "steps"}, so this lesson is not complete and no XP was added. Everything you matched is saved: you only need to redo the skipped {skipped.current.size === 1 ? "step" : "steps"}.</p>
-        <p><button onClick={redoSkipped}>Redo the skipped {skipped.current.size === 1 ? "step" : "steps"}</button> <button onClick={startAgain}>Start the whole lesson over</button></p>
-        <p>{after && <a href={`#/lesson/${after.id}`}>Go on to {after.id} {after.title}</a>} {after && "· "}<a href="#/">Back to your path</a></p>
-        {after && <p className="muted small">This lesson stays partly filled on your path until the skipped steps are matched.</p>}
-      </div>
+      <LessonNotice
+        title="Lesson not finished yet"
+        message={`You skipped ${n} ${stepWord}, so this lesson is not complete and no XP was added. Everything you matched is saved: you only need to redo the skipped ${stepWord}.`}
+        primary={{ label: `Redo the skipped ${stepWord}`, onClick: redoSkipped }}
+        secondary={{ label: "Start the whole lesson over", onClick: startAgain }}
+        links={[...(after ? [{ href: `#/lesson/${after.id}`, label: `Go on to ${after.id} ${after.title}` }] : []), { href: "#/", label: "Back to your path" }]}
+        footnote={after ? "This lesson stays partly filled on your path until the skipped steps are matched." : undefined}
+      />
     );
+  }
   if (resume)
     return (
-      <div className="page">
-        <h1>Pick up where you left off</h1>
-        <p role="status">{resume.length} {resume.length === 1 ? "step is" : "steps are"} left in this lesson. The ones you already matched are saved.</p>
-        <p><button onClick={() => restart(resume)}>Continue ({resume.length} left)</button> <button onClick={startAgain}>Start the whole lesson over</button> <a href="#/">Back to your path</a></p>
-      </div>
+      <LessonNotice
+        title="Pick up where you left off"
+        message={`${resume.length} ${resume.length === 1 ? "step is" : "steps are"} left in this lesson. The ones you already matched are saved.`}
+        primary={{ label: `Continue (${resume.length} left)`, onClick: () => restart(resume) }}
+        secondary={{ label: "Start the whole lesson over", onClick: startAgain }}
+        links={[{ href: "#/", label: "Back to your path" }]}
+      />
     );
   const item = items[i];
   if (!item) return <div className="page"><p>Nothing to practice here yet.</p><button onClick={next}>Continue</button></div>;

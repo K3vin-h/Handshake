@@ -34,20 +34,11 @@ function PathPageInner({ profile }: { profile: Profile }) {
   const dueSet = new Set(due);
 
   // Hero stats. All from local progress; nothing is sent anywhere.
-  const nameLetters = (name: string) => [...name.toUpperCase().replace(/[^A-Z]/g, "")];
-  const yourLetters = nameLetters(profile.userName);
-  const theirLetters = nameLetters(profile.theirName);
-  const nameSet = [...new Set([...yourLetters, ...theirLetters])];
   const demoLessons = units.flatMap((u) => u.lessons).filter((l) => l.scope === "demo");
-  const tries = Object.values(progress.items).reduce((n, s) => n + s.attempts, 0);
-  const misses = Object.values(progress.items).reduce((n, s) => n + s.misses, 0);
   const stats: [string, string][] = [
     [String(progress.streakDays), progress.streakDays === 1 ? "day streak" : "days streak"],
     [String(progress.xp), "XP earned"],
-    [`${nameSet.filter((l) => progress.items[l]?.mastered).length}/${nameSet.length}`, "name letters mastered"],
     [`${demoLessons.filter((l) => progress.completed.includes(l.id)).length}/${demoLessons.length}`, "lessons done"],
-    [tries ? `${Math.round(((tries - misses) / tries) * 100)}%` : "–", "match rate"],
-    [String(dueItems(progress, Date.now(), 99).length), "to review today"],
   ];
 
   const stateOf = (id: string): MapLesson["state"] => {
@@ -56,13 +47,9 @@ function PathPageInner({ profile }: { profile: Profile }) {
     return isUnlocked(units, progress, id) ? "available" : "locked";
   };
   const open = (id: string) => (location.hash = `#/lesson/${id}`);
-  // Their name is the one "Spell ..." lesson in Unit 2. Found by position, not by comparing titles: the curriculum cleans
-  // the name itself (accents, hyphens), so a title match broke for names like "Mary-Ann" or "José".
-  const spellThem = units.find((u) => u.id === "u2")?.lessons.find((l) => /^Spell /i.test(l.title));
-  const spellOpen = spellThem ? isUnlocked(units, progress, spellThem.id) : false;
   // Banner headline: one hand-written line per lesson (see lessonHeadline). No AI, no promises about outcomes.
   const them = profile.theirName;
-  const headline = next ? lessonHeadline(next, them) : "You've finished every available lesson!";
+  const headline = next ? lessonHeadline(next, them) : "You've finished every available lesson";
   // Small letters + live coverage under each lesson block (replaces the old side panels).
   const lessonExtras = (l: { title: string; teaches?: string[] }): Pick<MapLesson, "letters" | "note"> => {
     const letters = (l.teaches ?? []).filter((x) => /^[A-Z]$/.test(x)).map((x) => ({ letter: x, status: letterStatus(x), due: dueSet.has(x) }));
@@ -104,17 +91,6 @@ function PathPageInner({ profile }: { profile: Profile }) {
         </dl>
       </section>
 
-      <ul className="shortcuts stagger" style={{ "--i": 1 } as React.CSSProperties} aria-label="Shortcuts">
-        <li><a href="#/progress">Progress</a></li>
-        <li><a href="#/camera-demo">Camera demo</a></li>
-        {spellThem && (
-          <li>
-            {spellOpen ? <a href={`#/lesson/${spellThem.id}`}>{spellThem.title}</a> : <span className="is-locked">{spellThem.title} (locked until the lessons before it are done)</span>}
-          </li>
-        )}
-        <li><a href="#/welcome">Names and hand</a></li>
-      </ul>
-
       <ul className="status-legend" aria-label="What the shapes mean">
         {(["mastered", "practicing", "not-started", "reference-only"] as MarkState[]).map((m) => (
           <li key={m}><StatusMark state={m} size={14} /> {MARK_LABEL[m]}</li>
@@ -122,7 +98,7 @@ function PathPageInner({ profile }: { profile: Profile }) {
       </ul>
 
       <div className="home-single">
-        <div className="units stagger" style={{ "--i": 2 } as React.CSSProperties}>
+        <div className="units stagger" style={{ "--i": 1 } as React.CSSProperties}>
           {units.slice(0, 4).map((u, i) => (
             <UnitSection
               key={u.id}

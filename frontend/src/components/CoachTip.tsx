@@ -43,7 +43,6 @@ export function CoachTip(props: {
   return (
     <div className={`coach-halo${hasContent ? " is-active" : ""}${fresh ? " is-fresh" : ""}`}>
       <section className="coach" aria-label="Coaching" aria-live="polite">
-        <span className="coach-glow" aria-hidden="true" />
         {fresh && <span className="coach-new">New</span>}
         {instantTip && (
           <p key={instantTip} className="coach-instant coach-pop">

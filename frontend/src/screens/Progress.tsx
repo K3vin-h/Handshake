@@ -113,7 +113,7 @@ export function ProgressScreen() {
             aria-valuenow={lessonsDone}
             aria-valuetext={`${lessonsDone} of ${demo.length} lessons`}
           >
-            <span style={{ width: `${demo.length ? pct(lessonsDone, demo.length) : 0}%` }} />
+            <span style={{ "--p": demo.length ? lessonsDone / demo.length : 0 } as React.CSSProperties} />
           </div>
           <div className="jr-stamps">
             <Stamp value={progress.streakDays} label="day streak" />
@@ -204,6 +204,8 @@ export function ProgressScreen() {
         </Page>
       </Spread>
 
+      <details className="jr-more">
+        <summary>More detail: fingers, review plan, every letter</summary>
       <Spread>
         <Page side="left" label="My hands" title="Which finger needs love" number={5}>
           {noMistakes ? (
@@ -282,6 +284,7 @@ export function ProgressScreen() {
           <p className="jr-note">Mastered means matching the reference 3 times in a row. Reference-only letters have no pass or fail.</p>
         </Page>
       </Spread>
+      </details>
     </div>
   );
 }

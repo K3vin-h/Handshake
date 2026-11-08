@@ -17,11 +17,8 @@ import { ProgressScreen } from "./screens/Progress";
 import { LessonPreview } from "./screens/LessonPreview";
 import { Settings } from "./screens/Settings";
 import { loadProfile } from "./lib/profile";
-import { loadProgress } from "./lib/progress";
-import { ReduceMotionToggle } from "./components/motion/MotionProvider";
+import { TopNav, showNav } from "./components/TopNav";
 import { PageTransition } from "./components/motion/PageTransition";
-import { StreakXpChip } from "./components/StreakXpChip";
-import { AccountChip } from "./components/AccountChip";
 import { SignUp } from "./screens/SignUp";
 import { Login } from "./screens/Login";
 import { ForgotPassword } from "./screens/ForgotPassword";
@@ -79,15 +76,7 @@ const TITLES: Record<string, string> = {
   reset: "Reset password",
 };
 
-// Player-facing nav is deliberately small: Home (the main page that leads everywhere) and Progress.
 // Dev tools live in a "Dev tools" menu that only exists in `npm run dev`; their routes keep working in every build.
-const NAV: [string, string][] = [
-  ["#/", "Home"],
-  ["#/path", "Levels"],
-  ["#/progress", "Progress"],
-];
-/** Settings sits at the right end of the bar, by the Dev tools menu. */
-const SETTINGS: [string, string] = ["#/settings", "Settings"];
 const DEV_NAV: [string, string][] = [
   ["#/demo", "Demo"],
   ["#/record", "Record"],
@@ -98,10 +87,7 @@ const DEV_NAV: [string, string][] = [
   ["#/components", "Components"],
 ];
 
-/** Pages that belong to a nav item. "Levels" also covers the lesson, completion and alphabet pages that you reach from it. */
-const LEVEL_PAGES = ["path", "lesson", "complete", "alphabet"];
-export const navActive = (href: string, hash: string) =>
-  href === "#/path" ? LEVEL_PAGES.includes(hash.split("/")[1]?.split("?")[0] ?? "") : hash === href || (href !== "#/" && hash.startsWith(`${href}/`));
+export { navActive } from "./components/TopNav";
 
 export default function App() {
   const [hash, setHash] = useState(location.hash || "#/");
@@ -131,29 +117,7 @@ export default function App() {
       <a className="skip-link" href="#main" onClick={(e) => { e.preventDefault(); document.getElementById("main")?.focus(); }}>
         Skip to content
       </a>
-      <nav aria-label="Main" className="top-nav">
-        {/* Three zones with equal side columns: the streak / XP chip is always exactly in the middle. */}
-        <div className="nav-left">
-          <a className="brand" href="#/">Handshake</a>
-          {NAV.map(([href, label]) => (
-            <a key={href} href={href} aria-current={navActive(href, hash) ? "page" : undefined}>
-              {label}
-            </a>
-          ))}
-        </div>
-        <div className="nav-center">
-          {loadProfile() && (
-            <span className="nav-chips">
-              <StreakXpChip streakDays={loadProgress().streakDays} xp={loadProgress().xp} />
-            </span>
-          )}
-        </div>
-        <div className="nav-right">
-          <AccountChip />
-          <ReduceMotionToggle />
-          <a href={SETTINGS[0]} aria-current={navActive(SETTINGS[0], hash) ? "page" : undefined}>{SETTINGS[1]}</a>
-        </div>
-      </nav>
+      {showNav(hash) && <TopNav hash={hash} />}
       <main id="main" tabIndex={-1}>
         <PageTransition key={hash}>{screen(hash)}</PageTransition>
       </main>
