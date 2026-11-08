@@ -8,7 +8,7 @@ import { buildCurriculum } from "../lib/curriculum";
 import { DEMO_PROFILE, loadProfile } from "../lib/profile";
 import { dueItems, isUnlocked, loadProgress, nextLesson } from "../lib/progress";
 
-// Home: the path. Units 1-2 are active; Units 3-4 are locked ("Coming later").
+// Home: the path. Units 1-3 are active; Unit 4 is locked ("Coming later").
 // Reads the profile and progress from localStorage only.
 
 export function Home() {
@@ -92,7 +92,7 @@ export function Home() {
 
       <div className="home-single">
         <div className="units stagger" style={{ "--i": 2 } as React.CSSProperties}>
-          {units.slice(0, 2).map((u, i) => (
+          {units.slice(0, 3).map((u, i) => (
             <UnitSection
               key={u.id}
               index={i + 1}
@@ -104,8 +104,8 @@ export function Home() {
             />
           ))}
           <div className="locked-grid">
-            {units.slice(2, 4).map((u, i) => (
-              <LockedUnit key={u.id} title={`Unit ${i + 3} · ${u.title}`} />
+            {units.slice(3, 4).map((u, i) => (
+              <LockedUnit key={u.id} title={`Unit ${i + 4} · ${u.title}`} />
             ))}
           </div>
         </div>

@@ -21,7 +21,9 @@ test("Complete reads saved completion and never awards XP on navigation or reloa
     assert.ok(items.every((item) => item.kind === "check")); // L, I, Y are live letters (src/cv/practiceable.ts)
     assert.doesNotMatch(renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "2.1" })), /<video/);
     assert.match(renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "2.1" })), /Locked/);
-    assert.match(renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "3.1" })), /Lesson not found/);
+    // Unit 3 (greetings) is in scope: 3.1 exists but stays locked until the lessons before it are done. Unit 4 is not built yet.
+    assert.match(renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "3.1" })), /Locked/);
+    assert.match(renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "4.1" })), /Lesson not found/);
     const referenceLesson = renderToStaticMarkup(createElement(LessonPlayer, { lessonId: "1.1" }));
     assert.match(referenceLesson, /Reference only/);
     assert.doesNotMatch(referenceLesson, /<video/);
