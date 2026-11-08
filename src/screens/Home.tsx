@@ -75,7 +75,6 @@ export function Home() {
       <ul className="shortcuts stagger" style={{ "--i": 1 } as React.CSSProperties} aria-label="Shortcuts">
         <li><a href="#/progress">Progress</a></li>
         <li><a href="#/camera-demo">Camera demo</a></li>
-        <li><a href="#/stats">Stats</a></li>
         {spellThem && (
           <li>
             {spellOpen ? <a href={`#/lesson/${spellThem.id}`}>{spellThem.title}</a> : <span className="is-locked">{spellThem.title} (locked until the lessons before it are done)</span>}
