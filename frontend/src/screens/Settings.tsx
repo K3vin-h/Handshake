@@ -107,6 +107,16 @@ export function Settings() {
         </CardContent>
       </Card>
 
+      <Card className="mb-4 rounded-3xl border-2" aria-labelledby="set-camera">
+        <CardHeader>
+          <CardTitle id="set-camera" className="text-xl">Camera</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="muted">Try the camera on any letter, outside a lesson.</p>
+          <a href="#/camera-demo">Open the camera demo</a>
+        </CardContent>
+      </Card>
+
       <Card className="rounded-3xl border-2" aria-labelledby="set-privacy">
         <CardHeader>
           <CardTitle id="set-privacy" className="text-xl">Privacy</CardTitle>

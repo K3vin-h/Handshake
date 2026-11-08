@@ -441,12 +441,6 @@ thead th { font-size: 13px; color: var(--muted); }
 }
 [data-reduce-motion] .stagger { animation: none; }
 
-/* ---- Home: one loud focus card, everything else quiet ---- */
-.shortcuts { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: 0 0 var(--space-5); padding: 0; list-style: none; font-size: 15px; }
-.shortcuts a { color: var(--muted); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
-.shortcuts a:hover { color: var(--brand-text); }
-.shortcuts .is-locked { color: var(--muted); }
-
 /* Quiet secondary rail: no boxes, small headings, compact chips */
 .side { gap: var(--space-5); }
 .rail h2 { margin: 0 0 var(--space-2); font-size: 13px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }

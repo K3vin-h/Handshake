@@ -28,3 +28,20 @@ test("lesson routes hide the site nav", () =>
     assert.equal(showNav("#/lesson/1.1"), false);
     assert.equal(showNav("#/path"), true);
   }));
+
+test("levels: no shortcut row, exactly three hero stats", () =>
+  withApp(async (load, render, h) => {
+    const { PathPage } = await load("/src/screens/Path.tsx");
+    const html = render(h(PathPage));
+    assert.doesNotMatch(html, /aria-label="Shortcuts"|Camera demo|Names and hand/);
+    assert.equal((html.match(/<dt>/g) ?? []).length, 3);
+    assert.match(html, /XP earned/);
+    assert.match(html, /lessons done/);
+    assert.match(html, /day streak|days streak/);
+  }));
+
+test("settings links to the camera demo", () =>
+  withApp(async (load, render, h) => {
+    const { Settings } = await load("/src/screens/Settings.tsx");
+    assert.match(render(h(Settings)), /href="#\/camera-demo"/);
+  }));
