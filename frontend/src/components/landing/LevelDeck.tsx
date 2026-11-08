@@ -64,7 +64,7 @@ function CardArt({ unit }: { unit: DeckUnit }) {
   }
   return (
     <div className="lp-art lp-art-tiles" aria-hidden="true">
-      {unit.art.slice(0, 5).map((t, i) => (
+      {unit.art.slice(0, 12).map((t, i) => (
         <span key={i} style={{ ["--r" as string]: `${[-6, 4, -3, 5, -4][i % 5]}deg` }}>
           {t}
         </span>
@@ -78,6 +78,7 @@ function DeckCard(props: {
   unit: DeckUnit;
   index: number;
   slot: number;
+  restX: number; // where the track sits when this card is the active one
   x: MotionValue<number>;
   active: boolean;
   flat: boolean;
@@ -85,8 +86,8 @@ function DeckCard(props: {
   onSelect(): void;
   onOpen(): void;
 }) {
-  const { unit, index, slot, x, active, flat, width, onSelect, onOpen } = props;
-  const d = useTransform(x, (v) => (v + index * slot) / slot); // 0 = centred, +1 = one card to the right
+  const { unit, index, slot, restX, x, active, flat, width, onSelect, onOpen } = props;
+  const d = useTransform(x, (v) => (v - restX) / slot); // 0 = centred, +1 = one card to the right
   const rotateY = useTransform(d, [-1, 0, 1], flat ? [0, 0, 0] : [32, 0, -32]);
   const scale = useTransform(d, [-1, 0, 1], flat ? [1, 1, 1] : [0.9, 1, 0.9]);
   const opacity = useTransform(d, [-2, -1, 0, 1, 2], [0.3, 0.78, 1, 0.78, 0.3]);
@@ -266,40 +267,49 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
   }, []);
 
   const width = Math.max(240, Math.min(360, vw - 64));
-  const slot = width + GAP;
+  const gap = GAP;
+  const slot = width + gap;
   const pad = (vw - width) / 2;
 
-  // Centring the active card leaves an empty gutter beside the first card (left) and the last card (right). So near the
-  // ends the whole track slides toward that side by the gutter, which puts the first card flush left (next level peeking
-  // in on the right) and the last card flush right (previous level peeking in on the left). The cards keep reading their
-  // tilt/scale from the unshifted `x`, so the active card is still untilted. Middle cards stay centred.
-  const edge = Math.min(pad, 12);
-  const gutter = Math.max(0, pad - edge);
-  const shiftIn = units.map((_, i) => -i * slot);
-  const shiftOut = units.map((_, i) => (units.length > 1 && i === 0 ? -gutter : units.length > 1 && i === units.length - 1 ? gutter : 0));
-  const shift = useTransform(x, shiftIn.length > 1 ? shiftIn : [0, -1], shiftIn.length > 1 ? shiftOut : [0, 0]);
+  // The active card sits at the LEFT edge, with the next levels showing to its right. (Centring it left a wide empty gutter
+  // beside level 1. Sliding the ends flush instead made the step between 1 and 2 and between 3 and 4 move only a few pixels.)
+  // Because the active card always sits in the same place, every step moves the track by exactly one card width, so a drag
+  // feels the same at every level. After level 4 the right side is empty, as before. On a phone the cards are nearly as
+  // wide as the screen, so `lead` is just the small side margin there.
+  const lead = Math.min(pad, 16);
+  // The active card always sits at the left edge, so every step moves the track exactly one card. After the last level the
+  // right side is empty.
+  const restOf = (i: number) => -i * slot;
 
   const goTo = useCallback(
     (i: number, instant = false) => {
       const n = Math.max(0, Math.min(units.length - 1, i));
       setIndex(n);
-      if (instant || reduce) x.set(-n * slot);
-      else animate(x, -n * slot, { type: "spring", stiffness: 330, damping: 32 });
+      if (instant || reduce) x.set(restOf(n));
+      else animate(x, restOf(n), { type: "spring", stiffness: 330, damping: 32 });
     },
     [reduce, slot, units.length, x],
   );
 
   // Re-centre when the card size changes (resize, first measure).
   useLayoutEffect(() => {
-    x.set(-index * slot);
+    x.set(restOf(index));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slot]);
 
   const onDragEnd = (_: unknown, info: PanInfo) => {
     const { offset, velocity } = info;
-    if (offset.x < -DRAG_BUFFER || velocity.x < -VELOCITY) goTo(index + 1);
-    else if (offset.x > DRAG_BUFFER || velocity.x > VELOCITY) goTo(index - 1);
-    else goTo(index);
+    // Settle on the level whose resting spot is nearest to where the card was let go (plus a little for a flick), so a long
+    // drag lands on the level you dragged to instead of springing back to the one you started on.
+    const landed = x.get() + velocity.x * 0.15;
+    let best = 0;
+    for (let i = 1; i < units.length; i++) if (Math.abs(restOf(i) - landed) < Math.abs(restOf(best) - landed)) best = i;
+    if (best === index) {
+      // A short drag or flick still moves one level in the direction you went.
+      if (offset.x < -DRAG_BUFFER || velocity.x < -VELOCITY) best = index + 1;
+      else if (offset.x > DRAG_BUFFER || velocity.x > VELOCITY) best = index - 1;
+    }
+    goTo(best);
   };
   const onKey = (e: KeyboardEvent) => {
     if (e.key === "ArrowRight") { e.preventDefault(); goTo(index + 1); }
@@ -318,21 +328,20 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
 
       <div className="lp-deck" role="group" aria-roledescription="carousel" aria-label="Levels">
         <div className="lp-viewport" ref={viewport} tabIndex={0} onKeyDown={onKey} aria-label="Levels. Use the Left and Right arrow keys to switch.">
-          <motion.div style={{ x: shift, width: "max-content" }}>
           <motion.ul
             className="lp-track"
-            style={{ x, paddingLeft: pad, gap: GAP }}
+            style={{ x, paddingLeft: lead, gap }}
             drag="x"
-            dragConstraints={{ left: -(units.length - 1) * slot, right: 0 }}
+            // Extra room past the first and last positions so a drag can travel about as far as a full card, then springs back.
+            dragConstraints={{ left: restOf(units.length - 1) - slot * 0.7, right: restOf(0) + slot * 0.7 }}
             dragElastic={reduce ? 0 : 0.14}
             dragMomentum={false}
             onDragEnd={onDragEnd}
           >
             {units.map((u, i) => (
-              <DeckCard key={u.id} unit={u} index={i} slot={slot} x={x} active={i === index} flat={reduce} width={width} onSelect={() => goTo(i)} onOpen={() => setOpen(u)} />
+              <DeckCard key={u.id} unit={u} index={i} slot={slot} restX={restOf(i)} x={x} active={i === index} flat={reduce} width={width} onSelect={() => goTo(i)} onOpen={() => setOpen(u)} />
             ))}
           </motion.ul>
-          </motion.div>
         </div>
 
         <div className="lp-deck-nav">
