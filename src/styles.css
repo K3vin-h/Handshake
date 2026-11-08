@@ -345,17 +345,21 @@ button.badge[aria-disabled="true"] { cursor: not-allowed; }
 .coach-halo .coach p:last-child { margin-bottom: 0; }
 .coach-halo:not(.is-active) .coach { padding: 0; border: 0; background: none; box-shadow: none; backdrop-filter: none; }
 .coach-halo:not(.is-active) .coach-glow { display: none; }
-.coach-glow { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; opacity: 0.55; transition: opacity 600ms ease; }
-.coach-glow::before { content: ""; position: absolute; inset: -25%; background: radial-gradient(circle at 18% 88%, rgba(58, 106, 143, 0.55), transparent 42%), radial-gradient(circle at 84% 92%, rgba(229, 138, 168, 0.6), transparent 42%); animation: coach-drift 9s ease-in-out infinite alternate; }
-@keyframes coach-drift { from { transform: translate(-5%, 2%) scale(1); } to { transform: translate(5%, -3%) scale(1.08); } }
+.coach-glow { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; opacity: 0.85; transition: opacity 600ms ease; }
+/* Two soft circles, one blue and one sakura, each floating on its own path across the card. */
+.coach-glow::before, .coach-glow::after { content: ""; position: absolute; width: 75%; aspect-ratio: 1; bottom: -50%; border-radius: 50%; }
+.coach-glow::before { left: -18%; background: radial-gradient(circle, rgba(58, 106, 143, 0.6), transparent 66%); animation: coach-float-a 6s ease-in-out infinite alternate; }
+.coach-glow::after { right: -18%; background: radial-gradient(circle, rgba(229, 138, 168, 0.65), transparent 66%); animation: coach-float-b 7.5s ease-in-out infinite alternate; }
+@keyframes coach-float-a { from { transform: translate(0, 0) scale(1); } to { transform: translate(70%, -55%) scale(1.2); } }
+@keyframes coach-float-b { from { transform: translate(0, 0) scale(1.1); } to { transform: translate(-70%, -45%) scale(0.95); } }
 .coach-halo.is-fresh .coach { border-color: rgba(180, 70, 108, 0.55); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 28px rgba(180, 70, 108, 0.18); }
 .coach-halo.is-fresh .coach-glow { opacity: 1; }
 .coach-pill { display: inline-block; padding: 0 9px; border-radius: var(--radius-pill); background: rgba(47, 96, 136, 0.12); color: var(--brand-text); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; vertical-align: 1px; }
 .coach-pill-ai { background: rgba(180, 70, 108, 0.12); color: #962f55; }
 .coach-new { position: absolute; z-index: 2; top: -10px; right: 14px; padding: 1px 10px; border-radius: var(--radius-pill); background: var(--brand-2); color: #fff; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
 .coach-pop { animation: pop-in var(--motion-base) cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
-@media (prefers-reduced-motion: reduce) { .coach-glow::before, .coach-pop { animation: none !important; } }
-[data-reduce-motion] .coach-glow::before, [data-reduce-motion] .coach-pop { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .coach-glow::before, .coach-glow::after, .coach-pop { animation: none !important; } }
+[data-reduce-motion] .coach-glow::before, [data-reduce-motion] .coach-glow::after, [data-reduce-motion] .coach-pop { animation: none !important; }
 
 .streak-chip { display: inline-flex; gap: var(--space-1); align-items: center; margin: 0; padding: 6px var(--space-4); border-radius: var(--radius-pill); background: var(--card); border: 2px solid var(--border-strong); color: var(--text); font-weight: 700; }
 
