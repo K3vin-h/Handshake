@@ -57,3 +57,9 @@ bash -n backend/deploy/setup.sh backend/deploy/preflight.sh
 These validate inputs and syntax; they do not emulate Ubuntu package installation, systemd, DNS, firewall or ACME.
 
 Reviewed 2026-11-07: [Vultr provisioning](https://docs.vultr.com/products/compute/instances/cloud-compute/provisioning), [Vultr SSH](https://docs.vultr.com/products/compute/instances/cloud-compute/connection/openssh), [Caddy Ubuntu packages](https://caddyserver.com/docs/install#debian-ubuntu-raspbian). Caddy's official Cloudsmith package source matches the script.
+
+## Automatic updates
+
+For production-only GitHub Actions, restricted SSH access, retained backend releases,
+and rollback, see [CICD.md](CICD.md). The one-time `setup.sh` bootstrap is not the
+CI/CD update command. Do not rerun it after converting to the release layout.
