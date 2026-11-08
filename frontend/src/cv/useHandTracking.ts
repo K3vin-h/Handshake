@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { detectHand, getHandLandmarker } from "./handTracker";
+import { detectFace, getFaceLandmarker, type FaceAnchors } from "./faceTracker";
 import { drawHand } from "./drawing";
 import { LandmarkSmoother } from "./oneEuro";
 import { classifyBrightness, enhanceFrame, loadOpenCV, measureBrightness, openCamera, type LightingStatus } from "./lighting";
@@ -10,7 +11,7 @@ import { useCameraOn } from "../lib/cameraPref";
  * Webcam → (lighting check, CLAHE when dark) → MediaPipe → One Euro smoothing → onFrame.
  * Attach videoRef / canvasRef to a <video> and <canvas> (see components/Camera.tsx).
  */
-export function useHandTracking(onFrame: (hand: HandFrame | null, now: number) => void, opts: { enhance?: boolean; dominant?: "left" | "right" } = {}) {
+export function useHandTracking(onFrame: (hand: HandFrame | null, now: number, face?: FaceAnchors | null) => void, opts: { enhance?: boolean; dominant?: "left" | "right" } = {}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cb = useRef(onFrame);
@@ -41,6 +42,11 @@ export function useHandTracking(onFrame: (hand: HandFrame | null, now: number) =
       try {
         const lm = await getHandLandmarker();
         if (cancelled) return;
+        // The face model loads in the background: hand tracking starts without it, zones use it once it is ready.
+        let faceLm: Awaited<ReturnType<typeof getFaceLandmarker>> = null;
+        getFaceLandmarker().then((f) => (faceLm = f));
+        let face: FaceAnchors | null = null;
+        let faceSeen = 0;
         stream = await openCamera();
         if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
         const video = videoRef.current!;
@@ -93,7 +99,20 @@ export function useHandTracking(onFrame: (hand: HandFrame | null, now: number) =
               canvas.height = video.videoHeight;
               drawHand(canvas.getContext("2d")!, hand?.landmarks ?? null);
             }
-            cb.current(hand, now);
+            // Face every 3rd frame (it is the slower model); smoothed, and dropped after ~1 s without a face.
+            if (faceLm && frame % 3 === 0) {
+              try {
+                const f = detectFace(faceLm, source, now);
+                if (f) {
+                  face = face ? { top: face.top + (f.top - face.top) * 0.3, chin: face.chin + (f.chin - face.chin) * 0.3, cx: f.cx } : f;
+                  faceSeen = now;
+                }
+              } catch (e) {
+                console.warn("[handshake] face detection failed", e);
+              }
+            }
+            if (face && now - faceSeen > 1000) face = null;
+            cb.current(hand, now, face);
           }
           raf = requestAnimationFrame(loop);
         };
