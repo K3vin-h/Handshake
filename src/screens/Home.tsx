@@ -23,6 +23,23 @@ export function Home() {
   };
   const dueSet = new Set(due);
 
+  // Hero stats. All from local progress; nothing is sent anywhere.
+  const nameLetters = (name: string) => [...name.toUpperCase().replace(/[^A-Z]/g, "")];
+  const yourLetters = nameLetters(profile.userName);
+  const theirLetters = nameLetters(profile.theirName);
+  const nameSet = [...new Set([...yourLetters, ...theirLetters])];
+  const demoLessons = units.flatMap((u) => u.lessons).filter((l) => l.scope === "demo");
+  const tries = Object.values(progress.items).reduce((n, s) => n + s.attempts, 0);
+  const misses = Object.values(progress.items).reduce((n, s) => n + s.misses, 0);
+  const stats: [string, string][] = [
+    [String(progress.streakDays), progress.streakDays === 1 ? "day streak" : "days streak"],
+    [String(progress.xp), "XP earned"],
+    [`${nameSet.filter((l) => progress.items[l]?.mastered).length}/${nameSet.length}`, "name letters mastered"],
+    [`${demoLessons.filter((l) => progress.completed.includes(l.id)).length}/${demoLessons.length}`, "lessons done"],
+    [tries ? `${Math.round(((tries - misses) / tries) * 100)}%` : "–", "match rate"],
+    [String(dueItems(progress, Date.now(), 99).length), "to review today"],
+  ];
+
   const stateOf = (id: string): MapLesson["state"] => {
     if (progress.completed.includes(id)) return "done";
     if (next?.id === id) return "current";
@@ -53,23 +70,48 @@ export function Home() {
 
   return (
     <div className="page home">
-      <section className="focus banner stagger" style={{ "--i": 0 } as React.CSSProperties} aria-labelledby="focus-title">
-        <div className="focus-next">
-          <div>
-            <h1 id="focus-title">{headline}</h1>
-            {next ? (
-              <p className="focus-kicker">Lesson {next.id} · {next.title} · {next.xp} XP</p>
-            ) : (
-              <p className="focus-kicker">More lessons are coming later.</p>
-            )}
-          </div>
+      <section className="home-hero stagger" style={{ "--i": 0 } as React.CSSProperties} aria-labelledby="focus-title">
+        <div className="hero-main">
+          <h1 id="focus-title">{headline}</h1>
+          <p className="hero-kicker">
+            {next ? `Next up: lesson ${next.id}, ${next.title} (${next.xp} XP)` : "More lessons are coming later."}
+          </p>
           {next && (
-            <button type="button" className="focus-cta" onClick={() => open(next.id)}>
-              Go
+            <button type="button" className="hero-cta" onClick={() => open(next.id)}>
+              Continue
               <span className="sr-only"> to lesson {next.id}</span>
             </button>
           )}
         </div>
+
+        <div className="hero-names">
+          {([["Your name", yourLetters], [`${them}'s name`, theirLetters]] as const).map(([caption, letters]) => (
+            <div key={caption} role="group" aria-label={`${caption}: ${letters.join("")}`}>
+              <p className="hero-caption">{caption}</p>
+              <ol className="name-tiles">
+                {letters.map((l, i) => {
+                  const s = letterStatus(l);
+                  return (
+                    <li key={i} className={`name-tile name-tile-${s}`}>
+                      <span className="name-letter">{l}</span>
+                      <StatusMark state={s} size={16} />
+                      <span className="sr-only">{MARK_LABEL[s]}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          ))}
+        </div>
+
+        <dl className="hero-stats">
+          {stats.map(([value, label]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
       <ul className="shortcuts stagger" style={{ "--i": 1 } as React.CSSProperties} aria-label="Shortcuts">

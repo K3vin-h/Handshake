@@ -77,7 +77,11 @@ export default function App() {
     const name = hash.split("/")[1] || "path";
     document.title = `${TITLES[name] ?? "Handshake"} · Handshake`;
     if (first.current) first.current = false;
-    else document.getElementById("main")?.focus();
+    else {
+      // Hash routing keeps the old scroll offset, and focus() scrolls by itself: start each page at the top instead.
+      window.scrollTo(0, 0);
+      document.getElementById("main")?.focus({ preventScroll: true });
+    }
   }, [hash]);
   return (
     <>
