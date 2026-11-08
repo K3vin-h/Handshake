@@ -67,6 +67,13 @@ test("(e) a profile whose name the server would reject is never pushed", async (
   assert.equal(puts, before);
 });
 
+test("(f) a solo learner (empty theirName) is pushed", async () => {
+  profile = { ...prof, theirName: "" };
+  const before = puts;
+  await syncNow();
+  assert.equal(puts, before + 1);
+});
+
 test("(d) a debounce armed while signed in sends nothing after logout", async () => {
   const { logOut } = await import("./auth.ts");
   await syncNow();

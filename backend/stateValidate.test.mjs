@@ -20,11 +20,17 @@ test("optional fields may be absent", () => {
   const b = good(); delete b.profile.relationship; delete b.profile.practiceWords; delete b.profile.wordPack;
   assert.ok(validateState(b));
 });
+test("solo learner: empty theirName round-trips (onboarding saves cleanName('') and no relationship)", () => {
+  const b = good(); b.profile.theirName = ""; delete b.profile.relationship;
+  assert.deepEqual(JSON.parse(JSON.stringify(validateState(b))), b);
+});
 test("rejects each rule", () => {
   for (const [n, m] of Object.entries({
     nonobj: (b) => { b.profile = null; },
     userName: (b) => { b.profile.userName = "R2"; },
-    theirName: (b) => { b.profile.theirName = ""; },
+    userNameEmpty: (b) => { b.profile.userName = ""; },
+    theirName: (b) => { b.profile.theirName = "L2"; },
+    theirNameLong: (b) => { b.profile.theirName = "a".repeat(41); },
     relationship: (b) => { b.profile.relationship = "boss"; },
     leftHanded: (b) => { b.profile.leftHanded = "no"; },
     lessonId: (b) => { b.profile.practiceWords = { x: ["A"] }; },

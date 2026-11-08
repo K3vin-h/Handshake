@@ -1,6 +1,6 @@
 import { getMe, getUser, pushState } from "./auth.ts";
 import { mergeState } from "./merge.ts";
-import { validName } from "./nameRule.ts";
+import { validName, validTheirName } from "./nameRule.ts";
 import type { Profile } from "./profile.ts";
 import type { Progress } from "./progress.ts";
 
@@ -43,7 +43,7 @@ async function push(retry = true): Promise<void> {
   if (!getUser()) return; // signed out (e.g. a debounce timer firing after logout)
   const s = await local();
   if (!s.profile) return; // the server rejects a null profile with 400
-  if (!validName(s.profile.userName) || !validName(s.profile.theirName)) return; // the server would 400 it
+  if (!validName(s.profile.userName) || !validTheirName(s.profile.theirName)) return; // the server would 400 it
   const r = await pushState(s, rev);
   if (r.ok) { rev = r.rev; return; }
   if (r.error === "conflict" && r.state && retry) {

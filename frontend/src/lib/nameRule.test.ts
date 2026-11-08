@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cleanName, validName } from "./nameRule.ts";
+import { cleanName, validName, validTheirName } from "./nameRule.ts";
 
 test("names the server rejects are cleaned to ones it accepts", () => {
   for (const [raw, want] of [["Ryan2", "Ryan"], ["J.R.", "JR"], ["Zoe!", "Zoe"], ["O’Brien", "O'Brien"], ["  Mary   Ann ", "Mary Ann"]]) {
@@ -16,3 +16,10 @@ test("already-valid names are unchanged", () => {
   }
 });
 test("cap at 40", () => assert.equal(cleanName("a".repeat(60)).length, 40));
+test("theirName may be empty (solo learner); other names may not", () => {
+  assert.equal(validTheirName(""), true);
+  assert.equal(validTheirName(cleanName("")), true);
+  assert.equal(validTheirName("Lily"), true);
+  for (const bad of ["L2", "a".repeat(41), null, undefined, 5, ["Lily"]]) assert.equal(validTheirName(bad), false, String(bad));
+  assert.equal(validName(""), false);
+});

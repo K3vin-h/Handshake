@@ -6,10 +6,11 @@ const isObj = (o) => o !== null && typeof o === "object" && !Array.isArray(o);
 const int = (n, max) => Number.isInteger(n) && n >= 0 && n <= max;
 const strs = (a, max, re) => Array.isArray(a) && a.length <= max && a.every((s) => typeof s === "string" && re.test(s));
 const name = (s) => typeof s === "string" && NAME_RE.test(s);
+const theirName = (s) => s === "" || name(s); // "" = solo learner ("I'm learning for myself")
 const KEYS = (o) => Object.keys(o); // own enumerable keys only
 
 function profile(p) {
-  if (!isObj(p) || !name(p.userName) || !name(p.theirName) || typeof p.leftHanded !== "boolean") return null;
+  if (!isObj(p) || !name(p.userName) || !theirName(p.theirName) || typeof p.leftHanded !== "boolean") return null;
   const out = { userName: p.userName, theirName: p.theirName, leftHanded: p.leftHanded };
   if (p.relationship !== undefined) {
     if (!RELATIONSHIPS.includes(p.relationship)) return null;
