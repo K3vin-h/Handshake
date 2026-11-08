@@ -117,7 +117,7 @@ function Player({ lessonId }: { lessonId: string }) {
   // ONE camera at a time: LetterItem stays mounted across consecutive letter items (no key), so the camera never restarts.
   if (item.kind === "other")
     return <div className="page"><p>Coming in a later milestone: {item.step.kind}</p><button onClick={next}>Continue</button></div>;
-  return <LetterItem index={i} item={item} lessonLetters={lessonLetters} leftHanded={profile.leftHanded} stepLabel={stepLabel} lessonProgress={i / items.length} progress={progress} onRestart={() => { if (item.kind === "check" && item.practiceStart !== undefined) setI(item.practiceStart); }} onNext={next} />;
+  return <LetterItem index={i} item={item} lessonLetters={lessonLetters} leftHanded={profile.leftHanded} stepLabel={stepLabel} lessonProgress={i / items.length} stepSize={1 / items.length} progress={progress} onNext={next} />;
 }
 
 type LetterItemProps = {
@@ -126,13 +126,13 @@ type LetterItemProps = {
   lessonLetters: string[];
   leftHanded: boolean;
   stepLabel: string;
-  lessonProgress: number;
+  lessonProgress: number; // fraction of steps finished before this one
+  stepSize: number; // one step's share of the top bar, added once this step matches so the last step can fill the bar
   progress: { current: Progress };
   onNext: () => void;
-  onRestart: () => void;
 };
 
-function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonProgress, progress, onNext, onRestart }: LetterItemProps) {
+function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonProgress, stepSize, progress, onNext }: LetterItemProps) {
   const [landmarkTip, setLandmarkTip] = useState("");
   const [coach, setCoach] = useState({ tip: "", cached: false });
   const [sideBySide, setSideBySide] = useState(false);
@@ -183,7 +183,8 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     },
     onMiss: (feedback) => {
       if (item.kind !== "check") return;
-      onRestart();
+      // A miss shows the tip and keeps the same rep going. It does not send the learner back to rep 1 (that looped for
+      // anyone the model misses often). Mastery still needs 3 in a row: recordAttempt resets the streak on a miss.
       progress.current = recordAttempt(progress.current, target, false);
       reportAttempt(target, false, feedback.map((f) => f.code));
       setCoach({ tip: "", cached: false });
@@ -210,11 +211,20 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
 
   // Once the target matches, the ring and bar stay full until "Try again" (retry() resets the check, so this goes back to live progress).
   const shownProgress = result === "match" ? 1 : check.progress;
+  // Top bar: steps finished so far, plus this one once it matches, so the final step can reach 100%.
+  const barProgress = Math.min(1, lessonProgress + (result === "match" ? stepSize : 0));
   const noLiveCheck = item.kind === "learn" && item.referenceOnly;
+  const moving = target === "J" || target === "Z"; // these are drawn in the air, so a still camera frame can never check them
   const camera = noLiveCheck ? (
     <div className="card">
-      <p><strong>No live check for {target} yet.</strong> It is reference only until the letter passes the Letter gate.</p>
-      <p><a href="#/camera-demo">Try the camera and coach in the demo</a></p>
+      {moving ? (
+        <p><strong>{target} moves, so the camera can't check it.</strong> Watch the motion in a Deaf-led source such as Lifeprint (lifeprint.com), copy it, then continue.</p>
+      ) : (
+        <>
+          <p><strong>No live check for {target} yet.</strong> It is reference only until the letter passes the Letter gate.</p>
+          <p><a href="#/camera-demo">Try the camera and coach in the demo</a></p>
+        </>
+      )}
     </div>
   ) : (
     <>
@@ -227,12 +237,12 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
       <HandModel3D pose={meanPose3D(target, check.templates, leftHanded)} letter={target} />
     </Suspense>
   );
-  const common = { target, reference, camera, landmarkTip, coachTip: coach.tip, coachCached: coach.cached, sideBySide, stepLabel, lessonProgress, howTo };
+  const common = { target, reference, camera, landmarkTip, coachTip: coach.tip, coachCached: coach.cached, sideBySide, stepLabel, lessonProgress: barProgress, howTo };
 
   if (item.kind === "learn")
     return (
       <LessonView {...common} title={`Learn ${item.letter}`} showReference progress={0}
-        status={item.referenceOnly ? "Reference only, coming later" : `This is ${item.letter}. Try it, then continue.`}
+        status={item.referenceOnly ? (moving ? `${item.letter} moves: learn the motion, then continue.` : "Reference only, coming later") : `This is ${item.letter}. Try it, then continue.`}
         actionLabel="Continue" onAction={onNext} />
     );
 

@@ -4,6 +4,7 @@ import { drawHand } from "./drawing";
 import { LandmarkSmoother } from "./oneEuro";
 import { classifyBrightness, enhanceFrame, loadOpenCV, measureBrightness, openCamera, type LightingStatus } from "./lighting";
 import type { HandFrame } from "./types";
+import { useCameraOn } from "../lib/cameraPref";
 
 /**
  * Webcam → (lighting check, CLAHE when dark) → MediaPipe → One Euro smoothing → onFrame.
@@ -17,12 +18,15 @@ export function useHandTracking(onFrame: (hand: HandFrame | null, now: number) =
   const dominant = useRef(opts.dominant ?? "right");
   dominant.current = opts.dominant ?? "right";
   const enhanceAllowed = opts.enhance ?? true;
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [camOn] = useCameraOn();
+  const [status, setStatus] = useState<"loading" | "ready" | "error" | "off">(camOn ? "loading" : "off");
   const [error, setError] = useState("");
   const [lighting, setLighting] = useState<LightingStatus>("ok");
   const [enhancing, setEnhancing] = useState(false);
 
   useEffect(() => {
+    if (!camOn) { setStatus("off"); setLighting("ok"); setEnhancing(false); return; } // camera released by the cleanup below
+    setStatus("loading");
     let raf = 0;
     let stream: MediaStream | null = null;
     let cancelled = false;
@@ -95,6 +99,7 @@ export function useHandTracking(onFrame: (hand: HandFrame | null, now: number) =
         };
         loop();
       } catch (e) {
+        if (cancelled) return; // turned off (or left the page) while starting: play() rejects, not a real error
         setStatus("error");
         setError(e instanceof Error ? e.message : String(e));
       }
@@ -104,8 +109,11 @@ export function useHandTracking(onFrame: (hand: HandFrame | null, now: number) =
       cancelled = true;
       cancelAnimationFrame(raf);
       stream?.getTracks().forEach((t) => t.stop());
+      if (videoRef.current) videoRef.current.srcObject = null;
+      const c = canvasRef.current;
+      c?.getContext("2d")?.clearRect(0, 0, c.width, c.height);
     };
-  }, [enhanceAllowed]);
+  }, [enhanceAllowed, camOn]);
 
   /** JPEG snapshot of the current frame, cropped to the hand if given (for the Gemini coach). */
   function snapshot(hand?: HandFrame | null, size = 256): string | undefined {

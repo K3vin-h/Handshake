@@ -64,7 +64,11 @@ export function HandModel3D({ pose, letter, height = 320 }: { pose: Vec3[] | nul
   if (!pose) {
     return (
       <div className="hand3d empty" style={{ height }}>
-        <p>No 3D pose for {letter} yet. Record it on <a href="#/record">#/record</a>.</p>
+        {letter === "J" || letter === "Z" ? (
+          <p>{letter} is drawn in the air, so there is no still 3D hand to show.</p>
+        ) : (
+          <p>No 3D pose for {letter} yet. Record it on <a href="#/record">#/record</a>.</p>
+        )}
       </div>
     );
   }

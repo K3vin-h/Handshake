@@ -10,7 +10,7 @@ import { DEMO_PROFILE, loadProfile } from "../lib/profile";
 // mistakes or XP. The coach request sends only the letter, the finger codes and a repeat count (never names or images).
 
 const HandModel3D = lazy(() => import("../components/HandModel3D"));
-const LETTERS = ["L", "I", "Y", "A", "5"]; // handshapes with recorded templates
+const LETTERS = ["L", "I", "Y", "A", "B", "C", "D", "E", "F", "G", "H", "K", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "5"]; // every handshape with recorded templates
 const INTRO = "Demo: show the letter to the camera. Nothing here is scored or saved.";
 
 export function CameraDemo() {
@@ -20,13 +20,16 @@ export function CameraDemo() {
   const [landmarkTip, setLandmarkTip] = useState("");
   const [coach, setCoach] = useState({ tip: "", cached: false });
   const [repeat, setRepeat] = useState(0);
+  const [matched, setMatched] = useState(false);
   const asking = useRef(false);
   const gen = useRef(0);
 
-  const check = useLetterCheck(target, LETTERS, {
+  // Candidates are the target + its look-alikes only (like a lesson), not all 25 letters, so the demo is as fair as a lesson.
+  const check = useLetterCheck(target, [], {
     leftHanded: profile.leftHanded,
-    enabled: true,
+    enabled: !matched, // stop checking once matched; "Try again" restarts (same as the lesson player)
     onMatch: (d) => {
+      setMatched(true);
       setStatus(`Matches our recording: ${d.letter} (demo, not scored)`);
       setLandmarkTip("");
     },
@@ -56,12 +59,23 @@ export function CameraDemo() {
     setLandmarkTip("");
     setCoach({ tip: "", cached: false });
     setRepeat(0);
+    setMatched(false);
     check.reset();
   }, [target]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // useLetterCheck resets its progress the instant a match fires, so hold the ring and bar full until "Try again".
+  const shownProgress = matched ? 1 : check.progress;
+  function retry() {
+    setMatched(false);
+    setStatus(INTRO);
+    setLandmarkTip("");
+    setCoach({ tip: "", cached: false });
+    check.reset();
+  }
+
   const camera = (
     <>
-      <Camera {...check.cam} progress={check.progress} />
+      <Camera {...check.cam} progress={shownProgress} />
       {check.hint && <p role="status">{check.hint}</p>}
       <fieldset className="field demo-letters">
         <legend>Letter to try</legend>
@@ -90,7 +104,9 @@ export function CameraDemo() {
       reference={reference}
       showReference
       camera={camera}
-      progress={check.progress}
+      progress={shownProgress}
+      feedback={matched ? "match" : undefined}
+      onRetry={matched ? retry : undefined}
       landmarkTip={landmarkTip}
       coachTip={coach.tip}
       coachCached={coach.cached}

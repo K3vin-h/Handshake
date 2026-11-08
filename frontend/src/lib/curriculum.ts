@@ -60,9 +60,9 @@ const FAMILIES: { id: string; title: string; letters: string[]; scope: "demo" | 
   { id: "point", title: "Point and pinky", letters: ["D", "I", "L", "Y"], scope: "demo" },
   { id: "fingers", title: "Two and three fingers", letters: ["V", "W", "F"], scope: "demo" },
   { id: "fist", title: "The fist", letters: ["A"], scope: "demo" },
-  { id: "fingers2", title: "More finger shapes", letters: ["U", "K", "R"], scope: "stretch" },
-  { id: "fist2", title: "The fist family", letters: ["S", "E", "T", "M", "N"], scope: "stretch" },
-  { id: "sideways", title: "Sideways shapes", letters: ["G", "H", "P", "Q", "X"], scope: "stretch" },
+  { id: "fingers2", title: "More finger shapes", letters: ["U", "K", "R"], scope: "demo" },
+  { id: "fist2", title: "The fist family", letters: ["S", "E", "T", "M", "N"], scope: "demo" },
+  { id: "sideways", title: "Sideways shapes", letters: ["G", "H", "P", "Q", "X"], scope: "demo" },
 ];
 
 const clean = (s: string) => s.toUpperCase().replace(/[^A-Z]/g, "");
