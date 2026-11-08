@@ -1,4 +1,4 @@
-"""Feature extraction. MUST match src/cv/features.ts exactly (test_parity.py checks it).
+"""Feature extraction. MUST match frontend/src/cv/features.ts exactly (test_parity.py checks it).
 
 Layout (88 numbers):
   [0..62]  normalized landmarks: wrist origin, scaled by wrist->middle knuckle,

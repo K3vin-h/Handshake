@@ -7,3 +7,4 @@ dist
 training/data/*.task
 training/data/*.npz
 __pycache__
+*.tsbuildinfo
