@@ -14,7 +14,7 @@
 .hero-next-title { font-size: 1.15rem; font-weight: 800; color: #fff; }
 .hero-next-xp { font-size: 14px; font-weight: 700; color: rgba(255, 255, 255, 0.9); }
 
-/* Stats: serif numerals in pale gold, small sans labels. */
+/* Stats: numerals in pale gold, in the theme font (same as the rest of the app), small labels. */
 .path-page .hero-stats { padding-top: var(--space-4); gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
-.path-page .hero-stats dd { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; font-size: clamp(1.5rem, 2.6vw, 2rem); font-weight: 700; letter-spacing: -0.01em; color: #ffe9a6; }
+.path-page .hero-stats dd { font-size: clamp(1.5rem, 2.6vw, 2rem); font-weight: 800; letter-spacing: -0.02em; color: #ffe9a6; }
 .path-page .hero-stats dt { font-size: 13px; font-weight: 600; }
