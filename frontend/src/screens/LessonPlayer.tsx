@@ -76,6 +76,8 @@ function Player({ lessonId }: { lessonId: string }) {
   const [turn, setTurn] = useState(0); // which exchange of a conversation scene (hooks stay above the early returns)
   const lessonLetters = useMemo(() => [...new Set(items.flatMap((x) => (x.kind === "check" ? [x.letter] : [])))], [items]);
 
+  useEffect(() => { lessonLetters.forEach((l) => getHowTo(l).catch(() => {})); }, [lessonLetters]); // warm the server cache; a first Gemini call takes 4-6 s
+
   const finishing = useRef(false);
   // A skipped step is passed without a match. The lesson can then be walked to the end, but it is NOT completed:
   // no XP, no unlock. Otherwise Skip would be a way round the pass rule (mastery needs real matches).
@@ -267,10 +269,12 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
 
   // How to form the letter (Gemini, general ASL knowledge). Hidden until it arrives, and when Gemini is unsure or down.
   const [howTo, setHowTo] = useState<{ text: string; cached: boolean } | undefined>();
+  const [howToLoading, setHowToLoading] = useState(true);
   useEffect(() => {
     setHowTo(undefined);
+    setHowToLoading(true);
     let live = true;
-    getHowTo(target).then((r) => live && r.text && setHowTo({ text: r.text, cached: !!r.cached })).catch(() => {});
+    getHowTo(target).then((r) => live && r.text && setHowTo({ text: r.text, cached: !!r.cached })).catch(() => {}).finally(() => live && setHowToLoading(false));
     return () => { live = false; };
   }, [target]);
 
@@ -296,7 +300,7 @@ function LetterItem({ index, item, lessonLetters, leftHanded, stepLabel, lessonP
     <>
       <Camera {...check.cam} progress={shownProgress} />
       {check.hint && <p role="status">{check.hint}</p>}
-      {recall && hintStage === 1 && <p role="status">Hint: {howTo?.text ?? "no written hint is available right now, try Show answer."}</p>}
+      {recall && hintStage === 1 && <p role="status">Hint: {howTo?.text ?? (howToLoading ? "loading…" : "no written hint is available for this letter, try Show answer.")}</p>}
       {recall && (
         <button type="button" className={check.missCount >= 2 && hintStage === 0 ? "cta" : "secondary"} onClick={() => setHintStage((hintStage + 1) % 3)}>
           {hintStage === 0 ? (check.missCount >= 2 ? "Struggling? Get a hint" : "Hint") : hintStage === 1 ? "Show answer" : "Hide answer"}
