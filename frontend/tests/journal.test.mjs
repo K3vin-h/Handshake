@@ -20,6 +20,9 @@ test("journal building blocks render accessible markup", async () => {
     assert.match(html, /role="progressbar"/);
     assert.match(html, /aria-valuenow="11"/);
     assert.match(html, /aria-valuemax="12"/);
+    assert.match(html, /aria-label="L"/);
+    assert.match(html, /aria-valuetext="11 of 12"/);
+    assert.match(html, /jr-num"? aria-hidden="true"|aria-hidden="true"[^>]*jr-num/);
     assert.match(html, /11 of 12/);
     assert.match(html, /Y was hard/);
     assert.match(html, /day streak/);

@@ -86,7 +86,7 @@ test("reviewPlan buckets by whole days", () => {
     E: it({ attempts: 1, due: now + 30 * DAY }),
     F: it({ attempts: 0, due: now - DAY }),
   }, now);
-  assert.deepEqual(r, { today: ["A"], tomorrow: ["C"], threeDays: ["B"], week: ["D"] });
+  assert.deepEqual(r, { today: ["A"], tomorrow: ["C"], threeDays: ["B"], week: ["D"], later: ["E"] });
 });
 
 test("strongAndWeak never lists a letter with no attempts", () => {
@@ -100,9 +100,10 @@ test("reviewPlan day boundaries", () => {
     A: it({ attempts: 1, due: now }),
     B: it({ attempts: 1, due: now + DAY / 2 }),
     C: it({ attempts: 1, due: now + 3 * DAY }),
+    G: it({ attempts: 1, due: now + 3 * DAY + 1 }),
     D: it({ attempts: 1, due: now + 4 * DAY }),
     E: it({ attempts: 1, due: now + 7 * DAY }),
     F: it({ attempts: 1, due: now + 8 * DAY }),
   }, now);
-  assert.deepEqual(r, { today: ["A", "B"], tomorrow: [], threeDays: ["C"], week: ["D", "E"] });
+  assert.deepEqual(r, { today: ["A"], tomorrow: ["B"], threeDays: ["C"], week: ["D", "E", "G"].sort(), later: ["F"] });
 });

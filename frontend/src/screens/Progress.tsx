@@ -40,8 +40,10 @@ export function ProgressScreen() {
   const next = nextLesson(units, progress);
   const nextOpen = next && isUnlocked(units, progress, next.id);
 
-  const items = progress.items;
-  const all = Object.values(items);
+  const allItems = progress.items;
+  // Signs, sentences and scenes ("HELLO", "scene:4.1") live in the same store; letter views only use A to Z.
+  const items = Object.fromEntries(Object.entries(allItems).filter(([k]) => /^[A-Z]$/.test(k)));
+  const all = Object.values(allItems);
   const tries = all.reduce((n, it) => n + it.attempts, 0);
   const matched = all.reduce((n, it) => n + Math.max(0, it.attempts - it.misses), 0);
 
@@ -73,8 +75,9 @@ export function ProgressScreen() {
     if (!it) return "Not started";
     return it.mastered ? "Mastered ✓" : `Practising: ${Math.min(it.streak, 3)} of 3 in a row`;
   };
-  const tableRows = (letters: string[]) => (
-    <table className="jr-table">
+  const tableRows = (letters: string[], name: string) => (
+    <div className="jr-table-wrap">
+    <table className="jr-table" aria-label={name}>
       <thead>
         <tr><th scope="col">Letter</th><th scope="col">Status</th><th scope="col">Tries</th><th scope="col">Matched the reference</th></tr>
       </thead>
@@ -92,8 +95,9 @@ export function ProgressScreen() {
         })}
       </tbody>
     </table>
+    </div>
   );
-  const coming: [string, string[]][] = [["Tomorrow", plan.tomorrow], ["In 3 days", plan.threeDays], ["In a week", plan.week]];
+  const coming: [string, string[]][] = [["Tomorrow", plan.tomorrow], ["In 3 days", plan.threeDays], ["In a week", plan.week], ["Later", plan.later]];
 
   return (
     <div className="page progress-page reward-dawn">
@@ -116,7 +120,7 @@ export function ProgressScreen() {
             <Stamp value={progress.xp} label="XP" />
             <Stamp value={tries > 0 ? `${pct(matched, tries)}%` : "No tries yet"} label="matches the reference" />
           </div>
-          <ul className="plain-list jr-log">
+          <ul className="jr-log">
             {pages.map((l, i) => (
               <li key={l.id}>
                 <Ink tone="plain">Page {i + 1} · {(l.teaches ?? []).join(" ")}</Ink>
@@ -133,8 +137,9 @@ export function ProgressScreen() {
             {ALPHABET.map((letter) => {
               const st = states[letter];
               return (
-                <li key={letter} className={`alpha-box alpha-${st}`} aria-label={`${letter}, ${LABEL[st]}`}>
+                <li key={letter} className={`alpha-box alpha-${st}`}>
                   <span aria-hidden="true">{letter}</span>
+                  <span className="sr-only">{letter}, {LABEL[st]}</span>
                   {st === "done" && <b className="alpha-check" aria-hidden="true">✓</b>}
                   {st === "locked" && <Lock />}
                 </li>
@@ -170,7 +175,7 @@ export function ProgressScreen() {
             </div>
           )}
         </Page>
-        <Page side="right" label="Going well" title="Where I am" number={4}>
+        <Page side="right" label="Standouts" title="Where I am" number={4} stain>
           <div className="jr-stack jr-stack-wide">
             <section aria-labelledby="jr-strong">
               <h3 id="jr-strong">Going well</h3>
@@ -212,7 +217,7 @@ export function ProgressScreen() {
           )}
           <p className="jr-note">How often the camera measured each finger away from the reference. Fewer is better.</p>
         </Page>
-        <Page side="right" label="Kinds of difference" title="Curl, direction, placement" number={6}>
+        <Page side="right" label="Kinds of difference" title="Curl, direction, placement" number={6} stain>
           {noMistakes ? (
             <p className="muted">Nothing to sort yet.</p>
           ) : (
@@ -234,8 +239,9 @@ export function ProgressScreen() {
             <>
               <ol className="jr-chips" aria-label="Letters due today">
                 {plan.today.map((l) => (
-                  <li key={l} className="alpha-box alpha-open" aria-label={`${l}, due today`}>
+                  <li key={l} className="alpha-box alpha-open">
                     <span aria-hidden="true">{l}</span>
+                    <span className="sr-only">{l}, due today</span>
                   </li>
                 ))}
               </ol>
@@ -246,14 +252,14 @@ export function ProgressScreen() {
           )}
           <section aria-labelledby="jr-coming">
             <h3 id="jr-coming">Coming up</h3>
-            <ul className="plain-list jr-log">
+            <ul className="jr-log">
               {coming.map(([when, letters]) => (
                 <li key={when}><b>{when}</b>{" "}<Ink tone="plain">{letters.length ? letters.join(" ") : "—"}</Ink></li>
               ))}
             </ul>
           </section>
         </Page>
-        <Page side="right" label="The review boxes" title="The review boxes" number={8}>
+        <Page side="right" label="Spaced practice" title="The review boxes" number={8}>
           <ol className="jr-boxes" aria-label="Letters in each review box">
             {boxes.map((n, i) => (
               <li key={i} className="jr-box">
@@ -269,10 +275,10 @@ export function ProgressScreen() {
 
       <Spread>
         <Page side="left" label="Every letter" title="The full table" number={9}>
-          {tableRows(ALPHABET.slice(0, 13))}
+          {tableRows(ALPHABET.slice(0, 13), "Letters A to M")}
         </Page>
         <Page side="right" label="Every letter, continued" number={10}>
-          {tableRows(ALPHABET.slice(13))}
+          {tableRows(ALPHABET.slice(13), "Letters N to Z")}
           <p className="jr-note">Mastered means matching the reference 3 times in a row. Reference-only letters have no pass or fail.</p>
         </Page>
       </Spread>

@@ -27,9 +27,24 @@ test("Progress journal spreads 1 and 2 render empty and filled states", async ()
     const full = render();
     assert.match(full, /11 of 12/);
     assert.match(full, /B is 1 away from mastered/);
-    assert.match(full, /aria-label="L, matches the reference"/);
+    assert.match(full, /<span class="sr-only">L, matches the reference<\/span>/);
+    assert.match(full, /aria-label="Letters A to M"/);
+    assert.match(full, /aria-label="Letters N to Z"/);
     assert.match(full, /Practise next: /);
     assert.doesNotMatch(full, /NaN/);
+
+    // sign / sentence / scene items never show up in letter views
+    saved.set("handshake.progress.v1", JSON.stringify({ xp: 0, streakDays: 0, lastActiveDay: null, completed: [], items: { "scene:4.1": item(4, 1, false, 1, 0), "MY NAME fs:RYAN": item(3, 0, false, 1, 0), L: item(2, 0, false, 1, 0) } }));
+    const signs = render();
+    assert.doesNotMatch(signs, /scene:4\.1/);
+    assert.doesNotMatch(signs, /MY NAME fs:RYAN/);
+    assert.match(signs, /jr-table-wrap/);
+
+    // a letter practised just now (due in a day) is not due today
+    saved.set("handshake.progress.v1", JSON.stringify({ xp: 0, streakDays: 0, lastActiveDay: null, completed: [], items: { L: { ...item(2, 0, false, 1, 1), due: Date.now() + 86400000 } } }));
+    const fresh = render();
+    assert.match(fresh, /Nothing is due today\./);
+    assert.match(fresh, /Later/);
 
     // attempts-0 mastered item: not listed, no NaN
     saved.set("handshake.progress.v1", JSON.stringify({ xp: 0, streakDays: 0, lastActiveDay: null, completed: [], items: { Q: item(0, 0, true, 3, 1) } }));
@@ -38,7 +53,7 @@ test("Progress journal spreads 1 and 2 render empty and filled states", async ()
     assert.doesNotMatch(zero, /Q<\/span>[^<]*matches the reference most/);
     assert.match(zero, /Nothing is giving you trouble right now\./);
 
-    // next lesson locked: complete 1.2 only so the first incomplete (1.1) ... use a state where 1.1 is not done but 1.2 is
+    // only 1.1 completed: there is still a next lesson, so the "finished every lesson" line is absent
     saved.set("handshake.progress.v1", JSON.stringify({ xp: 0, streakDays: 0, lastActiveDay: null, completed: ["1.1"], items: {} }));
     const mid = render();
     assert.doesNotMatch(mid, /finished every lesson/);
@@ -95,17 +110,18 @@ test("Progress journal spreads 3 and 4 (my hands, review plan)", async () => {
     const dt = text(due);
     assert.match(dt, /Due today/);
     assert.match(dt, /1 letter is due for a quick review\./);
-    assert.match(due, /aria-label="L, due today"/);
+    assert.match(due, /<span class="sr-only">L, due today<\/span>/);
     assert.doesNotMatch(due, /NaN/);
 
     // plural + coming up + box counts as text
-    const future = (d) => Date.now() + d * 86_400_000 + 3_600_000;
+    const future = (d) => Date.now() + d * 86_400_000 - 3_600_000;
     prog({ L: item(0, 0), B: item(0, 0), K: item(1, future(1)), V: item(2, future(3)), W: item(3, future(7)), A: item(4, future(10)) });
     const t = text(render());
     assert.match(t, /2 letters are due for a quick review\./);
     assert.match(t, /Tomorrow K/);
     assert.match(t, /In 3 days V/);
     assert.match(t, /In a week W/);
+    assert.match(t, /Later A/);
     assert.match(t, /2 letters today/);
     assert.match(t, /1 letter 14 days/);
     assert.match(t, /A letter moves up a box each time it matches the reference, and drops back to today on a miss\./);

@@ -23,7 +23,7 @@ export function Page({ side, label, title, number, ribbon, stain, children }: {
           <div className="jr-ripple" aria-hidden="true" />
         </>
       )}
-      {number !== undefined && <span className="jr-num">{number}</span>}
+      {number !== undefined && <span className="jr-num" aria-hidden="true">{number}</span>}
     </div>
   );
 }
@@ -48,7 +48,7 @@ export function HandBar({ label, value, max, text, tone }: {
   return (
     <div className="jr-row">
       <b className="jr-row-label">{label}</b>
-      <div className="jr-bar" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={max} aria-label={`${label}: ${text}`}>
+      <div className="jr-bar" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={max} aria-label={label} aria-valuetext={text}>
         <i className={tone === "warn" ? "jr-warn" : undefined} style={{ width: `${pct}%` }} />
       </div>
       <span className="jr-row-text">{text}</span>

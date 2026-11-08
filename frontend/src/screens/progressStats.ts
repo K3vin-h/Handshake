@@ -101,15 +101,16 @@ export function boxCounts(items: Record<string, Item>) {
 }
 
 export function reviewPlan(items: Record<string, Item>, now: number) {
-  const plan = { today: [] as string[], tomorrow: [] as string[], threeDays: [] as string[], week: [] as string[] };
+  const plan = { today: [] as string[], tomorrow: [] as string[], threeDays: [] as string[], week: [] as string[], later: [] as string[] };
   for (const letter of Object.keys(items).sort(byLetter)) {
     const i = items[letter];
     if (i.attempts <= 0) continue;
-    const days = i.due <= now ? 0 : Math.floor((i.due - now) / DAY);
-    if (days === 0) plan.today.push(letter);
-    else if (days === 1) plan.tomorrow.push(letter);
+    if (i.due <= now) { plan.today.push(letter); continue; }
+    const days = Math.ceil((i.due - now) / DAY);
+    if (days <= 1) plan.tomorrow.push(letter);
     else if (days <= 3) plan.threeDays.push(letter);
     else if (days <= 7) plan.week.push(letter);
+    else plan.later.push(letter);
   }
   return plan;
 }
