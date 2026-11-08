@@ -267,7 +267,10 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
   }, []);
 
   const width = Math.max(240, Math.min(360, vw - 64));
-  const slot = width + GAP;
+  // The active card drifts across the deck (see restOf), which eats into how far the track moves per step. A wider gap on
+  // wide screens gives that distance back, so each step travels further while neither end has an empty gutter.
+  const gap = vw > 700 ? 160 : GAP;
+  const slot = width + gap;
   const pad = (vw - width) / 2;
 
   // The active card sits at the LEFT edge, with the next levels showing to its right. (Centring it left a wide empty gutter
@@ -322,7 +325,7 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
         <div className="lp-viewport" ref={viewport} tabIndex={0} onKeyDown={onKey} aria-label="Levels. Use the Left and Right arrow keys to switch.">
           <motion.ul
             className="lp-track"
-            style={{ x, paddingLeft: lead, gap: GAP }}
+            style={{ x, paddingLeft: lead, gap }}
             drag="x"
             // Extra room past the first and last positions so a drag can travel about as far as a full card, then springs back.
             dragConstraints={{ left: restOf(units.length - 1) - slot * 0.7, right: restOf(0) + slot * 0.7 }}
