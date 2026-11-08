@@ -27,7 +27,10 @@ async function call(method: string, path: string, body?: unknown): Promise<Resul
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     const data = await res.json().catch(() => null);
-    if (!res.ok) return { ok: false, error: data?.error ?? `http_${res.status}`, ...(data?.state ? { state: data.state } : {}) };
+    if (!res.ok) {
+      if (data?.error === "unauthenticated") setUser(null); // session gone (reset, revoked, expired)
+      return { ok: false, error: data?.error ?? `http_${res.status}`, ...(data?.state ? { state: data.state } : {}) };
+    }
     return { ok: true, data };
   } catch {
     return { ok: false, error: "network" };
@@ -50,7 +53,7 @@ export async function getAuthConfig(): Promise<Result<{ accounts: boolean; googl
 }
 export async function getMe(): Promise<Result<{ user: User; state: ServerState | null }>> {
   const r = await call("GET", "/api/me");
-  if (!r.ok) { if (r.error === "unauthenticated") setUser(null); return r; }
+  if (!r.ok) return r;
   setUser(r.data.user);
   return { ok: true, user: r.data.user, state: r.data.state ?? null };
 }

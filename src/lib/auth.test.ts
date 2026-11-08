@@ -21,6 +21,17 @@ test("401 body maps to its error code", async () => {
   assert.deepEqual(await logIn("a@b.co", "bad"), { ok: false, error: "invalid_credentials" });
 });
 
+test("401 unauthenticated clears the user on any call; invalid_credentials does not", async () => {
+  use(reply(200, { user: { email: "a@b.co", hasPassword: true, google: false } }) as typeof fetch);
+  await logIn("a@b.co", "pw");
+  use(reply(401, { error: "invalid_credentials" }) as typeof fetch);
+  await logIn("a@b.co", "bad");
+  assert.ok(getUser());
+  use(reply(401, { error: "unauthenticated" }) as typeof fetch);
+  await pushState({ profile: null, progress: {} as never }, 1);
+  assert.equal(getUser(), null);
+});
+
 test("409 on signup is email_taken; 409 on pushState carries the server state", async () => {
   use(reply(409, { error: "email_taken" }) as typeof fetch);
   assert.deepEqual(await signUp("a@b.co", "pw"), { ok: false, error: "email_taken" });
