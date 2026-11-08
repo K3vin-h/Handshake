@@ -16,7 +16,7 @@ import { dueItems, isUnlocked, loadProgress, nextLesson } from "../lib/progress"
 const ART: Record<string, { art: (p: { me: string }) => string[]; kind: "tiles" | "bubbles" }> = {
   u1: { art: ({ me }) => [...me.toUpperCase()].filter((c) => /[A-Z]/.test(c)).slice(0, 12), kind: "tiles" },
   u2: { art: () => ["A", "B", "C", "D", "E"], kind: "tiles" },
-  u3: { art: () => ["HELLO", "BYE"], kind: "bubbles" },
+  u3: { art: () => ["HELLO", "NICE TO MEET YOU"], kind: "bubbles" },
   u4: { art: () => ["HELLO", "MY NAME…"], kind: "bubbles" },
 };
 

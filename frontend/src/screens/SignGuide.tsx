@@ -3,6 +3,7 @@ import { useReduceMotion } from "../components/motion/MotionProvider";
 import { PHASE_TEXT, TOTAL_MS, handAt } from "./signMotion";
 import { meanPose3D, shapeTip, type SignDef, type SignStage } from "../cv";
 import type { Template } from "../cv/types";
+import { DIAGRAMS, SignDiagram } from "../components/SignDiagram";
 
 const HandModel3D = lazy(() => import("../components/HandModel3D"));
 
@@ -117,6 +118,18 @@ function Diagram({ def }: { def: SignDef }) {
  * 3 movement (arrow). With `stage` it also shows which part you are on. Nothing depends on colour alone.
  */
 export function SignGuide({ def, templates, leftHanded, stage }: { def: SignDef; templates: Template[]; leftHanded: boolean; stage?: SignStage }) {
+  // The six introduction signs have a hand-drawn start/end diagram (see components/SignDiagram.tsx).
+  if (DIAGRAMS[def.id])
+    return (
+      <section className="card sign-guide" aria-label={`How to sign ${def.english}`}>
+        <h2 className="small-title">How to sign “{def.english}”{def.hands === 2 ? " (both hands)" : ""}</h2>
+        <SignDiagram id={def.id} leftHanded={leftHanded} />
+        <Suspense fallback={<div className="hand3d empty">Loading 3D hand…</div>}>
+          <HandModel3D pose={meanPose3D(def.handshape, templates, leftHanded)} letter={def.handshape} height={170} />
+        </Suspense>
+        <p className="muted small">Picture is like a mirror: faded dashed hands are the start, solid hands the end. Handshape: “{def.handshape === "5" ? "open hand" : def.handshape}”. Simplified, not yet checked by a fluent signer.</p>
+      </section>
+    );
   const order: SignStage[] = ["handshape", "position", "movement", "done"];
   const at = stage ? order.indexOf(stage) : -1;
   const mark = (i: number) => (at < 0 ? "" : at > i ? " ✓ done" : at === i ? " ← you are here" : "");

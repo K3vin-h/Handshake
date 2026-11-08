@@ -1,14 +1,15 @@
 import { apiUrl } from "./apiBase";
 import type { FingerFeedback } from "../cv";
+import { requestPraise, type PraiseKind } from "./praise";
 
 // Frontend → backend. Keep these shapes in sync with CLAUDE.md and backend/index.mjs.
 
-async function post<T>(url: string, body: unknown): Promise<T> {
+async function post<T>(url: string, body: unknown, timeoutMs = 14000): Promise<T> {
   const res = await fetch(apiUrl(url), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(14000), // a stalled Gemini call rejects, so every caller's fallback runs
+    signal: AbortSignal.timeout(timeoutMs), // a stalled Gemini call rejects, so every caller's fallback runs
   });
   if (!res.ok) throw new Error(`${url} failed: ${res.status}`);
   return res.json();
@@ -26,6 +27,10 @@ export const getCoachTip = (target: string, feedback: FingerFeedback[], repeat: 
 
 /** How to form a letter, from Gemini's general ASL knowledge. text is "" when Gemini is unsure or unavailable. */
 export const getHowTo = (target: string) => post<{ text: string } & Cached>("/api/explain", { target });
+
+/** One varied praise line AFTER the app confirmed a match. Never throws; a slow or failed call gives a local line marked cached. */
+export const praise = (kind: PraiseKind, target: string, opts: { streak?: number; tries?: number } = {}) =>
+  requestPraise(kind, target, opts, (body) => post("/api/praise", body, 3000));
 
 export const getPracticeWords = (knownLetters: string[], weakLetters: string[]) =>
   post<{ words: string[] } & Cached>("/api/words", { knownLetters, weakLetters });

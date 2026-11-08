@@ -4,7 +4,13 @@
 export type Landmark = { x: number; y: number; z: number };
 
 /** 21 landmarks for one hand, plus which hand MediaPipe thinks it is. */
-export type HandFrame = { landmarks: Landmark[]; worldLandmarks?: Landmark[]; handedness: "Left" | "Right" };
+export type HandFrame = {
+  landmarks: Landmark[];
+  worldLandmarks?: Landmark[];
+  handedness: "Left" | "Right";
+  /** The other visible hand (two-handed signs only read this; letters ignore it). */
+  other?: HandFrame;
+};
 
 /** 88 numbers from features.ts (coords + curl + direction + tip distances). */
 export type FeatureVector = number[];
