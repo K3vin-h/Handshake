@@ -130,7 +130,7 @@ function Player({ lessonId }: { lessonId: string }) {
       <TokenRunner tokens={tokens} leftHanded={profile.leftHanded} onEmpty={skip}
         onDone={() => { progress.current = recordAttempt(progress.current, tokens.join(" "), true); celebrate(); next(); }}
         render={(r) => (
-          <LessonView title={title} target={tokens.join(" ")} reference={null} showReference={false} progress={0}
+          <LessonView title={title} target={tokens.join(" ")} reference={r.guide} showReference={!!r.guide} progress={0}
             camera={r.camera} status={r.prompt} landmarkTip="" coachTip="" coachCached={false} sideBySide={false}
             stepLabel={`${stepLabel} · part ${r.index + 1} of ${r.units.length}`} lessonProgress={i / items.length}
             actionLabel="Skip" onAction={skip} onSelfCheck={r.selfCheck} />
@@ -151,7 +151,8 @@ function Player({ lessonId }: { lessonId: string }) {
           next();
         }}
         onEmpty={() => { skipped.current = true; if (turnNow + 1 < turns.length) setTurn(turnNow + 1); else { setTurn(0); next(); } }}
-        render={(r) => <SceneView title={lesson.title} turns={turns} turnIndex={turnNow} tokenIndex={r.token} camera={r.camera} prompt={r.prompt} onSelfCheck={r.selfCheck} onSkip={skip} />} />
+        render={(r) => <SceneView title={lesson.title} turns={turns} turnIndex={turnNow} tokenIndex={r.token} camera={<>{r.guide}{r.camera}</>} prompt={r.prompt} onSelfCheck={r.selfCheck} onSkip={skip} />} />
+
     );
   }
   // ONE camera at a time: LetterItem stays mounted across consecutive letter items (no key), so the camera never restarts.
