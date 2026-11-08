@@ -32,6 +32,7 @@ export function useHandTracking(onFrame: (hand: HandFrame | null, now: number, f
     let stream: MediaStream | null = null;
     let cancelled = false;
     const smoother = new LandmarkSmoother();
+    const otherSmoother = new LandmarkSmoother(); // second hand, for two-handed signs
     const work = document.createElement("canvas");
     const enhanced = document.createElement("canvas");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -93,6 +94,10 @@ export function useHandTracking(onFrame: (hand: HandFrame | null, now: number, f
             const smooth = smoother.smooth(rawInFrame ? raw : null, now);
             // Preserve invalid raw coordinates so the consumer can explain the frame-edge problem.
             const hand = rawInFrame ? smooth : raw;
+            const otherRaw = rawInFrame ? raw.other ?? null : null;
+            const otherSmooth = otherSmoother.smooth(otherRaw && otherRaw.landmarks.every((p) => p.x > 0.01 && p.x < 0.99 && p.y > 0.01 && p.y < 0.99) ? otherRaw : null, now);
+            if (hand && rawInFrame && otherSmooth) hand.other = otherSmooth;
+            else if (hand && rawInFrame) delete hand.other;
             const canvas = canvasRef.current;
             if (canvas) {
               canvas.width = video.videoWidth;

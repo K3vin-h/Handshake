@@ -15,3 +15,5 @@ export { useLetterCheck, inFrame, type LetterCheckOptions } from "./useLetterChe
 export type { ErrorCode, Finger } from "./types";
 export { SIGNS, SignChecker, zoneOf, classifyMovement, ZONES, shapeTip, type SignDef, type SignStage } from "./signs";
 export type { FaceAnchors } from "./faceTracker";
+export { SequenceChecker } from "./signSequence";
+export { getSignTemplate } from "./signStore";
