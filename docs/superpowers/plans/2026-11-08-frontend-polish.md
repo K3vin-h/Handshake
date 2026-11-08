@@ -7,6 +7,20 @@
 **Tech stack:** React 19, TypeScript, Vite 8, `motion/react` v14, plain CSS, `node --test` + `vite.ssrLoadModule` SSR tests.
 **Spec:** none separate; decisions are below. No Codex review (your call).
 
+## Status (updated after execution)
+
+Executed sequentially (one implementer per checkout), each task spec- and quality-reviewed, on `feature/frontend-polish`. Not pushed.
+
+- [x] Task 0 baseline (build + tests green; "before" screenshots skipped)
+- [x] Task 1 tokens, self-hosted Atkinson Hyperlegible Next, slop test (`f791d27`)
+- [x] Task 2 de-slop sweep, slop test 9/9 green (`3d957d4`)
+- [x] Task 3 centered nav + lesson focus mode (`e5ca10f`) + narrow-width layout fix (see git log)
+- [x] Task 4 Levels declutter (`1176ce0`)
+- [x] Task 5 Progress disclosure (`aa0b613`)
+- [x] Task 6 LessonNotice cards (`3e64563`)
+- [x] Task 7 motion tokens in hero/reveal/status, reward line, calmer copy (`8e0e1d4`)
+- [~] Task 8 QA: build, 143 tests, slop test, contrast pass; real screenshots at 477px only (Home, Levels, Progress, Settings, a lesson). **Not done:** 320/768/1024/1440 screenshots (pane could not be resized), keyboard and reduced-motion walkthrough, finish-gate evidence JSON, lesson-not-finished card render, Home composition changes (deliberately not restructured without seeing it).
+
 ## Context
 
 **Base (done):** `feature/frontend-polish` = this branch + `origin/accounts` + `origin/main`, re-synced at `05af55a` (11 newer `main` commits, clean merge). Build passes, `npm test` = **126 pass / 0 fail** on the merged tree. Nothing pushed.
