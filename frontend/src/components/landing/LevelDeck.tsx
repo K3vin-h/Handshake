@@ -269,6 +269,16 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
   const slot = width + GAP;
   const pad = (vw - width) / 2;
 
+  // Centring the active card leaves an empty gutter beside the first card (left) and the last card (right). So near the
+  // ends the whole track slides toward that side by the gutter, which puts the first card flush left (next level peeking
+  // in on the right) and the last card flush right (previous level peeking in on the left). The cards keep reading their
+  // tilt/scale from the unshifted `x`, so the active card is still untilted. Middle cards stay centred.
+  const edge = Math.min(pad, 12);
+  const gutter = Math.max(0, pad - edge);
+  const shiftIn = units.map((_, i) => -i * slot);
+  const shiftOut = units.map((_, i) => (units.length > 1 && i === 0 ? -gutter : units.length > 1 && i === units.length - 1 ? gutter : 0));
+  const shift = useTransform(x, shiftIn.length > 1 ? shiftIn : [0, -1], shiftIn.length > 1 ? shiftOut : [0, 0]);
+
   const goTo = useCallback(
     (i: number, instant = false) => {
       const n = Math.max(0, Math.min(units.length - 1, i));
@@ -308,6 +318,7 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
 
       <div className="lp-deck" role="group" aria-roledescription="carousel" aria-label="Levels">
         <div className="lp-viewport" ref={viewport} tabIndex={0} onKeyDown={onKey} aria-label="Levels. Use the Left and Right arrow keys to switch.">
+          <motion.div style={{ x: shift, width: "max-content" }}>
           <motion.ul
             className="lp-track"
             style={{ x, paddingLeft: pad, gap: GAP }}
@@ -321,6 +332,7 @@ export function LevelDeck(props: { units: DeckUnit[]; initial: number; onLesson(
               <DeckCard key={u.id} unit={u} index={i} slot={slot} x={x} active={i === index} flat={reduce} width={width} onSelect={() => goTo(i)} onOpen={() => setOpen(u)} />
             ))}
           </motion.ul>
+          </motion.div>
         </div>
 
         <div className="lp-deck-nav">

@@ -43,7 +43,8 @@ export function RevealCard({ title, summary, className = "", children }: { title
       aria-labelledby={id}
       onPointerEnter={(e) => e.pointerType !== "touch" && setHover(true)}
       onPointerLeave={() => setHover(false)}
-      onFocusCapture={() => setFocus(true)}
+      // Only keyboard focus pins the card open. A mouse click on a button inside leaves focus there, and the card then stayed open after the pointer left.
+      onFocusCapture={(e) => { if ((e.target as HTMLElement).matches(":focus-visible")) setFocus(true); }}
       onBlurCapture={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setFocus(false)}
       initial={false}
       animate={{ backgroundColor: open ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.45)" }}

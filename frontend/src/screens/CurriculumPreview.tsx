@@ -1,4 +1,4 @@
-import { loadProfile } from "../lib/profile";
+import { DEMO_PROFILE, loadProfile } from "../lib/profile";
 import { useMemo, useState } from "react";
 import { buildCurriculum, requiredHandshapes, type Personalization } from "../lib/curriculum";
 
@@ -8,8 +8,9 @@ import { buildCurriculum, requiredHandshapes, type Personalization } from "../li
 const RELATIONSHIPS: Personalization["relationship"][] = ["coworker", "friend", "family", "classmate", "partner"];
 
 export function CurriculumPreview() {
-  const [userName, setUserName] = useState(loadProfile()?.userName ?? "");
-  const [theirName, setTheirName] = useState(loadProfile()?.theirName ?? "");
+  const saved = useMemo(() => loadProfile(), []); // read once
+  const [userName, setUserName] = useState(saved?.userName ?? "");
+  const [theirName, setTheirName] = useState(saved?.theirName ?? "");
   const [relationship, setRelationship] = useState<Personalization["relationship"]>("coworker");
   const [demoOnly, setDemoOnly] = useState(false);
   const units = useMemo(() => buildCurriculum({ userName, theirName, relationship }), [userName, theirName, relationship]);
@@ -21,6 +22,9 @@ export function CurriculumPreview() {
       <div className="row">
         <input aria-label="Your name" value={userName} onChange={(e) => setUserName(e.target.value)} />
         <input aria-label="Their name" value={theirName} onChange={(e) => setTheirName(e.target.value)} />
+        <button type="button" className="secondary" onClick={() => { setUserName(DEMO_PROFILE.userName); setTheirName(DEMO_PROFILE.theirName); setRelationship(DEMO_PROFILE.relationship ?? "coworker"); }}>
+          Use demo names ({DEMO_PROFILE.userName} → {DEMO_PROFILE.theirName})
+        </button>
         <select aria-label="Relationship" value={relationship} onChange={(e) => setRelationship(e.target.value as Personalization["relationship"])}>
           {RELATIONSHIPS.map((r) => (
             <option key={r}>{r}</option>

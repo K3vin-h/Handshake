@@ -28,12 +28,15 @@ export function TokenRunner(props: {
   tokens: string[];
   leftHanded: boolean;
   onDone: () => void;
-  /** Called by "Continue" when NOTHING in these tokens can be camera-checked (e.g. a name of only J and Z). Not a pass: no attempt is recorded. */
-  onEmpty?: () => void;
+  /** Called by "Continue" when NOTHING in these tokens can be camera-checked (e.g. a name of only J and Z). Required, so a
+   *  caller must decide what that means; it must NOT count as a pass (the player treats it as a skip). */
+  onEmpty: () => void;
   render: (a: RenderArgs) => ReactNode;
 }) {
   const tokensKey = props.tokens.join(" ");
   const units = useMemo(() => unitsOf(props.tokens), [tokensKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Moving letters the camera cannot check, each named once ("JJ" says "J"). Computed once per step, not on every render.
+  const movers = useMemo(() => [...new Set(unchecked(props.tokens))], [tokensKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const [k, setK] = useState(0);
   const [msg, setMsg] = useState("");
   const [zone, setZone] = useState("");
@@ -67,13 +70,12 @@ export function TokenRunner(props: {
 
   if (!u) {
     // Nothing to check here. Never a blank page: say why and give a way on (it is not counted as a pass).
-    const letters = unchecked(props.tokens);
     return (
       <div className="page">
         <p role="status">
-          {letters.length ? `${[...new Set(letters)].join(" and ")} move${letters.length === 1 ? "s" : ""}, so the camera can't check ${letters.length === 1 ? "it" : "them"}. Practise by watching and copying.` : "There is nothing for the camera to check in this step."}
+          {movers.length ? `${movers.join(" and ")} move${movers.length === 1 ? "s" : ""}, so the camera can't check ${movers.length === 1 ? "it" : "them"}. Practise by watching and copying.` : "There is nothing for the camera to check in this step."}
         </p>
-        <button type="button" onClick={props.onEmpty ?? props.onDone}>Continue</button>
+        <button type="button" onClick={props.onEmpty}>Continue</button>
       </div>
     );
   }
@@ -83,9 +85,9 @@ export function TokenRunner(props: {
     <>
       <Camera {...check.cam} progress={check.progress} />
       {import.meta.env.DEV && <p className="muted">debug: zone {zone || "–"} · seeing {check.prediction?.letter ?? "–"}</p>}
-      {unchecked(props.tokens).length > 0 && (
+      {movers.length > 0 && (
         <p className="muted">
-          Not checked by the camera: {[...new Set(unchecked(props.tokens))].join(", ")} (moving letters). Sign {unchecked(props.tokens).length === 1 ? "it" : "them"} yourself.
+          Not checked by the camera: {movers.join(", ")} (moving letters). Sign {movers.length === 1 ? "it" : "them"} yourself.
         </p>
       )}
     </>
