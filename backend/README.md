@@ -25,7 +25,7 @@ names belong only in the browser. The model is configurable with `GEMINI_MODEL`.
   default. Enabling them requires the documented human H4 evaluation first.
 - Recognition thresholds, dominant-hand selection, out-of-frame behavior and
   live-letter eligibility remain CV responsibilities. No letters were validated
-  or promoted by this implementation. See `docs/test-log.md` for human evidence.
+  or promoted by this implementation.
 
 POST `/api/words` accepts `{ knownLetters, weakLetters }` and returns
 `{ words, cached? }`. Words contain only the supplied known letters, and words

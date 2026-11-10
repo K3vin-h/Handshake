@@ -61,8 +61,8 @@ No durable files are needed by this stateless planner.
    letters. If output fails the app's stricter response guard, record fallback rather than success.
    Check deployed logs locally with secrets redacted before sharing. Repeat after idle wake and
    verify unavailable/wrong-token integration falls back locally through the app.
-6. Record time, revision/artifact hash, actual host, status codes, redacted response and log review
-   in `docs/evidence/maritime.md`. Coordinate the final planner clip with the integrated app tester.
+6. Record time, revision/artifact hash, actual host, status codes, redacted response and log review.
+   Coordinate the final planner clip with the integrated app tester.
 
 Local verification: `node --test agent/*.test.mjs` from the project root. These tests use fake
 Gemini/tool responses and a local production server with dummy credentials. They are not proof

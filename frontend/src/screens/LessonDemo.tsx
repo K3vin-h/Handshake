@@ -29,7 +29,7 @@ const HandModel3D = lazy(() => import("../components/HandModel3D"));
 const TARGETS = ["L", "I", "L", "Y"];
 const LESSON_LETTERS = ["L", "I", "Y"];
 const MISS_MS = 4000;
-/** Letter picker for the non-recorder test (docs/test-log.md). A single letter competes against ALL of these. */
+/** Letter picker for the non-recorder test. A single letter competes against ALL of these. */
 const TEST_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "5"];
 
 export function LessonDemo() {
